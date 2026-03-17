@@ -42,7 +42,7 @@ contract LibOrganizationGroupsInvariants is OrganizationGroupsTestBase {
     }
 
     /// @dev Verifies invariant: deleted marker implies group is inactive.
-    function invariant_GROUP_INV_2_wasGroupDeletedImpliesGroupInactive() public view {
+    function invariant_wasGroupDeletedImpliesGroupInactive() public view {
         uint256 count = handler.trackedGroupCount();
         for (uint256 i = 0; i < count; i++) {
             uint256 groupId = handler.trackedGroupIdAt(i);
@@ -53,7 +53,7 @@ contract LibOrganizationGroupsInvariants is OrganizationGroupsTestBase {
     }
 
     /// @dev Verifies invariant: `wasGroupDeleted` is monotonic (`false -> true` only).
-    function invariant_GROUP_INV_1_wasGroupDeletedMonotonic() public view {
+    function invariant_wasGroupDeletedMonotonic() public view {
         uint256 count = handler.trackedGroupCount();
         for (uint256 i = 0; i < count; i++) {
             uint256 groupId = handler.trackedGroupIdAt(i);
@@ -64,7 +64,7 @@ contract LibOrganizationGroupsInvariants is OrganizationGroupsTestBase {
     }
 
     /// @dev Verifies invariant: zero address can never be marked as a group member.
-    function invariant_GROUP_INV_5_zeroAddressNeverBecomesGroupMember() public view {
+    function invariant_zeroAddressNeverBecomesGroupMember() public view {
         uint256 count = handler.trackedGroupCount();
         for (uint256 i = 0; i < count; i++) {
             uint256 groupId = handler.trackedGroupIdAt(i);
@@ -76,7 +76,7 @@ contract LibOrganizationGroupsInvariants is OrganizationGroupsTestBase {
     }
 
     /// @dev Verifies desired invariant: active group membership implies active organization membership.
-    function invariant_GROUP_INV_7_activeGroupMembershipImpliesOrgMembership() public view {
+    function invariant_activeGroupMembershipImpliesOrgMembership() public view {
         uint256 groupCount = handler.trackedGroupCount();
         uint256 memberCount = handler.trackedMemberCount();
 

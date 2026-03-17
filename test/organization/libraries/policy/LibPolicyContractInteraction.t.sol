@@ -136,9 +136,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that same selector with different constraints hash must not validate with old proof.
-    function test_isContractInteractionAllowed__OPB_PH_2_sameSelectorDifferentConstraintsHash_invalidatesProof()
-        public
-    {
+    function test_isContractInteractionAllowed_sameSelectorDifferentConstraintsHash_invalidatesProof() public {
         // Setup: build fixture inputs where same selector with different constraints hash must not validate with old
         // proof should be denied.
         address target = address(0xC707);
@@ -211,7 +209,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that `anyFunction == false` and `data.length < 4` returns false.
-    function test_POL_INV_10__OPB_PH_2_isFunctionAllowed_anyFunctionFalseAndShortData_returnsFalse() public {
+    function test_isFunctionAllowed_anyFunctionFalseAndShortData_returnsFalse() public {
         // Setup: build fixture inputs where `anyFunction == false` and `data.length < 4` returns false should be
         // denied.
         Policy memory policy = _buildBasePolicy();
@@ -225,7 +223,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that valid (selector, constraintsHash) proof returns true.
-    function test_POL_INV_10_isFunctionAllowed_validFunctionProof_returnsTrue() public {
+    function test_isFunctionAllowed_validFunctionProof_returnsTrue() public {
         // Setup: configure a valid fixture for valid (selector, constraintsHash) proof returns true.
         bytes4 selector = bytes4(keccak256("setValue(uint256)"));
         bytes memory constraints = _encodeUintExactConstraint(55);
@@ -248,7 +246,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that invalid function proof returns false.
-    function test_POL_INV_10_isFunctionAllowed_invalidFunctionProof_returnsFalse() public {
+    function test_isFunctionAllowed_invalidFunctionProof_returnsFalse() public {
         // Setup: build fixture inputs where invalid function proof returns false should be denied.
         bytes4 selector = bytes4(keccak256("setValue(uint256)"));
         bytes memory constraints = _encodeUintExactConstraint(56);

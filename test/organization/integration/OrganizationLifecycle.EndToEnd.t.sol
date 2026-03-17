@@ -159,7 +159,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
 
     /// @dev Verifies the full organization lifecycle keeps execution, rejection, nonce, and policy-usage state
     /// coherent from factory deploy through account activity.
-    function test_INT_ETE_1_fullLifecycle_executesAndRejectsWithExpectedNonceAndPolicyUsageOutcomes() public {
+    function test_fullLifecycle_executesAndRejectsWithExpectedNonceAndPolicyUsageOutcomes() public {
         // Setup: deploy an initialized organization, configure one rate-limited auto-approve policy, and deploy a
         // funded account through the real factory and guardian/admin entrypoints.
         OrganizationImplementationHarness organization = _deployOrganizationHarness(bytes32(uint256(15_101)));
@@ -288,7 +288,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
 
     /// @dev Verifies multiple accounts in one organization consume independent source-scoped rate-limit budgets under
     /// one shared policy root.
-    function test_INT_ETE_2_multipleAccounts_executeIndependentlyUnderSharedSourceScopedRateLimit() public {
+    function test_multipleAccounts_executeIndependentlyUnderSharedSourceScopedRateLimit() public {
         // Setup: deploy one organization with a shared policy root whose time-window budget is scoped per source
         // account, then deploy and fund two accounts that use the same initiator and destination.
         OrganizationImplementationHarness organization = _deployOrganizationHarness(bytes32(uint256(15_201)));
@@ -402,7 +402,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
 
     /// @dev Verifies unauthorized callers are rejected across the modifier-protected organization entrypoints named in
     /// the end-to-end access-control matrix.
-    function test_INT_ETE_4_accessControlMatrix_rejectsUnauthorizedCallersAcrossProtectedEntrypoints() public {
+    function test_accessControlMatrix_rejectsUnauthorizedCallersAcrossProtectedEntrypoints() public {
         // Setup: deploy one fresh proxy that has not been initialized yet to exercise `onlyDeployer`, then deploy one
         // initialized organization and stage pending guardian and recovery updates for the other modifier branches.
         OrganizationProxy uninitializedProxy =
@@ -495,7 +495,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
 
     /// @dev Verifies `computeNonce` and `isNonceUsed` stay aligned with successful rejection, successful execution,
     /// and reverted execution rollback across distinct operation types.
-    function test_INT_ETE_5_computeNonceAndIsNonceUsed_matchSuccessRejectAndRollbackAcrossOperationTypes() public {
+    function test_computeNonceAndIsNonceUsed_matchSuccessRejectAndRollbackAcrossOperationTypes() public {
         // Setup: deploy one organization, prepare a policy-update nonce for the admin rejection path, deploy a real
         // account for the success path, and prepare a reverting receiver for the rollback path.
         OrganizationImplementationHarness organization = _deployOrganizationHarness(bytes32(uint256(15_501)));
@@ -597,9 +597,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
 
     /// @dev Verifies guardian rotation and policy-governed account execution remain coherent after both the
     /// organization implementation and account implementation are upgraded.
-    function test_INT_ETE_6_guardianUpdateAndTransactionExecution_remainCoherentAcrossOrganizationAndAccountUpgrades()
-        public
-    {
+    function test_guardianUpdateAndTransactionExecution_remainCoherentAcrossOrganizationAndAccountUpgrades() public {
         // Setup: deploy an organization/account pair on v1 implementations, publish one policy root, and fund the
         // account before running the upgrade and guardian-rotation sequence.
         OrganizationImplementationHarness organization = _deployOrganizationHarness(bytes32(uint256(15_601)));
@@ -668,7 +666,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
 
     /// @dev Verifies guardian-recovery and tx-recovery flows remain coherent after upgrading both the organization
     /// implementation and the shared account implementation.
-    function test_INT_ETE_6_recoveryFlows_remainCoherentAcrossOrganizationAndAccountUpgrades() public {
+    function test_recoveryFlows_remainCoherentAcrossOrganizationAndAccountUpgrades() public {
         // Setup: deploy one organization/account pair on v1 implementations, then fund the account for the recovery
         // execution path that will run after both upgrades complete.
         OrganizationImplementationHarness organization = _deployOrganizationHarness(bytes32(uint256(15_610)));
@@ -720,8 +718,8 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
     }
 
     /// @dev Verifies the real tx-recovery disable flow immediately blocks both recovery account transactions and
-    /// recovery ERC-1271 signatures. [OREC-TRF-7]
-    function test_OREC_TRF_7_disableRecoveryImmediatelyBlocksTransactionsAndERC1271Signatures() public {
+    /// recovery ERC-1271 signatures.
+    function test_disableRecoveryImmediatelyBlocksTransactionsAndERC1271Signatures() public {
         // Setup: deploy one organization with a contract-based recovery signer, deploy and fund one account, then
         // enable tx/ERC-1271 recovery through the real timelocked flow.
         MockERC1271ValidSigner recoverySigner = new MockERC1271ValidSigner();
@@ -777,7 +775,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
     /// @param accountSalt CREATE2 salt used for account deployment.
     /// @param amountRaw Fuzzed amount seed used for token-transfer usage.
     /// @param useTokenTransfer Whether to exercise the token-transfer or contract-interaction execution path.
-    function testFuzz_FCF_RATE_163_getPolicyUsage_matchesExecutionPathUsage(
+    function testFuzz_getPolicyUsage_matchesExecutionPathUsage(
         bytes32 organizationSalt,
         bytes32 accountSalt,
         uint96 amountRaw,
@@ -846,7 +844,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
     /// @param txSaltRaw Raw salt used to derive the shared execute/reject nonce.
     /// @param rejectFirst Whether the rejection path should consume the nonce before the execute replay attempt.
     /// @param recoveryBeforeReplay Whether to place the recovery execution before or after the nonce-consuming path.
-    function testFuzz_FCF_REPLAY_165_executeRejectAndRecoveryOrderingNeverReopensConsumedNonce(
+    function testFuzz_executeRejectAndRecoveryOrderingNeverReopensConsumedNonce(
         bytes32 organizationSalt,
         bytes32 accountSalt,
         uint256 txSaltRaw,
@@ -957,10 +955,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
     /// @dev Verifies organization and account CREATE2 precomputes match their runtime deployments for fuzzed salts.
     /// @param organizationSalt CREATE2 salt used for organization deployment.
     /// @param accountSalt CREATE2 salt used for account deployment.
-    function testFuzz_FCF_DEPLOY_166_factoryAndAccountPrecomputesMatchRuntime(
-        bytes32 organizationSalt,
-        bytes32 accountSalt
-    ) public {
+    function testFuzz_factoryAndAccountPrecomputesMatchRuntime(bytes32 organizationSalt, bytes32 accountSalt) public {
         // Setup: precompute both deployment addresses before executing the real factory and account-factory paths.
         address expectedOrganization =
             factory.computeOrganizationAddress(organizationSalt, address(lifecycleImplementation), address(whitelist));
@@ -984,7 +979,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
     /// @param newGuardian Pending guardian used for the normal guardian-update flow.
     /// @param guardianRecoveryAddress Recovery address proposed through deferred guardian-recovery initialization.
     /// @param txRecoveryAddress Recovery address proposed through deferred tx-recovery initialization.
-    function testFuzz_FCF_TIMELK_167_allPendingFinalizeTimestampsUseOrgWideAdminTimelock(
+    function testFuzz_allPendingFinalizeTimestampsUseOrgWideAdminTimelock(
         bytes32 organizationSalt,
         uint256 adminTimelockRaw,
         address newGuardian,

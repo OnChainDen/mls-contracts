@@ -11,8 +11,8 @@ import {
  * @dev Unit tests for guardian enforcement helpers in `LibOrganizationGuardian`.
  */
 contract LibOrganizationGuardianEnforcementTest is LibOrganizationGuardianSuiteBase {
-    /// @dev Verifies LOG-EOG-1: `enforceOnlyGuardian` passes when caller equals guardian.
-    function test_LOG_EOG_1_callerIsGuardian_doesNotRevert() public {
+    /// @dev Verifies `enforceOnlyGuardian` passes when caller equals guardian.
+    function test_callerIsGuardian_doesNotRevert() public {
         // Setup
         guardianStateHarness.setGuardian(NEW_GUARDIAN_A);
 
@@ -24,8 +24,8 @@ contract LibOrganizationGuardianEnforcementTest is LibOrganizationGuardianSuiteB
         assertEq(harness.getGuardianViaLibrary(), NEW_GUARDIAN_A, "guardian should remain unchanged");
     }
 
-    /// @dev Verifies LOG-EOG-2: `enforceOnlyGuardian` reverts for non-guardian caller.
-    function test_LOG_EOG_2_callerNotGuardian_revertsUnauthorizedGuardian() public {
+    /// @dev Verifies `enforceOnlyGuardian` reverts for non-guardian caller.
+    function test_callerNotGuardian_revertsUnauthorizedGuardian() public {
         // Setup
         guardianStateHarness.setGuardian(NEW_GUARDIAN_A);
 
@@ -40,8 +40,8 @@ contract LibOrganizationGuardianEnforcementTest is LibOrganizationGuardianSuiteB
         assertEq(harness.getGuardianViaLibrary(), NEW_GUARDIAN_A, "guardian should remain unchanged");
     }
 
-    /// @dev Verifies LOG-EOG-3: `UnauthorizedGuardian` error includes caller and expected guardian.
-    function test_LOG_EOG_3_errorIncludesCallerAndExpectedGuardian() public {
+    /// @dev Verifies `UnauthorizedGuardian` error includes caller and expected guardian.
+    function test_errorIncludesCallerAndExpectedGuardian() public {
         // Setup
         guardianStateHarness.setGuardian(NEW_GUARDIAN_A);
 
@@ -56,8 +56,8 @@ contract LibOrganizationGuardianEnforcementTest is LibOrganizationGuardianSuiteB
         assertEq(harness.getGuardianViaLibrary(), NEW_GUARDIAN_A, "guardian should remain unchanged");
     }
 
-    /// @dev Verifies LOG-EPG-1: `enforceOnlyPendingGuardian` passes when caller equals pending guardian.
-    function test_LOG_EPG_1_callerIsPendingGuardian_doesNotRevert() public {
+    /// @dev Verifies `enforceOnlyPendingGuardian` passes when caller equals pending guardian.
+    function test_callerIsPendingGuardian_doesNotRevert() public {
         // Setup
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
 
@@ -69,8 +69,8 @@ contract LibOrganizationGuardianEnforcementTest is LibOrganizationGuardianSuiteB
         assertEq(harness.getPendingGuardianViaLibrary(), NEW_GUARDIAN_A, "pending guardian should remain unchanged");
     }
 
-    /// @dev Verifies LOG-EPG-2: `enforceOnlyPendingGuardian` reverts for non-pending-guardian caller.
-    function test_LOG_EPG_2_callerNotPendingGuardian_revertsUnauthorizedGuardianAcceptance() public {
+    /// @dev Verifies `enforceOnlyPendingGuardian` reverts for non-pending-guardian caller.
+    function test_callerNotPendingGuardian_revertsUnauthorizedGuardianAcceptance() public {
         // Setup
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
 
@@ -87,8 +87,8 @@ contract LibOrganizationGuardianEnforcementTest is LibOrganizationGuardianSuiteB
         assertEq(harness.getPendingGuardianViaLibrary(), NEW_GUARDIAN_A, "pending guardian should remain unchanged");
     }
 
-    /// @dev Verifies LOG-EPG-3: no pending update causes all callers to revert.
-    function test_LOG_EPG_3_noPendingGuardian_anyCallerReverts() public {
+    /// @dev Verifies no pending update causes all callers to revert.
+    function test_noPendingGuardian_anyCallerReverts() public {
         // Setup
         guardianStateHarness.setPendingGuardian(address(0));
 
@@ -105,8 +105,8 @@ contract LibOrganizationGuardianEnforcementTest is LibOrganizationGuardianSuiteB
         assertEq(harness.getPendingGuardianViaLibrary(), address(0), "pending guardian should remain unset");
     }
 
-    /// @dev Verifies LOG-EPG-4: `UnauthorizedGuardianAcceptance` includes caller and expected pending guardian.
-    function test_LOG_EPG_4_errorIncludesCallerAndExpectedPendingGuardian() public {
+    /// @dev Verifies `UnauthorizedGuardianAcceptance` includes caller and expected pending guardian.
+    function test_errorIncludesCallerAndExpectedPendingGuardian() public {
         // Setup
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
 

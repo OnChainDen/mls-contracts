@@ -16,8 +16,8 @@ import {OperationType} from "types/CommonTypes.sol";
  * @dev Unit tests for `OrganizationGuardianBase.finalizeGuardianUpdate`.
  */
 contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuardianBaseSuiteBase {
-    /// @dev Verifies OGB-FGU-1: non-guardian caller reverts via `onlyGuardian`.
-    function test_OGB_FGU_1_GUARD_INV_6_B_nonGuardianCaller_revertsOnlyGuardian() public {
+    /// @dev Verifies non-guardian caller reverts via `onlyGuardian`.
+    function test_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
@@ -39,8 +39,8 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         assertFalse(harness.isGuardianUpdateReadyForAcceptance(), "ready flag must remain unchanged");
     }
 
-    /// @dev Verifies OGB-FGU-2: insufficient admin signatures revert.
-    function test_OGB_FGU_2_insufficientAdminSignatures_reverts() public {
+    /// @dev Verifies insufficient admin signatures revert.
+    function test_insufficientAdminSignatures_reverts() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
@@ -62,8 +62,8 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         assertFalse(harness.isGuardianUpdateReadyForAcceptance(), "ready flag must remain false");
     }
 
-    /// @dev Verifies OGB-FGU-3: replaying the same nonce reverts after successful execution.
-    function test_OGB_FGU_3__NMGUB_GUF_3_replaySameNonce_revertsNonceAlreadyUsed() public {
+    /// @dev Verifies replaying the same nonce reverts after successful execution.
+    function test_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2901);
@@ -88,8 +88,8 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         harness.finalizeGuardianUpdate(auth);
     }
 
-    /// @dev Verifies OGB-FGU-4: the approval path succeeds with `OperationType.FinalizeUpdateGuardian`.
-    function test_OGB_FGU_4_operationTypeFinalizeUpdateGuardian_authorizesExecution() public {
+    /// @dev Verifies the approval path succeeds with `OperationType.FinalizeUpdateGuardian`.
+    function test_operationTypeFinalizeUpdateGuardian_authorizesExecution() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2902);
@@ -113,8 +113,8 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         assertFalse(harness.getUsedNonce(initiateNonce), "initiate nonce should remain unused");
     }
 
-    /// @dev Verifies OGB-FGU-5: operation data encodes current pending guardian.
-    function test_OGB_FGU_5_operationDataEncodesPendingGuardian_bindingHolds() public {
+    /// @dev Verifies operation data encodes current pending guardian.
+    function test_operationDataEncodesPendingGuardian_bindingHolds() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2903);
@@ -139,8 +139,8 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         assertFalse(harness.getUsedNonce(nonceB), "different pending guardian payload nonce should remain unused");
     }
 
-    /// @dev Verifies OGB-FGU-6: successful base call delegates to library and marks update ready for acceptance.
-    function test_OGB_FGU_6_delegatesToLibrary_andMarksReadyForAcceptance() public {
+    /// @dev Verifies successful base call delegates to library and marks update ready for acceptance.
+    function test_delegatesToLibrary_andMarksReadyForAcceptance() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2904);
@@ -163,8 +163,8 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         assertEq(harness.guardian(), GUARDIAN, "guardian should not change during finalize");
     }
 
-    /// @dev Verifies OGB-FGU-7: rejection signatures cannot execute finalization.
-    function test_OGB_FGU_7_rejectionSignatures_cannotExecuteFinalization() public {
+    /// @dev Verifies rejection signatures cannot execute finalization.
+    function test_rejectionSignatures_cannotExecuteFinalization() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2905);
@@ -188,10 +188,8 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
     }
 
     /// @dev Verifies `OrganizationGuardianBase.finalizeGuardianUpdate` rejects initiate-stage signatures reused
-    /// during finalize-stage authorization. [OGU-GU-2]
-    function test_OGB_FGU_8__NMGUB_GUF_7__OGU_GU_2_differentOperationTypeSignatures_cannotAuthorizeFinalization()
-        public
-    {
+    /// during finalize-stage authorization.
+    function test_differentOperationTypeSignatures_cannotAuthorizeFinalization() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2906);
@@ -219,8 +217,8 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         assertFalse(harness.getUsedNonce(wrongAuthNonce), "wrong auth nonce should remain unused");
     }
 
-    /// @dev Verifies OGB-FGU-9: finalize signatures for pending guardian A fail after pending guardian changes to B.
-    function test_OGB_FGU_9__NMGUB_GUF_8_signedOperationDataBinding_rejectsChangedPendingGuardian() public {
+    /// @dev Verifies finalize signatures for pending guardian A fail after pending guardian changes to B.
+    function test_signedOperationDataBinding_rejectsChangedPendingGuardian() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2907);
@@ -250,8 +248,8 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
     }
 
     /// @dev Verifies `OrganizationGuardianBase.finalizeGuardianUpdate` reverts before the admin timelock expires and
-    /// succeeds at the exact boundary without requiring new signatures. [OGU-GU-3]
-    function test_OGB_FGU_10__NMGUB_GUF_10__OGU_GU_3_timelockRevert_rollsBackNonceAndAllowsRetry_A() public {
+    /// succeeds at the exact boundary without requiring new signatures.
+    function test_timelockRevert_rollsBackNonceAndAllowsRetry_A() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2908);
@@ -282,8 +280,8 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         assertTrue(harness.getUsedNonce(nonce), "same signed finalize request should succeed after timelock expiry");
     }
 
-    /// @dev Verifies OGB-FGU-10: `NoPendingGuardianUpdate` revert rolls back nonce usage.
-    function test_OGB_FGU_10__NMGUB_GUF_10_noPendingRevert_rollsBackNonce_B() public {
+    /// @dev Verifies `NoPendingGuardianUpdate` revert rolls back nonce usage.
+    function test_noPendingRevert_rollsBackNonce_B() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationData) = _buildFinalizeGuardianUpdateAuth({
@@ -306,7 +304,7 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
 
     /// @dev Verifies `OrganizationGuardianBase.finalizeGuardianUpdate` can finalize the same pending guardian twice
     /// with different salts before accept/cancel.
-    function test_NMGUB_GUF_4_finalizeGuardianUpdate_samePendingGuardianDifferentSalts_canFinalizeTwice() public {
+    function test_finalizeGuardianUpdate_samePendingGuardianDifferentSalts_canFinalizeTwice() public {
         // Setup: create one pending guardian update, wait through timelock, and build two finalize auth payloads with
         // distinct salts for the same pending guardian.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});

@@ -161,7 +161,7 @@ abstract contract InitializationSuiteBase is Test, ArrayBuilders {
         );
         assertEq(organization.implementation(), params.accountImplementation, "account implementation mismatch");
 
-        // Verify transaction recovery configuration and downstream defaults (CFI-FLOW-6).
+        // Verify transaction recovery configuration and downstream defaults.
         TxRecoveryState memory txRecovery = organization.getTxRecoveryState();
         if (params.transactionAndERC1271RecoveryAddress == address(0)) {
             assertEq(txRecovery.recoveryAddress, address(0), "tx recovery should stay unset when omitted");
@@ -192,7 +192,7 @@ abstract contract InitializationSuiteBase is Test, ArrayBuilders {
             txRecovery.pendingInit.pendingTimestamp, 0, "tx recovery pending init timestamp must be zero after init"
         );
 
-        // Verify guardian recovery configuration and downstream defaults (CFI-FLOW-6).
+        // Verify guardian recovery configuration and downstream defaults.
         GuardianRecoveryState memory guardianRecovery = organization.getGuardianRecoveryState();
         if (params.guardianRecoveryAddress == address(0)) {
             assertEq(guardianRecovery.recoveryAddress, address(0), "guardian recovery should stay unset when omitted");

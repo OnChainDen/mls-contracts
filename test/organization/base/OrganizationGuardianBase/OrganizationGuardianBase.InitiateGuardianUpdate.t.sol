@@ -15,8 +15,8 @@ import {OperationType} from "types/CommonTypes.sol";
  * @dev Unit tests for `OrganizationGuardianBase.initiateGuardianUpdate`.
  */
 contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuardianBaseSuiteBase {
-    /// @dev Verifies OGB-IGU-1: non-guardian caller reverts via `onlyGuardian`.
-    function test_OGB_IGU_1_GUARD_INV_6_A_nonGuardianCaller_revertsOnlyGuardian() public {
+    /// @dev Verifies non-guardian caller reverts via `onlyGuardian`.
+    function test_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth,) = _buildInitiateGuardianUpdateAuth({
@@ -36,8 +36,8 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
         assertEq(harness.pendingGuardian(), address(0), "pending guardian must remain unchanged");
     }
 
-    /// @dev Verifies OGB-IGU-2: insufficient admin signatures revert.
-    function test_OGB_IGU_2_insufficientAdminSignatures_reverts() public {
+    /// @dev Verifies insufficient admin signatures revert.
+    function test_insufficientAdminSignatures_reverts() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
         (AdminAuthParams memory auth,) = _buildInitiateGuardianUpdateAuth({
@@ -57,8 +57,8 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
         assertEq(harness.pendingGuardian(), address(0), "pending guardian must remain unchanged");
     }
 
-    /// @dev Verifies OGB-IGU-3: replaying the same nonce reverts after successful execution.
-    function test_OGB_IGU_3__NMGUB_GUF_1_replaySameNonce_revertsNonceAlreadyUsed() public {
+    /// @dev Verifies replaying the same nonce reverts after successful execution.
+    function test_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationData) = _buildInitiateGuardianUpdateAuth({
@@ -81,8 +81,8 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
         harness.initiateGuardianUpdate(NEW_GUARDIAN_A, auth);
     }
 
-    /// @dev Verifies OGB-IGU-4: the approval path succeeds with `OperationType.InitiateUpdateGuardian`.
-    function test_OGB_IGU_4_operationTypeInitiateUpdateGuardian_authorizesExecution() public {
+    /// @dev Verifies the approval path succeeds with `OperationType.InitiateUpdateGuardian`.
+    function test_operationTypeInitiateUpdateGuardian_authorizesExecution() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationData) = _buildInitiateGuardianUpdateAuth({
@@ -104,8 +104,8 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
         assertFalse(harness.getUsedNonce(finalizeNonce), "finalize nonce should remain unused");
     }
 
-    /// @dev Verifies OGB-IGU-5: operation data binding includes `newGuardian`.
-    function test_OGB_IGU_5_operationDataEncodesNewGuardian_bindingHolds() public {
+    /// @dev Verifies operation data binding includes `newGuardian`.
+    function test_operationDataEncodesNewGuardian_bindingHolds() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationDataA) = _buildInitiateGuardianUpdateAuth({
@@ -128,8 +128,8 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
         assertFalse(harness.getUsedNonce(nonceB), "different newGuardian payload nonce should remain unused");
     }
 
-    /// @dev Verifies OGB-IGU-6: successful base call delegates to library and writes pending state.
-    function test_OGB_IGU_6_delegatesToLibrary_andWritesPendingState() public {
+    /// @dev Verifies successful base call delegates to library and writes pending state.
+    function test_delegatesToLibrary_andWritesPendingState() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth,) = _buildInitiateGuardianUpdateAuth({
@@ -155,8 +155,8 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
         assertFalse(harness.isGuardianUpdateReadyForAcceptance(), "ready-for-acceptance should be false after initiate");
     }
 
-    /// @dev Verifies OGB-IGU-7: rejection signatures cannot execute initiation.
-    function test_OGB_IGU_7_rejectionSignatures_cannotExecuteInitiation() public {
+    /// @dev Verifies rejection signatures cannot execute initiation.
+    function test_rejectionSignatures_cannotExecuteInitiation() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory rejectionAuth, bytes memory operationData) = _buildInitiateGuardianUpdateAuth({
@@ -178,8 +178,8 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
     }
 
     /// @dev Verifies `OrganizationGuardianBase.initiateGuardianUpdate` rejects finalize-stage signatures reused
-    /// during initiate-stage authorization. [OGU-GU-2]
-    function test_OGB_IGU_8__NMGUB_GUF_7__OGU_GU_2_differentOperationTypeSignatures_cannotAuthorizeInitiation() public {
+    /// during initiate-stage authorization.
+    function test_differentOperationTypeSignatures_cannotAuthorizeInitiation() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         bytes memory operationData = abi.encode(NEW_GUARDIAN_A);
@@ -205,8 +205,8 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
         assertFalse(harness.getUsedNonce(finalizeNonce), "finalize nonce should remain unused");
     }
 
-    /// @dev Verifies OGB-IGU-9: signatures bound to `newGuardian=A` cannot execute with `newGuardian=B`.
-    function test_OGB_IGU_9_signedOperationDataBinding_rejectsMutatedNewGuardian() public {
+    /// @dev Verifies signatures bound to `newGuardian=A` cannot execute with `newGuardian=B`.
+    function test_signedOperationDataBinding_rejectsMutatedNewGuardian() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory signedOperationData) = _buildInitiateGuardianUpdateAuth({
@@ -231,8 +231,8 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
     }
 
     /// @dev Verifies `OrganizationGuardianBase.initiateGuardianUpdate` rejects a second pending guardian update until
-    /// the first lifecycle is cleared, without burning the signed nonce. [OGU-GU-5]
-    function test_OGB_IGU_10__NMGUB_GUF_9__OGU_GU_5_downstreamPendingRevert_rollsBackNonceAndAllowsRetry_A() public {
+    /// the first lifecycle is cleared, without burning the signed nonce.
+    function test_downstreamPendingRevert_rollsBackNonceAndAllowsRetry_A() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_B);
@@ -266,8 +266,8 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
         assertEq(harness.pendingGuardian(), NEW_GUARDIAN_A, "pending guardian should be updated on retry");
     }
 
-    /// @dev Verifies OGB-IGU-10: downstream `InvalidGuardianAddress` revert rolls back nonce usage.
-    function test_OGB_IGU_10__NMGUB_GUF_9_downstreamInvalidGuardianRevert_rollsBackNonce_B() public {
+    /// @dev Verifies downstream `InvalidGuardianAddress` revert rolls back nonce usage.
+    function test_downstreamInvalidGuardianRevert_rollsBackNonce_B() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationData) = _buildInitiateGuardianUpdateAuth({
@@ -290,7 +290,7 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
 
     /// @dev Verifies `OrganizationGuardianBase.initiateGuardianUpdate` reuses the same guardian value with a new salt
     /// after cancellation.
-    function test_NMGUB_GUF_2_initiateGuardianUpdate_sameGuardianDifferentSalts_canSucceedAcrossReinitiation() public {
+    function test_initiateGuardianUpdate_sameGuardianDifferentSalts_canSucceedAcrossReinitiation() public {
         // Setup: configure one-admin auth plus two initiate salts for the same guardian, with an intermediate cancel.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory firstInitiateAuth, bytes memory operationData) = _buildInitiateGuardianUpdateAuth({

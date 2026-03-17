@@ -21,7 +21,7 @@ import {ApproverType} from "types/PolicyTypes.sol";
  */
 contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganizationAccountTransactionTestBase {
     /// @dev Verifies non-time-interval rate-limit type is treated as no-op.
-    function test_LOAT_VAURLOR_1_validateAndUpdateRateLimit_nonTimeIntervalType_noOp() public {
+    function test_validateAndUpdateRateLimit_nonTimeIntervalType_noOp() public {
         // Setup: policy disables rate limiting and pre-seed usage.
         Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
         policy.config.rateLimit.limitType = RateLimitType.None;
@@ -43,9 +43,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies token-transfer rate usage uses extracted transfer amount and recipient destination.
-    function test_LOAT_VAURLOR_2__LOAT_VAURLOR_4__LOAT_VAURLOR_6__LOAT_VAURLOR_12__OAT_PH_1__LOAT_AHELP_1__LOAT_AHELP_3_validateAndUpdateRateLimit_tokenTransfer_usesTransferAmountAndRecipientDestination()
-        public
-    {
+    function test_validateAndUpdateRateLimit_tokenTransfer_usesTransferAmountAndRecipientDestination() public {
         // Setup: token-transfer policy with enabled rate-limit and scoped usage key.
         Policy memory policy = _buildApprovalPolicy(TransactionType.TokenTransfers, PolicyType.AutoApprove);
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
@@ -70,9 +68,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies contract-interaction usage is count-based (`usageAmount = 1`).
-    function test_LOAT_VAURLOR_3__LOAT_VAURLOR_7__LOAT_VAURLOR_9__LOAT_AHELP_2_validateAndUpdateRateLimit_nonTokenTransfer_usesCountBasedUsage()
-        public
-    {
+    function test_validateAndUpdateRateLimit_nonTokenTransfer_usesCountBasedUsage() public {
         // Setup: contract-interaction policy with enabled rate-limit.
         Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
@@ -95,9 +91,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies native transfer usage amount is derived from `value` when calldata is empty.
-    function test_LOAT_VAURLOR_5__LOAT_VAURLOR_11_validateAndUpdateRateLimit_nativeTransfer_usesValueAsUsageAmount()
-        public
-    {
+    function test_validateAndUpdateRateLimit_nativeTransfer_usesValueAsUsageAmount() public {
         // Setup: token-transfer policy with enabled rate-limit.
         Policy memory policy = _buildApprovalPolicy(TransactionType.TokenTransfers, PolicyType.AutoApprove);
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
@@ -120,7 +114,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies rate-limit exceedance reverts `RateLimitExceeded`.
-    function test_LOAT_VAURLOR_8__LOAT_AHELP_4_validateAndUpdateRateLimit_exceeded_revertsRateLimitExceeded() public {
+    function test_validateAndUpdateRateLimit_exceeded_revertsRateLimitExceeded() public {
         // Setup: low interval limit and oversized token transfer amount.
         Policy memory policy = _buildApprovalPolicy(TransactionType.TokenTransfers, PolicyType.AutoApprove);
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
@@ -139,7 +133,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies time-window rollover allows usage again after interval boundary.
-    function test_LOAT_VAURLOR_10_validateAndUpdateRateLimit_nextWindow_allowsUsageAgain() public {
+    function test_validateAndUpdateRateLimit_nextWindow_allowsUsageAgain() public {
         // Setup: initialize a one-hour interval policy with per-entity scopes.
         Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
@@ -173,7 +167,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies `TransactionType.Any` uses count-based usage even for token transfer shapes.
-    function test_LOAT_VAURLOR_13_validateAndUpdateRateLimit_transactionTypeAny_usesCountBasedUsage() public {
+    function test_validateAndUpdateRateLimit_transactionTypeAny_usesCountBasedUsage() public {
         // Setup: any-type policy with rate-limit enabled.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
@@ -196,9 +190,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies auto-approve rejection requires non-empty review signature.
-    function test_LOAT_VAAROR_2__LOAT_AHELP_5_validateAutoApproveRejection_emptyReviewSignature_revertsTransactionRejectionNotAllowed()
-        public
-    {
+    function test_validateAutoApproveRejection_emptyReviewSignature_revertsTransactionRejectionNotAllowed() public {
         // Setup: valid auto-approve rejection context with empty review signatures.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -220,9 +212,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies auto-approve rejection succeeds for authorized initiator signatures.
-    function test_LOACT_VAAROR_1__LOAT_VAAROR_1__LOAT_VAAROR_3__LOAT_VAAROR_5__OAT_PH_1__LOAT_AVTROR_2_validateAutoApproveRejection_authorizedInitiatorSigner_succeeds()
-        public
-    {
+    function test_validateAutoApproveRejection_authorizedInitiatorSigner_succeeds() public {
         // Setup: auto-approve policy and rejection signature from authorized initiator.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -239,7 +229,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies auto-approve rejection also accepts a different authorized initiator.
-    function test_LOAT_VAAROR_6_validateAutoApproveRejection_differentAuthorizedInitiator_succeeds() public {
+    function test_validateAutoApproveRejection_differentAuthorizedInitiator_succeeds() public {
         // Setup: allow initiator group with two members and sign rejection by second initiator.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         policy.config.initiator.initiatorType = ApproverType.Group;
@@ -261,9 +251,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies manual-confirmation helper uses policy threshold and rejects below-threshold approvals.
-    function test_LOACT_VMCOR_1__LOAT_VMCOR_1__LOAT_VMCOR_5__LOAT_VMCOR_6__LOAT_AVTAOR_9_validateManualConfirmation_belowThreshold_revertsInsufficientApprovals()
-        public
-    {
+    function test_validateManualConfirmation_belowThreshold_revertsInsufficientApprovals() public {
         // Setup: group approver threshold=2 with one valid review signature.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
         policy.config.approval.approverType = ApproverType.Group;
@@ -302,7 +290,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies manual-confirmation succeeds with sufficient approvals.
-    function test_LOAT_VMCOR_7__OAT_PH_1_validateManualConfirmation_sufficientApprovals_succeeds() public {
+    function test_validateManualConfirmation_sufficientApprovals_succeeds() public {
         // Setup: group approver threshold=2 with two valid review signatures.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
         policy.config.approval.approverType = ApproverType.Group;
@@ -364,9 +352,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies review-hash binding changes when initiator signature bytes change.
-    function test_LOACT_VMCOR_2__LOAT_VMCOR_2__LOAT_VMCOR_8__LOAT_AHELP_6__LOAT_AVTAOR_7_validateManualConfirmation_reviewHashBindsInitiatorSignature()
-        public
-    {
+    function test_validateManualConfirmation_reviewHashBindsInitiatorSignature() public {
         // Setup: derive two initiator signatures for the same transaction hash from different keys.
         bytes memory data = abi.encodeWithSelector(bytes4(0x49494949), uint256(9));
         uint256 expiration = block.timestamp + 1 days;
@@ -390,7 +376,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies duplicate/out-of-order reviewers fail closed by reverting `InsufficientApprovals`.
-    function test_LOAT_VMCOR_9_validateManualConfirmation_duplicateOrOutOfOrderReviewers_failClosedWithInsufficientApprovals()
+    function test_validateManualConfirmation_duplicateOrOutOfOrderReviewers_failClosedWithInsufficientApprovals()
         public
     {
         // Setup: threshold-two group policy with duplicate reviewer signatures.
@@ -432,9 +418,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies unauthorized reviewer fails closed by reverting `InsufficientApprovals`.
-    function test_LOAT_VMCOR_10_validateManualConfirmation_unauthorizedReviewer_failClosedWithInsufficientApprovals()
-        public
-    {
+    function test_validateManualConfirmation_unauthorizedReviewer_failClosedWithInsufficientApprovals() public {
         // Setup: member-approver policy where reviewer2 is unauthorized signer.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
         policy.config.approval.approverType = ApproverType.Member;
@@ -479,9 +463,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies non-existent approver group fails closed by reverting `InsufficientApprovals`.
-    function test_LOAT_VMCOR_11_validateManualConfirmation_nonExistentApproverGroup_failClosedWithInsufficientApprovals()
-        public
-    {
+    function test_validateManualConfirmation_nonExistentApproverGroup_failClosedWithInsufficientApprovals() public {
         // Setup: group-approver policy references a missing group ID.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
         policy.config.approval.approverType = ApproverType.Group;

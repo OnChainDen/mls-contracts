@@ -15,7 +15,7 @@ import {AdminAuthParams} from "types/AdminTypes.sol";
  */
 contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBaseSuiteBase {
     /// @dev Verifies `computeAccountAddress` returns the same value as direct library-wrapper computation.
-    function test_OAFB_CAA_1__OAF_CAA_1_computeAccountAddress_delegatesToLibraryAndReturnsSameResult() public view {
+    function test_computeAccountAddress_delegatesToLibraryAndReturnsSameResult() public view {
         bytes32 create2Salt = bytes32(uint256(7017));
 
         // Setup: choose deterministic CREATE2 salt for both view paths.
@@ -28,7 +28,7 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
     }
 
     /// @dev Verifies `computeAccountAddress` is callable by arbitrary non-guardian callers.
-    function test_OAFB_CAA_2_computeAccountAddress_callableByAnyone() public {
+    function test_computeAccountAddress_callableByAnyone() public {
         bytes32 create2Salt = bytes32(uint256(7018));
 
         // Setup: choose deterministic CREATE2 salt and non-guardian caller fixture.
@@ -41,7 +41,7 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
     }
 
     /// @dev Verifies compute output remains stable across account implementation upgrades.
-    function test_OAFB_CAA_3_computeAccountAddress_sameSalt_stableAcrossImplementationUpgrades() public {
+    function test_computeAccountAddress_sameSalt_stableAcrossImplementationUpgrades() public {
         bytes32 create2Salt = bytes32(uint256(7066));
 
         // Setup: configure one-admin auth and whitelist both implementation versions.
@@ -81,8 +81,8 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         assertEq(beforeUpgrade, afterUpgrade, "computed account address should not change across upgrades");
     }
 
-    /// @dev Verifies OAFB-IMP-1: `implementation()` returns the current account implementation from storage.
-    function test_OAFB_IMP_1_implementation_returnsCurrentImplementationAddressFromStorage() public {
+    /// @dev Verifies `implementation()` returns the current account implementation from storage.
+    function test_implementation_returnsCurrentImplementationAddressFromStorage() public {
         // Setup: seed account implementation storage directly.
         harness.setAccountImplementationStorage(accountImplementationV1);
 
@@ -93,8 +93,8 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         assertEq(implementationAddress, accountImplementationV1, "implementation view should mirror storage");
     }
 
-    /// @dev Verifies OAFB-IMP-2: `implementation()` reverts `AccountImplementationNotSet` when unset.
-    function test_OAFB_IMP_2__OAF_SAI_4_implementation_whenUnset_revertsAccountImplementationNotSet() public {
+    /// @dev Verifies `implementation()` reverts `AccountImplementationNotSet` when unset.
+    function test_implementation_whenUnset_revertsAccountImplementationNotSet() public {
         // Setup: leave account implementation storage as zero.
 
         // Verify: unset implementation should revert with canonical organization error.
@@ -103,8 +103,8 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         harness.implementation();
     }
 
-    /// @dev Verifies OAFB-IMP-1: `implementation()` returns updated address after set-account-implementation call.
-    function test_OAFB_IMP_1_implementation_afterSetAccountImplementation_returnsUpdatedAddress() public {
+    /// @dev Verifies `implementation()` returns updated address after set-account-implementation call.
+    function test_implementation_afterSetAccountImplementation_returnsUpdatedAddress() public {
         // Setup: configure one-admin auth and whitelist target implementation.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV2, true);
@@ -138,8 +138,8 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         assertEq(implementationAddress, accountImplementationV1, "implementation should be publicly readable");
     }
 
-    /// @dev Verifies OAFB-IMP-1: successive implementation updates are reflected by `implementation()` getter.
-    function test_OAFB_IMP_1_implementation_afterSuccessiveSetCalls_returnsLatest() public {
+    /// @dev Verifies successive implementation updates are reflected by `implementation()` getter.
+    function test_implementation_afterSuccessiveSetCalls_returnsLatest() public {
         // Setup: configure one-admin baseline and whitelist both implementation versions.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV1, true);

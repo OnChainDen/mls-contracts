@@ -33,7 +33,7 @@ contract LibOrganizationEIP712Invariants is LibOrganizationEIP712TestBase {
     }
 
     /// @dev Verifies fixed `(chainId, organization)` pairs always produce the same domain separator.
-    function invariant_E712_INV_1_domainSeparator_isDeterministicForFixedDomain() public view {
+    function invariant_domainSeparator_isDeterministicForFixedDomain() public view {
         // Setup: keep the current harness and chain id fixed.
 
         // Call: compute the same domain separator twice.
@@ -45,7 +45,7 @@ contract LibOrganizationEIP712Invariants is LibOrganizationEIP712TestBase {
     }
 
     /// @dev Verifies typed-data hashes always use the documented `\\x19\\x01 || domain || structHash` composition.
-    function invariant_E712_INV_2_typedDataHash_usesPrefixCompliantComposition() public view {
+    function invariant_typedDataHash_usesPrefixCompliantComposition() public view {
         // Setup: build the manual reference typed-data hash for one representative struct hash.
         bytes32 expected = _manualTypedDataHash(address(harness), block.chainid, STRUCT_HASH);
 
@@ -57,7 +57,7 @@ contract LibOrganizationEIP712Invariants is LibOrganizationEIP712TestBase {
     }
 
     /// @dev Verifies identical struct hashes stay isolated across different organization addresses and chain ids.
-    function invariant_E712_INV_3_crossDomainIsolation_changesTypedDataHash() public {
+    function invariant_crossDomainIsolation_changesTypedDataHash() public {
         // Setup: deploy a second harness and preserve the original chain id for cleanup.
         LibOrganizationEIP712Harness otherHarness = new LibOrganizationEIP712Harness();
         uint256 originalChainId = block.chainid;
@@ -75,7 +75,7 @@ contract LibOrganizationEIP712Invariants is LibOrganizationEIP712TestBase {
     }
 
     /// @dev Verifies system-defined EIP-712 message type hashes remain unique and non-interchangeable.
-    function invariant_E712_INV_4_systemTypehashes_remainUnique() public pure {
+    function invariant_systemTypehashes_remainUnique() public pure {
         // Setup: collect the six system-defined type hashes.
         bytes32[6] memory hashes = [
             LibOrganizationEIP712.EIP712_DOMAIN_TYPEHASH,

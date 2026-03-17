@@ -75,8 +75,8 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         );
     }
 
-    /// @dev Verifies all three system entrypoints reject unwhitelisted implementations. [IWC-INT-1]
-    function test_IWC_INT_1_unwhitelistedTargets_revertAcrossDeployOrganizationUpgradeAndAccountUpgrade() public {
+    /// @dev Verifies all three system entrypoints reject unwhitelisted implementations.
+    function test_unwhitelistedTargets_revertAcrossDeployOrganizationUpgradeAndAccountUpgrade() public {
         // Setup: deploy a baseline organization while leaving the candidate org/account upgrade targets unwhitelisted.
         InitializationParams memory params = _buildInitializationParams(address(baseAccountImplementation));
         OrganizationImplementationHarness organization = _deployOrganizationProxy({
@@ -143,10 +143,7 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
     }
 
     /// @dev Verifies Account and Organization whitelist namespaces stay isolated across all system entrypoints.
-    ///      [IWC-INT-2]
-    function test_UPG_CTRL_6__IWC_INT_2_accountAndOrganizationNamespaces_remainSeparatedAcrossDeployUpgradeAndAccountFlows()
-        public
-    {
+    function test_accountAndOrganizationNamespaces_remainSeparatedAcrossDeployUpgradeAndAccountFlows() public {
         // Setup: whitelist the organization candidate under Account only, and the account candidate under
         // Organization only, then deploy a baseline organization.
         _setWhitelistStatus(ContractType.Account, address(upgradeOrganizationImplementation), true);
@@ -206,8 +203,8 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
     }
 
     /// @dev Verifies unwhitelisting active implementations blocks future deployments and upgrades without mutating the
-    ///      already-active organization or account implementation pointers. [IWI-CTRL-5]
-    function test_IWI_CTRL_5_unwhitelistingActiveImplementations_blocksFutureDeploysAndPreservesPointers() public {
+    ///  already-active organization or account implementation pointers.
+    function test_unwhitelistingActiveImplementations_blocksFutureDeploysAndPreservesPointers() public {
         // Setup: deploy a baseline organization while both active implementations remain whitelisted.
         InitializationParams memory params = _buildInitializationParams(address(baseAccountImplementation));
         OrganizationImplementationHarness organization = _deployOrganizationProxy({
@@ -279,8 +276,8 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
     }
 
     /// @dev Verifies whitelist UUPS upgrades preserve state and enforcement in factory, org-upgrade, and
-    /// account-upgrade flows. [IWC-INT-5]
-    function test_IWC_INT_5_whitelistUpgrade_preservesFactoryOrgAndAccountEnforcement() public {
+    /// account-upgrade flows.
+    function test_whitelistUpgrade_preservesFactoryOrgAndAccountEnforcement() public {
         // Setup: whitelist alternate org/account implementations, then deploy a baseline organization before the
         // whitelist proxy upgrade.
         _setWhitelistStatus(ContractType.Organization, address(upgradeOrganizationImplementation), true);
@@ -391,8 +388,8 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
     }
 
     /// @dev Verifies whitelist ownership transfer immediately changes who can unlock factory, org-upgrade, and
-    ///      account-upgrade flows. [IWC-INT-6]
-    function test_UPG_CTRL_5__IWC_INT_6_whitelistOwnershipTransfer_changesSystemWideMutationAuthority() public {
+    ///  account-upgrade flows.
+    function test_whitelistOwnershipTransfer_changesSystemWideMutationAuthority() public {
         // Setup: deploy a baseline organization, then transfer whitelist ownership to a new owner while leaving the
         // candidate org/account targets unwhitelisted.
         InitializationParams memory params = _buildInitializationParams(address(baseAccountImplementation));

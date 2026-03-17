@@ -30,7 +30,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` recovery and normal pending flows remain isolated from one
     /// another.
-    function invariant_OGR_INV_1_GREC_INV_1_recoveryIsolation_pendingFlowsDoNotCrossMutate() public view {
+    function invariant_recoveryIsolation_pendingFlowsDoNotCrossMutate() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
 
         // Call: evaluate invariant predicate on current state.
@@ -45,7 +45,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
     }
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` guardian is always non-zero.
-    function invariant_OGR_INV_2_guardianAlwaysValid_nonZero() public view {
+    function invariant_guardianAlwaysValid_nonZero() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
 
         // Call: evaluate invariant predicate on current state.
@@ -57,7 +57,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` recovery guardian cannot change without timelock/finalize/accept
     /// preconditions.
-    function invariant_OGR_INV_3_GREC_INV_4_timelockEnforcement_noBypass() public view {
+    function invariant_timelockEnforcement_noBypass() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
 
         // Call: evaluate invariant predicate on current state.
@@ -70,7 +70,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` if no recovery pending guardian then pending timestamp=0 and
     /// ready=false.
-    function invariant_OGR_INV_4_stateConsistency_noPendingImpliesTimestampZeroAndReadyFalse() public view {
+    function invariant_stateConsistency_noPendingImpliesTimestampZeroAndReadyFalse() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
         GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
 
@@ -83,7 +83,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
     }
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` successful accept always clears recovery pending fields.
-    function invariant_OGR_INV_5_GREC_INV_5_acceptClearsAllRecoveryPendingFields() public view {
+    function invariant_acceptClearsAllRecoveryPendingFields() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
 
         // Call: evaluate invariant predicate on current state.
@@ -96,7 +96,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
     }
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` recovery config is immutable after first initialization.
-    function invariant_OGR_INV_6_GREC_INV_2_configImmutability_afterInitialization() public view {
+    function invariant_configImmutability_afterInitialization() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
 
         // Call: evaluate invariant predicate on current state.
@@ -110,7 +110,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` if deferred-init pending timestamp is zero then deferred-init
     /// tuple is fully cleared.
-    function invariant_OGR_INV_7_GREC_INV_3_deferredInitStateConsistency_zeroTimestampImpliesZeroTuple() public view {
+    function invariant_deferredInitStateConsistency_zeroTimestampImpliesZeroTuple() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
         GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
 
@@ -123,11 +123,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
     }
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` guardian-recovery operations never mutate tx-recovery state.
-    /// SAG-INV-2
-    function invariant_OGR_INV_8_GREC_INV_8__SAG_INV_2_txRecoveryIsolation_neverMutatedByGuardianRecoveryOps()
-        public
-        view
-    {
+    function invariant_txRecoveryIsolation_neverMutatedByGuardianRecoveryOps() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
 
         // Call: evaluate invariant predicate on current state.
@@ -137,7 +133,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
     }
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` accept path must not mutate recovery config fields.
-    function invariant_OGR_INV_9_acceptDoesNotMutateRecoveryConfigFields() public view {
+    function invariant_acceptDoesNotMutateRecoveryConfigFields() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
 
         // Call: evaluate invariant predicate on current state.
@@ -148,7 +144,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` ready=true implies pending guardian and pending timestamp are
     /// both set.
-    function invariant_OGR_INV_10_readyStateReverseCoherence_readyImpliesPendingTuple() public view {
+    function invariant_readyStateReverseCoherence_readyImpliesPendingTuple() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
         GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
 
@@ -162,7 +158,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` deferred-init pending timestamp implies non-zero address and
     /// in-range timelock.
-    function invariant_OGR_INV_11_deferredInitReverseCoherence_pendingTimestampImpliesValidTuple() public view {
+    function invariant_deferredInitReverseCoherence_pendingTimestampImpliesValidTuple() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
         GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
 
@@ -186,7 +182,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
     }
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` non-zero pending guardian implies non-zero pending timestamp.
-    function invariant_OGR_INV_12_pendingTimestampCoherence_pendingGuardianImpliesTimestamp() public view {
+    function invariant_pendingTimestampCoherence_pendingGuardianImpliesTimestamp() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
         GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
 
@@ -199,7 +195,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` config coherence (`recoveryAddress==0` iff `timelock==0`) and
     /// in-range timelock when configured.
-    function invariant_OGR_INV_13_configCoherence_addressAndTimelockConsistency() public view {
+    function invariant_configCoherence_addressAndTimelockConsistency() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
         GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
 
@@ -225,7 +221,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` guardian cannot change in recovery flow except through
     /// successful accept.
-    function invariant_OGR_INV_14_guardianMutationPoint_onlyRecoveryAcceptCanMutateGuardian() public view {
+    function invariant_guardianMutationPoint_onlyRecoveryAcceptCanMutateGuardian() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
 
         // Call: evaluate invariant predicate on current state.
@@ -239,7 +235,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` recovery-update and deferred-init operations do not cross-mutate
     /// each other's fields.
-    function invariant_OGR_INV_15_flowFieldIsolation_updateFlowVsDeferredInitFlowIsolation() public view {
+    function invariant_flowFieldIsolation_updateFlowVsDeferredInitFlowIsolation() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
 
         // Call: evaluate invariant predicate on current state.

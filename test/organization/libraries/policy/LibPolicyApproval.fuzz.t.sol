@@ -11,7 +11,7 @@ import {Policy} from "types/PolicyTypes.sol";
 contract LibPolicyApprovalFuzzTest is PolicyLibrariesFuzzTestBase {
     /// @dev Verifies `LibPolicyApproval.areApprovalsValid` accepts only sorted unique reviewer signatures.
     /// @param messageHash The message hash signed by the reviewers.
-    function testFuzz_FLPA_APPROVE_78_areApprovalsValid_requiresSortedUniqueReviewers(bytes32 messageHash) public {
+    function testFuzz_areApprovalsValid_requiresSortedUniqueReviewers(bytes32 messageHash) public {
         // Setup: configure a threshold-two approver group and prepare sorted, duplicate, and reversed signature sets.
         Policy memory policy = _groupApproverPolicy(7801, 2);
         _setActiveGroupWithMembers(7801, buildArray(reviewer1, reviewer2));
@@ -43,10 +43,9 @@ contract LibPolicyApprovalFuzzTest is PolicyLibrariesFuzzTestBase {
     /// configured member/group match.
     /// @param rawGroupId The group identifier used for the group-based authorization branch.
     /// @param outsider An address kept outside the organization for the negative branch.
-    function testFuzz_FLPA_SAUTH_80_isSignerAuthorized_requiresMembershipAndConfiguredMatch(
-        uint256 rawGroupId,
-        address outsider
-    ) public {
+    function testFuzz_isSignerAuthorized_requiresMembershipAndConfiguredMatch(uint256 rawGroupId, address outsider)
+        public
+    {
         vm.assume(outsider != reviewer1);
         vm.assume(outsider != reviewer2);
 

@@ -128,7 +128,7 @@ contract MerkleUtilsTest is Test {
     }
 
     /// @dev Test case: Modifying any single byte of a valid merkle proof should always cause verification to fail.
-    function testFuzz_FMU_MERK_11_computeAddressLeaf_modifiedProofByteAlwaysInvalidatesVerification(
+    function testFuzz_computeAddressLeaf_modifiedProofByteAlwaysInvalidatesVerification(
         uint8 rawTreeSize,
         uint8 leafIndex,
         uint8 proofByteIndex

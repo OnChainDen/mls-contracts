@@ -15,7 +15,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     LibOrganizationAccountSignatureTestBase
 {
     /// @dev Verifies that invalid policy proofs return false.
-    function test_LOAS_IESABP_1_isERC1271SignatureAllowedByPolicy_invalidPolicyProof_returnsFalse() public {
+    function test_isERC1271SignatureAllowedByPolicy_invalidPolicyProof_returnsFalse() public {
         // Setup: build a valid fixture and then tamper policy proof bytes.
         (Policy memory policy, ValidationProofs memory proofs) = _buildAllowedFixture();
         policy;
@@ -31,7 +31,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that `TokenTransfers` policies are not valid for ERC-1271 signatures.
-    function test_LOAS_IESABP_2_isERC1271SignatureAllowedByPolicy_tokenTransfersPolicy_returnsFalse() public {
+    function test_isERC1271SignatureAllowedByPolicy_tokenTransfersPolicy_returnsFalse() public {
         // Setup: build policy fixture with non-signature transaction type.
         (Policy memory policy,) = _buildAllowedFixture();
         policy.config.transactionType = TransactionType.TokenTransfers;
@@ -46,7 +46,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that `ContractInteractions` policies are not valid for ERC-1271 signatures.
-    function test_LOAS_IESABP_3_isERC1271SignatureAllowedByPolicy_contractInteractionsPolicy_returnsFalse() public {
+    function test_isERC1271SignatureAllowedByPolicy_contractInteractionsPolicy_returnsFalse() public {
         // Setup: build policy fixture with non-signature transaction type.
         (Policy memory policy,) = _buildAllowedFixture();
         policy.config.transactionType = TransactionType.ContractInteractions;
@@ -61,7 +61,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that `Any` transaction type is rejected for ERC-1271 signatures.
-    function test_LOAS_IESABP_4_isERC1271SignatureAllowedByPolicy_anyTransactionType_returnsFalse() public {
+    function test_isERC1271SignatureAllowedByPolicy_anyTransactionType_returnsFalse() public {
         // Setup: build policy fixture with `TransactionType.Any`.
         (Policy memory policy,) = _buildAllowedFixture();
         policy.config.transactionType = TransactionType.Any;
@@ -76,7 +76,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that source-account mismatches return false when source filtering is enabled.
-    function test_LOAS_IESABP_5_isERC1271SignatureAllowedByPolicy_sourceAccountMismatch_returnsFalse() public {
+    function test_isERC1271SignatureAllowedByPolicy_sourceAccountMismatch_returnsFalse() public {
         // Setup: build source-account constrained policy allowing only `OTHER_ACCOUNT`.
         (Policy memory policy,) = _buildAllowedFixture();
         policy.config.anySourceAccount = false;
@@ -93,9 +93,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that `anySourceAccount=true` bypasses source-account proof checks.
-    function test_LOAS_IESABP_6__OAS_IESABP_4_isERC1271SignatureAllowedByPolicy_anySourceAccountBypassesSourceProof_returnsTrue()
-        public
-    {
+    function test_isERC1271SignatureAllowedByPolicy_anySourceAccountBypassesSourceProof_returnsTrue() public {
         // Setup: build valid fixture with permissive `anySourceAccount=true` and empty source proof.
         (, ValidationProofs memory proofs) = _buildAllowedFixture();
         proofs.sourceAccountProof = new bytes32[](0);
@@ -109,7 +107,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that unauthorized initiators return false.
-    function test_LOAS_IESABP_7_isERC1271SignatureAllowedByPolicy_unauthorizedInitiator_returnsFalse() public {
+    function test_isERC1271SignatureAllowedByPolicy_unauthorizedInitiator_returnsFalse() public {
         // Setup: build valid fixture constrained to `initiator1`.
         (, ValidationProofs memory proofs) = _buildAllowedFixture();
 
@@ -122,9 +120,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that all policy checks passing returns true.
-    function test_LOAS_IESABP_8_LOACS_IESABP_1__OAS_IESABP_6_LOAS_AHELP_2_isERC1271SignatureAllowedByPolicy_allChecksPass_returnsTrue()
-        public
-    {
+    function test_isERC1271SignatureAllowedByPolicy_allChecksPass_returnsTrue() public {
         // Setup: build fully valid baseline fixture.
         (, ValidationProofs memory proofs) = _buildAllowedFixture();
 
@@ -137,9 +133,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that policy-proof failure short-circuits composite failing inputs.
-    function test_LOAS_IESABP_9_LOACS_IESABP_2__LOAS_AHELP_3_isERC1271SignatureAllowedByPolicy_firstCheckPolicyProofFailure_failsClosed()
-        public
-    {
+    function test_isERC1271SignatureAllowedByPolicy_firstCheckPolicyProofFailure_failsClosed() public {
         // Setup: build fixture with multiple failing conditions, including invalid policy proof.
         (Policy memory policy, ValidationProofs memory proofs) = _buildAllowedFixture();
         policy.config.transactionType = TransactionType.TokenTransfers;
@@ -156,9 +150,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that empty source proofs fail when policy requires specific source accounts.
-    function test_LOAS_IESABP_10_isERC1271SignatureAllowedByPolicy_emptySourceProofWithSpecificSource_returnsFalse()
-        public
-    {
+    function test_isERC1271SignatureAllowedByPolicy_emptySourceProofWithSpecificSource_returnsFalse() public {
         // Setup: build source-restricted policy but provide empty source proof.
         (Policy memory policy,) = _buildAllowedFixture();
         policy.config.anySourceAccount = false;
@@ -176,7 +168,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that `anyInitiator=true` still requires initiator membership.
-    function test_LOAS_IESABP_11_isERC1271SignatureAllowedByPolicy_anyInitiatorStillRequiresMembership_returnsFalseForNonMember()
+    function test_isERC1271SignatureAllowedByPolicy_anyInitiatorStillRequiresMembership_returnsFalseForNonMember()
         public
     {
         // Setup: build valid fixture and enable `anyInitiator`.
@@ -196,9 +188,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that group-based initiator authorization returns true for existing groups and members.
-    function test_LOAS_IESABP_12_isERC1271SignatureAllowedByPolicy_groupInitiatorExistingGroupMember_returnsTrue()
-        public
-    {
+    function test_isERC1271SignatureAllowedByPolicy_groupInitiatorExistingGroupMember_returnsTrue() public {
         // Setup: build valid fixture and switch initiator auth to group membership.
         (Policy memory policy,) = _buildAllowedFixture();
         policy.config.initiator.anyInitiator = false;
@@ -219,7 +209,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that group-based initiator authorization returns false for non-existent groups.
-    function test_LOAS_IESABP_13_isERC1271SignatureAllowedByPolicy_groupInitiatorMissingGroup_returnsFalse() public {
+    function test_isERC1271SignatureAllowedByPolicy_groupInitiatorMissingGroup_returnsFalse() public {
         // Setup: build valid fixture and switch initiator auth to a missing group id.
         (Policy memory policy,) = _buildAllowedFixture();
         policy.config.initiator.anyInitiator = false;

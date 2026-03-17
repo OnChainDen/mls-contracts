@@ -14,10 +14,8 @@ contract OrganizationGuardianRecoveryBaseInitiateRecoveryGuardianUpdateTest is
     OrganizationGuardianRecoveryBaseSuiteBase
 {
     /// @dev Verifies recovery-only guardian entrypoints reject unauthorized callers before any pending recovery state
-    /// is written. [OREC-GRF-2]
-    function test_OGRB_IRGU_1__OREC_GRF_2__GREC_INV_6_A_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress()
-        public
-    {
+    /// is written.
+    function test_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress() public {
         // Setup: reuse suite baseline where guardian-recovery is configured.
         address caller = address(0xCA11);
 
@@ -32,7 +30,7 @@ contract OrganizationGuardianRecoveryBaseInitiateRecoveryGuardianUpdateTest is
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateRecoveryGuardianUpdate` recovery address caller
     /// delegates to library and writes pending state.
-    function test_OGRB_IRGU_2_recoveryAddressCaller_delegatesToLibrary() public {
+    function test_recoveryAddressCaller_delegatesToLibrary() public {
         // Setup: reuse suite baseline where guardian-recovery is configured.
         uint256 expectedFinalizeAt = block.timestamp + GUARDIAN_RECOVERY_TIMELOCK;
 
@@ -55,7 +53,7 @@ contract OrganizationGuardianRecoveryBaseInitiateRecoveryGuardianUpdateTest is
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateRecoveryGuardianUpdate` out-of-range configured timelock
     /// reverts and does not create pending state.
-    function test_OGRB_IRGU_3_invalidConfiguredTimelock_revertsInvalidTimelockAndDoesNotCreatePendingState() public {
+    function test_invalidConfiguredTimelock_revertsInvalidTimelockAndDoesNotCreatePendingState() public {
         // Setup: reuse suite baseline where guardian-recovery is configured.
         recoveryStateHarness.setGuardianRecoveryConfig(GUARDIAN_RECOVERY_ADDRESS, 1 days);
 

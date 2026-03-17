@@ -12,8 +12,8 @@ import {
  * @dev Unit tests for `LibOrganizationGuardian.finalizeGuardianUpdate`.
  */
 contract LibOrganizationGuardianFinalizeGuardianUpdateTest is LibOrganizationGuardianSuiteBase {
-    /// @dev Verifies LOG-FGU-1: finalize after timelock marks update ready for acceptance.
-    function test_LOG_FGU_1_afterTimelock_setsReadyForAcceptanceTrue() public {
+    /// @dev Verifies finalize after timelock marks update ready for acceptance.
+    function test_afterTimelock_setsReadyForAcceptanceTrue() public {
         // Setup
         _initiateGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         vm.warp(harness.getPendingGuardianUpdateTimestampViaLibrary());
@@ -28,8 +28,8 @@ contract LibOrganizationGuardianFinalizeGuardianUpdateTest is LibOrganizationGua
         );
     }
 
-    /// @dev Verifies LOG-FGU-2: finalize before timelock reverts `TimelockNotExpired`.
-    function test_LOG_FGU_2__LOG_AOTIGU_3__LOG_AOTFGU_1_beforeTimelock_revertsTimelockNotExpired() public {
+    /// @dev Verifies finalize before timelock reverts `TimelockNotExpired`.
+    function test_beforeTimelock_revertsTimelockNotExpired() public {
         // Setup
         _initiateGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         uint256 canFinalizeAt = harness.getPendingGuardianUpdateTimestampViaLibrary();
@@ -49,8 +49,8 @@ contract LibOrganizationGuardianFinalizeGuardianUpdateTest is LibOrganizationGua
         );
     }
 
-    /// @dev Verifies LOG-FGU-3: finalize at exact timelock expiry succeeds.
-    function test_LOG_FGU_3__LOG_AOTFGU_2_atExactTimelockExpiry_succeeds() public {
+    /// @dev Verifies finalize at exact timelock expiry succeeds.
+    function test_atExactTimelockExpiry_succeeds() public {
         // Setup
         _initiateGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         vm.warp(harness.getPendingGuardianUpdateTimestampViaLibrary());
@@ -64,7 +64,7 @@ contract LibOrganizationGuardianFinalizeGuardianUpdateTest is LibOrganizationGua
 
     /// @dev Verifies `LibOrganizationGuardian.finalizeGuardianUpdate` succeeds after the pending timestamp has already
     /// passed.
-    function test_LOG_AOTFGU_3_finalizeGuardianUpdate_afterPendingTimestampSucceeds() public {
+    function test_finalizeGuardianUpdate_afterPendingTimestampSucceeds() public {
         // Setup: stage a pending guardian update and advance one second past the stored finalize timestamp.
         _initiateGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         vm.warp(harness.getPendingGuardianUpdateTimestampViaLibrary() + 1);
@@ -81,7 +81,7 @@ contract LibOrganizationGuardianFinalizeGuardianUpdateTest is LibOrganizationGua
 
     /// @dev Verifies `LibOrganizationGuardian.finalizeGuardianUpdate` sets the ready flag while preserving the
     /// pending guardian and pending timestamp until accept or cancel clears them.
-    function test_LOG_AOTFGU_4_finalizeGuardianUpdate_preservesPendingGuardianAndTimestampWhileMarkingReady() public {
+    function test_finalizeGuardianUpdate_preservesPendingGuardianAndTimestampWhileMarkingReady() public {
         // Setup: stage a pending guardian update and record its pending tuple before finalization.
         _initiateGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         uint256 canFinalizeAt = harness.getPendingGuardianUpdateTimestampViaLibrary();
@@ -102,9 +102,7 @@ contract LibOrganizationGuardianFinalizeGuardianUpdateTest is LibOrganizationGua
 
     /// @dev Verifies `LibOrganizationGuardian.finalizeGuardianUpdate` reverts with `NoPendingGuardianUpdate` after the
     /// pending update was cancelled, even once the cancelled timestamp has passed.
-    function test_LOG_AOTFGU_5_finalizeGuardianUpdate_afterCancellationAndExpiryRevertsNoPendingGuardianUpdate()
-        public
-    {
+    function test_finalizeGuardianUpdate_afterCancellationAndExpiryRevertsNoPendingGuardianUpdate() public {
         // Setup: stage and cancel a pending guardian update, then advance past the original finalize timestamp.
         _initiateGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         uint256 cancelledCanFinalizeAt = harness.getPendingGuardianUpdateTimestampViaLibrary();
@@ -121,9 +119,7 @@ contract LibOrganizationGuardianFinalizeGuardianUpdateTest is LibOrganizationGua
 
     /// @dev Verifies `LibOrganizationGuardian.finalizeGuardianUpdate` reverts with `NoPendingGuardianUpdate` after the
     /// pending guardian already accepted the finalized update.
-    function test_LOG_AOTFGU_6_finalizeGuardianUpdate_afterAcceptanceAndOldExpiryRevertsNoPendingGuardianUpdate()
-        public
-    {
+    function test_finalizeGuardianUpdate_afterAcceptanceAndOldExpiryRevertsNoPendingGuardianUpdate() public {
         // Setup: complete a full initiate-finalize-accept flow and then advance past the old finalize timestamp.
         _initiateGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         uint256 originalCanFinalizeAt = harness.getPendingGuardianUpdateTimestampViaLibrary();
@@ -141,8 +137,8 @@ contract LibOrganizationGuardianFinalizeGuardianUpdateTest is LibOrganizationGua
         assertEq(harness.getPendingGuardianViaLibrary(), address(0), "accepted update should leave no pending guardian");
     }
 
-    /// @dev Verifies LOG-FGU-4: no pending update reverts `NoPendingGuardianUpdate`.
-    function test_LOG_FGU_4_noPendingUpdate_revertsNoPendingGuardianUpdate() public {
+    /// @dev Verifies no pending update reverts `NoPendingGuardianUpdate`.
+    function test_noPendingUpdate_revertsNoPendingGuardianUpdate() public {
         // Setup
         _clearPendingGuardianState();
 
@@ -157,8 +153,8 @@ contract LibOrganizationGuardianFinalizeGuardianUpdateTest is LibOrganizationGua
         );
     }
 
-    /// @dev Verifies LOG-FGU-5: finalize emits `GuardianUpdateFinalized`.
-    function test_LOG_FGU_5_emitsGuardianUpdateFinalized() public {
+    /// @dev Verifies finalize emits `GuardianUpdateFinalized`.
+    function test_emitsGuardianUpdateFinalized() public {
         // Setup
         _initiateGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         vm.warp(harness.getPendingGuardianUpdateTimestampViaLibrary());
@@ -172,8 +168,8 @@ contract LibOrganizationGuardianFinalizeGuardianUpdateTest is LibOrganizationGua
         assertTrue(harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary(), "ready flag should be true");
     }
 
-    /// @dev Verifies LOG-FGU-6: finalize does not mutate guardian, only marks ready state.
-    function test_LOG_FGU_6_finalizeDoesNotChangeGuardian_onlyMarksReady() public {
+    /// @dev Verifies finalize does not mutate guardian, only marks ready state.
+    function test_finalizeDoesNotChangeGuardian_onlyMarksReady() public {
         // Setup
         _initiateGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         vm.warp(harness.getPendingGuardianUpdateTimestampViaLibrary());
@@ -187,8 +183,8 @@ contract LibOrganizationGuardianFinalizeGuardianUpdateTest is LibOrganizationGua
         assertTrue(harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary(), "ready flag should become true");
     }
 
-    /// @dev Verifies LOG-FGU-7: double finalize is an idempotent no-op after first success.
-    function test_LOG_FGU_7_doubleFinalize_secondCallIsNoOp() public {
+    /// @dev Verifies double finalize is an idempotent no-op after first success.
+    function test_doubleFinalize_secondCallIsNoOp() public {
         // Setup
         _initiateGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         vm.warp(harness.getPendingGuardianUpdateTimestampViaLibrary());

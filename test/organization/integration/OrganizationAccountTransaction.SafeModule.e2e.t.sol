@@ -152,8 +152,8 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
     }
 
     /// @dev Verifies the full ETH-transfer execute path succeeds with a Safe-module guardian caller plus manual review
-    /// signatures. [OAT-EAT-1]
-    function test_OAT_EAT_1_executeAccountTransaction_safeModuleGuardianEthTransferFlow_succeeds() public {
+    /// signatures.
+    function test_executeAccountTransaction_safeModuleGuardianEthTransferFlow_succeeds() public {
         // Setup: deploy a real Safe guardian plus module, initialize the organization with that Safe as guardian, and
         // publish a manual-approval ETH-transfer policy.
         (address guardianSafe, SafeExecutorModule module) = _deployGuardianSafeModule(19_801);
@@ -199,8 +199,8 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
     }
 
     /// @dev Verifies the full ERC-20 execute path succeeds with destination, token, and amount constraints enforced
-    /// through a Safe-module guardian caller. [OAT-EAT-2]
-    function test_OAT_EAT_2_executeAccountTransaction_safeModuleGuardianErc20TransferFlow_succeeds() public {
+    /// through a Safe-module guardian caller.
+    function test_executeAccountTransaction_safeModuleGuardianErc20TransferFlow_succeeds() public {
         // Setup: deploy a real Safe guardian plus module, initialize the organization with that Safe as guardian, and
         // publish a manual-approval ERC-20 policy constrained by recipient, token, and amount.
         (address guardianSafe, SafeExecutorModule module) = _deployGuardianSafeModule(19_821);
@@ -248,8 +248,8 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
     }
 
     /// @dev Verifies the full contract-interaction execute path succeeds with a whitelisted selector and exact
-    /// parameter constraint enforced through a Safe-module guardian caller. [OAT-EAT-3]
-    function test_OAT_EAT_3_executeAccountTransaction_safeModuleGuardianContractInteractionFlow_succeeds() public {
+    /// parameter constraint enforced through a Safe-module guardian caller.
+    function test_executeAccountTransaction_safeModuleGuardianContractInteractionFlow_succeeds() public {
         // Setup: deploy a real Safe guardian plus module, initialize the organization with that Safe as guardian, and
         // publish a manual-approval contract-interaction policy constrained to `ping(uint256)` with `uint256(42)`.
         (address guardianSafe, SafeExecutorModule module) = _deployGuardianSafeModule(19_841);

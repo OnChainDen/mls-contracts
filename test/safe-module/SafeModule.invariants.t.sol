@@ -244,8 +244,8 @@ contract SafeModuleInvariantHandler is Test {
 
 /**
  * @dev Invariant tests for SafeExecutorModule and BatchedTransaction.
- *      Covers test plan rows SMI-INV-1 through SMI-INV-5.
- *      SMI-INV-6 covers guardian module signature invariants and is
+ *  Covers test plan rows through.
+ *  covers guardian module signature invariants and is
  *      implemented in the existing LibOrganizationAccountSignature invariant suite.
  */
 contract SafeModuleInvariantsTest is Test {
@@ -279,15 +279,15 @@ contract SafeModuleInvariantsTest is Test {
         targetContract(address(handler));
     }
 
-    /// @dev SMI-INV-1: Only AUTHORIZED_EXECUTOR can make executeOnBehalf succeed.
-    function invariant_SMI_INV_1_onlyAuthorizedExecutorCanSucceed() public view {
+    /// @dev : Only AUTHORIZED_EXECUTOR can make executeOnBehalf succeed.
+    function invariant_onlyAuthorizedExecutorCanSucceed() public view {
         // If any unauthorized attempt had succeeded, the handler would have reverted.
         // The invariant holds as long as the handler didn't panic.
         assertTrue(handler.unauthorizedAttempts() >= 0, "Invariant check executed");
     }
 
-    /// @dev SMI-INV-2: SafeExecutorModule never instructs Safe to send non-zero value.
-    function invariant_SMI_INV_2_moduleNeverSendsNonZeroValue() public view {
+    /// @dev : SafeExecutorModule never instructs Safe to send non-zero value.
+    function invariant_moduleNeverSendsNonZeroValue() public view {
         uint256 count = mockSafe.callRecordCount();
         for (uint256 i = 0; i < count; i++) {
             (, uint256 value,) = mockSafe.callRecords(i);
@@ -295,8 +295,8 @@ contract SafeModuleInvariantsTest is Test {
         }
     }
 
-    /// @dev SMI-INV-3: SafeExecutorModule never allows direct to == SAFE execution.
-    function invariant_SMI_INV_3_moduleNeverAllowsDirectSafeExecution() public view {
+    /// @dev : SafeExecutorModule never allows direct to == SAFE execution.
+    function invariant_moduleNeverAllowsDirectSafeExecution() public view {
         uint256 count = mockSafe.callRecordCount();
         for (uint256 i = 0; i < count; i++) {
             (address to,,) = mockSafe.callRecords(i);
@@ -304,14 +304,14 @@ contract SafeModuleInvariantsTest is Test {
         }
     }
 
-    /// @dev SMI-INV-4: BatchedTransaction never allows a sub-call to the delegatecaller Safe.
-    function invariant_SMI_INV_4_batchNeverAllowsSelfCall() public view {
+    /// @dev : BatchedTransaction never allows a sub-call to the delegatecaller Safe.
+    function invariant_batchNeverAllowsSelfCall() public view {
         // Handler actions would revert immediately if a self-targeting batch ever succeeded or leaked state.
         assertTrue(handler.selfTargetBatchAttempts() > 0, "self-targeting batches should be exercised");
     }
 
-    /// @dev SMI-INV-5: Batched execution is atomic after any reverting later sub-call.
-    function invariant_SMI_INV_5_batchedExecutionIsAtomic() public view {
+    /// @dev : Batched execution is atomic after any reverting later sub-call.
+    function invariant_batchedExecutionIsAtomic() public view {
         // Handler actions would revert immediately if a failing batch ever persisted earlier writes.
         assertTrue(handler.atomicRevertBatchAttempts() > 0, "reverting later sub-calls should be exercised");
     }

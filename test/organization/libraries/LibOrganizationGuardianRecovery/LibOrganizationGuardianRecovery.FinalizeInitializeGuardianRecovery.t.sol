@@ -17,10 +17,7 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
 {
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` finalize after timelock
     /// configures state, clears pending-init, and emits event.
-    /// Plan rows: LOGR-AOTFIGR-2, LOGR-AOTFIGR-4, LOGR-AOTFIGR-5.
-    function test_LOGR_FIGR_1__LOGR_FIGR_4__LOGR_FIGR_5__LOGR_FIGR_6__LOGR_FIGR_7__LOGR_AOTFIGR_2__LOGR_AOTFIGR_4__LOGR_AOTFIGR_5_finalizeAfterTimelock_configuresAndClearsPendingInit()
-        public
-    {
+    function test_finalizeAfterTimelock_configuresAndClearsPendingInit() public {
         // Setup: start from clean recovery state and seed pending deferred-init tuple.
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
@@ -45,10 +42,7 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` no-pending and
     /// timelock-not-expired paths revert without mutating pending/config state.
-    /// Plan rows: LOGR-AOTFIGR-1.
-    function test_LOGR_FIGR_2__LOGR_FIGR_3__LOGR_FIGR_12__LOGR_AOTFIGR_1_revertPaths_preservePendingAndConfigState()
-        public
-    {
+    function test_revertPaths_preservePendingAndConfigState() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
@@ -87,7 +81,7 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` finalized deferred-init
     /// enables the full recovery update flow.
-    function test_LOGR_FIGR_8_finalizeDeferredInit_enablesRecoveryFlowUsage() public {
+    function test_finalizeDeferredInit_enablesRecoveryFlowUsage() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and position timestamp at timelock
         // boundary.
         harness.resetGuardianRecoveryStorageViaHarness();
@@ -110,8 +104,7 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` malformed pending tuple
     /// revert is atomic and rolls back pending-init clearing.
-    /// Plan rows: LOGR-AOTFIGR-7.
-    function test_LOGR_FIGR_9__LOGR_AOTFIGR_7_malformedPendingTupleRevert_isAtomic() public {
+    function test_malformedPendingTupleRevert_isAtomic() public {
         // Setup: start from clean recovery state and seed pending deferred-init tuple.
         harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryPendingInit(address(0), GUARDIAN_RECOVERY_TIMELOCK, block.timestamp);
@@ -139,7 +132,7 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` finalize leaves
     /// recovery-update pending fields untouched and double-finalize reverts.
-    function test_LOGR_FIGR_10__LOGR_FIGR_11_finalizePreservesRecoveryUpdateFields_andDoubleFinalizeReverts() public {
+    function test_finalizePreservesRecoveryUpdateFields_andDoubleFinalizeReverts() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and seed pending recovery-guardian
         // update.
         harness.resetGuardianRecoveryStorageViaHarness();
@@ -168,7 +161,7 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` succeeds when
     /// `block.timestamp` is strictly greater than the pending initialization timestamp.
-    function test_LOGR_AOTFIGR_3_finalizeInitializeGuardianRecovery_afterPendingTimestampSucceeds() public {
+    function test_finalizeInitializeGuardianRecovery_afterPendingTimestampSucceeds() public {
         // Setup: stage a deferred guardian-recovery initialization and advance one second past its pending timestamp.
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
@@ -189,9 +182,7 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` reverts with
     /// `NoGuardianRecoveryInitializationPending` after cancellation even once the cancelled timestamp has passed.
-    function test_LOGR_AOTFIGR_6_finalizeInitializeGuardianRecovery_afterCancellationAndExpiryRevertsNoPending()
-        public
-    {
+    function test_finalizeInitializeGuardianRecovery_afterCancellationAndExpiryRevertsNoPending() public {
         // Setup: stage and cancel a deferred initialization, then advance past the cancelled pending timestamp.
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);

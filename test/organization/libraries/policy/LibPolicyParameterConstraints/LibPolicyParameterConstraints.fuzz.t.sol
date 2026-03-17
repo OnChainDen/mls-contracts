@@ -14,7 +14,7 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
     /// @dev Verifies `LibPolicyParameterConstraints.areParametersAllowedByConstraints` accepts both empty bytes and
     /// ABI-encoded empty arrays.
     /// @param data Arbitrary calldata supplied to the empty-constraints helper.
-    function testFuzz_FLPPC_PARAM_72_areParametersAllowed_emptyConstraintPayloadsAccept(bytes memory data) public view {
+    function testFuzz_areParametersAllowed_emptyConstraintPayloadsAccept(bytes memory data) public view {
         vm.assume(data.length < 256);
 
         // Setup: prepare both canonical empty-constraints encodings against the same arbitrary calldata.
@@ -39,7 +39,7 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
     /// @param fixedBytesValue The bytes32 value used for the fixed-bytes exact check.
     /// @param dynamicBytesValue The dynamic bytes value used for the bytes exact check.
     /// @param dynamicStringValue The string value used for the string exact check.
-    function testFuzz_FLPPC_VALID_73_supportedConstraintMatrix_acceptsMatchingValues(
+    function testFuzz_supportedConstraintMatrix_acceptsMatchingValues(
         uint256 uintValue,
         int256 intValue,
         address allowedAddress,
@@ -113,7 +113,7 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
     /// @param fixedBytesValue The bytes32 value supplied to the unsupported fixed-bytes-range branch.
     /// @param payload The dynamic bytes payload supplied to the unsupported bytes-range, string-range, and dispatch
     /// branches.
-    function testFuzz_FLPPC_VALID_74_unsupportedConstraintMatrix_alwaysFails(
+    function testFuzz_unsupportedConstraintMatrix_alwaysFails(
         uint256 uintValue,
         int256 intValue,
         address addressValue,
@@ -193,7 +193,7 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
     /// @param allowedAddress The address included in the merkle tree.
     /// @param siblingAddress The second address included to force a non-empty proof.
     /// @param otherAddress A different address used for mutation branches.
-    function testFuzz_FLPPC_ONEOF_75_isAddressParameterAllowed_validProofPassesMutationsFail(
+    function testFuzz_isAddressParameterAllowed_validProofPassesMutationsFail(
         address allowedAddress,
         address siblingAddress,
         address otherAddress
@@ -232,7 +232,7 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
     /// @dev Verifies the bytes/string validator returns false when the dynamic offset points beyond calldata.
     /// @param extraOffset The extra distance placed beyond the calldata length.
     /// @param payload The reference payload used to build the calldata fixture.
-    function testFuzz_FLPPC_BYTES_76_isBytesOrStringParameterAllowed_offsetBeyondCalldataReturnsFalse(
+    function testFuzz_isBytesOrStringParameterAllowed_offsetBeyondCalldataReturnsFalse(
         uint16 extraOffset,
         bytes memory payload
     ) public view {
@@ -254,7 +254,7 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
     /// @dev Verifies the bytes/string validator returns false when a declared dynamic length exceeds available bytes.
     /// @param declaredLengthRaw The declared dynamic length.
     /// @param trailingBytesRaw The actual number of trailing bytes left in calldata.
-    function testFuzz_FLPPC_BYTES_76_isBytesOrStringParameterAllowed_declaredLengthBeyondCalldataReturnsFalse(
+    function testFuzz_isBytesOrStringParameterAllowed_declaredLengthBeyondCalldataReturnsFalse(
         uint8 declaredLengthRaw,
         uint8 trailingBytesRaw
     ) public view {
@@ -277,7 +277,7 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
     /// @dev Verifies the bytes/string validator fails closed instead of reverting when the dynamic offset arithmetic
     /// would overflow.
     /// @param nearMaxDelta The small delta subtracted from `type(uint256).max`.
-    function testFuzz_FLPPC_BYTES_76_isBytesOrStringParameterAllowed_overflowingOffsetFailsClosedDesiredBehavior(uint8 nearMaxDelta)
+    function testFuzz_isBytesOrStringParameterAllowed_overflowingOffsetFailsClosedDesiredBehavior(uint8 nearMaxDelta)
         public
     {
         uint256 overflowingOffset = type(uint256).max - bound(uint256(nearMaxDelta), 0, 3);
@@ -301,8 +301,7 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
     /// @dev Verifies `_processConstraints` terminates without panic across random head-slot counts and calldata sizes.
     /// @param headSlots The declared number of 32-byte head slots for the fuzzed constraint.
     /// @param dataSlots The number of 32-byte words appended after the selector.
-    /// SAG-FUZ-1
-    function testFuzz_FLPPC_PROCESS_77__SAG_FUZ_1_processConstraints_randomOffsetsAndHeadSizesTerminateWithoutPanic(
+    function testFuzz_processConstraints_randomOffsetsAndHeadSizesTerminateWithoutPanic(
         uint8 headSlots,
         uint8 dataSlots
     ) public {

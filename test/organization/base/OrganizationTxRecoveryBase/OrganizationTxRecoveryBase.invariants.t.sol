@@ -17,7 +17,7 @@ import {
 import {GuardianRecoveryState, PendingRecoveryInitTimelock, TxRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
- * @dev Invariant coverage for tx-recovery plan rows `TXR-INV-1` through `TXR-INV-21`.
+ * @dev Invariant coverage for tx-recovery plan rows.
  */
 contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuiteBase {
     MockAccountForOrganizationTransaction internal account;
@@ -63,7 +63,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` only allows the configured tx recovery address to invoke protected
     /// state-changing entrypoints.
-    function invariant_TXR_INV_1_TXRC_INV_4_onlyTxRecoveryAddressCanCallTxRecoveryProtectedEntrypoints() public {
+    function invariant_onlyTxRecoveryAddressCanCallTxRecoveryProtectedEntrypoints() public {
         // Setup: use the seeded tx-recovery baseline and handler-owned mock account.
 
         // Call: attempt each protected entrypoint from non-recovery callers.
@@ -79,7 +79,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
     }
 
     /// @dev Verifies `OrganizationTxRecoveryBase` keeps tx-recovery config write-once after initial configuration.
-    function invariant_TXR_INV_2_TXRC_INV_1_txRecoveryConfigWriteOnce_afterInitialization() public {
+    function invariant_txRecoveryConfigWriteOnce_afterInitialization() public {
         // Setup: exercise enable/disable transitions around the configured baseline.
         handler.initiateEnable();
         handler.finalizeEnable(true);
@@ -95,7 +95,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` only allows `isEnabled` transitions from false to true through a
     /// successful finalize-enable path.
-    function invariant_TXR_INV_3_isEnabledTrueOnlyViaFinalizeEnable() public {
+    function invariant_isEnabledTrueOnlyViaFinalizeEnable() public {
         // Setup: drive representative tx-recovery transitions.
         handler.initiateEnable();
         handler.finalizeEnable(true);
@@ -112,7 +112,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` only allows `isEnabled` transitions from true to false through the
     /// disable path (excluding initialization default false).
-    function invariant_TXR_INV_4_isEnabledFalseOnlyViaDisableOrInitialFalse() public {
+    function invariant_isEnabledFalseOnlyViaDisableOrInitialFalse() public {
         // Setup: transition enabled->disabled through the handler.
         handler.initiateEnable();
         handler.finalizeEnable(true);
@@ -128,7 +128,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
     }
 
     /// @dev Verifies `OrganizationTxRecoveryBase` enabled state implies non-zero config and no pending enable.
-    function invariant_TXR_INV_5_enabledStateRequiresConfiguredAndNoPendingEnable() public {
+    function invariant_enabledStateRequiresConfiguredAndNoPendingEnable() public {
         // Setup: attempt a successful recovery execution path.
         handler.executeRecoveryToReceiver(1, 0);
 
@@ -144,7 +144,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
     }
 
     /// @dev Verifies `OrganizationTxRecoveryBase` pending-enable state implies `isEnabled == false`.
-    function invariant_TXR_INV_6_pendingEnableImpliesDisabled() public view {
+    function invariant_pendingEnableImpliesDisabled() public view {
         // Setup
 
         // Call: read current tx-recovery state snapshot.
@@ -158,7 +158,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` pending-enable state implies configured non-zero tx-recovery
     /// fields.
-    function invariant_TXR_INV_7_pendingEnableImpliesConfiguredFields() public view {
+    function invariant_pendingEnableImpliesConfiguredFields() public view {
         // Setup
 
         // Call: read current tx-recovery state snapshot.
@@ -174,7 +174,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
     }
 
     /// @dev Verifies `OrganizationTxRecoveryBase` successful disable always clears pending-enable timestamp.
-    function invariant_TXR_INV_8_successfulDisableAlwaysClearsPendingEnable() public {
+    function invariant_successfulDisableAlwaysClearsPendingEnable() public {
         // Setup: create pending-enable state and attempt disable.
         handler.initiateEnable();
         handler.disableRecovery();
@@ -189,10 +189,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
     }
 
     /// @dev Verifies `OrganizationTxRecoveryBase` zero deferred-init timestamp implies zero deferred-init tuple.
-    function invariant_TXR_INV_9_TXRC_INV_10__AOT_INV_4_zeroPendingInitTimestampImpliesZeroDeferredInitTuple()
-        public
-        view
-    {
+    function invariant_zeroPendingInitTimestampImpliesZeroDeferredInitTuple() public view {
         // Setup
 
         // Call: read current tx-recovery state snapshot.
@@ -215,7 +212,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies the tx-recovery deferred-init tuple is fully well-formed whenever its pending timestamp is
     /// non-zero.
-    function invariant_AOT_INV_5_pendingInitTimestampImpliesValidTxRecoveryDeferredInitTuple() public view {
+    function invariant_pendingInitTimestampImpliesValidTxRecoveryDeferredInitTuple() public view {
         // Setup
 
         // Call: read current tx-recovery state snapshot.
@@ -242,7 +239,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` configured tx-recovery state cannot overlap with deferred-init
     /// pending state.
-    function invariant_TXR_INV_10_configuredStateCannotOverlapWithDeferredInitPending() public view {
+    function invariant_configuredStateCannotOverlapWithDeferredInitPending() public view {
         // Setup
 
         // Call: read current tx-recovery state snapshot.
@@ -266,7 +263,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
     }
 
     /// @dev Verifies `OrganizationTxRecoveryBase` recovery transaction execution never mutates tx-recovery state.
-    function invariant_TXR_INV_11_recoveryExecutionNeverMutatesTxRecoveryState() public {
+    function invariant_recoveryExecutionNeverMutatesTxRecoveryState() public {
         // Setup: execute recovery against a receiver target.
         handler.executeRecoveryToReceiver(2, 123);
 
@@ -281,7 +278,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` recovery-driven account call chains targeting `modifyAdmins` cannot
     /// mutate admin set or voting threshold.
-    function invariant_TXR_INV_12_modifyAdminsChainCannotMutateAdminSetOrThreshold() public {
+    function invariant_modifyAdminsChainCannotMutateAdminSetOrThreshold() public {
         // Setup: attempt the recovery->account->organization `modifyAdmins` chain.
         handler.attemptModifyAdminsReentrant(3);
 
@@ -296,7 +293,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` recovery-driven account call chains targeting `modifyMembers` cannot
     /// mutate member/admin membership mappings.
-    function invariant_TXR_INV_13_modifyMembersChainCannotMutateMembershipMappings() public {
+    function invariant_modifyMembersChainCannotMutateMembershipMappings() public {
         // Setup: attempt the recovery->account->organization `modifyMembers` chain.
         handler.attemptModifyMembersReentrant(4);
 
@@ -311,7 +308,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` recovery-driven account call chains targeting `setPolicies` cannot
     /// mutate policy state.
-    function invariant_TXR_INV_14_setPoliciesChainCannotMutatePolicyState() public {
+    function invariant_setPoliciesChainCannotMutatePolicyState() public {
         // Setup: attempt the recovery->account->organization `setPolicies` chain.
         handler.attemptSetPoliciesReentrant(5);
 
@@ -325,7 +322,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` recovery-driven account call chains targeting tx-recovery management
     /// entrypoints cannot mutate tx-recovery state.
-    function invariant_TXR_INV_15_txRecoveryManagementChainCannotMutateTxRecoveryState() public {
+    function invariant_txRecoveryManagementChainCannotMutateTxRecoveryState() public {
         // Setup: attempt each tx-recovery management selector through account call-chaining.
         for (uint8 i = 0; i < 4; i++) {
             handler.attemptTxRecoveryManagementReentrant(i);
@@ -342,7 +339,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` reentrancy attempts targeting state-changing organization selectors
     /// cannot succeed during recovery execution.
-    function invariant_TXR_INV_16_reentrantOrganizationSelectorsCannotSucceed() public {
+    function invariant_reentrantOrganizationSelectorsCannotSucceed() public {
         // Setup: attempt a broad organization selector sweep via recovery call-chaining.
         for (uint8 i = 0; i < 30; i++) {
             handler.attemptOrganizationStateChangingSelector(i, uint256(i) + 11);
@@ -359,7 +356,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` reentrancy attempts targeting state-changing account selectors cannot
     /// succeed during recovery execution.
-    function invariant_TXR_INV_17_reentrantAccountSelectorsCannotSucceed() public {
+    function invariant_reentrantAccountSelectorsCannotSucceed() public {
         // Setup: attempt account `executeTransaction` reentrancy through `to=account`.
         handler.attemptAccountStateChangingSelector(address(harness), 7, 1, 1, 21);
 
@@ -374,7 +371,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` reentrancy attempts through `to=organization` and `to=account`
     /// preserve organization/account/tx-recovery snapshots.
-    function invariant_TXR_INV_18_reentrancyAttemptsPreserveAllSnapshots() public {
+    function invariant_reentrancyAttemptsPreserveAllSnapshots() public {
         // Setup: attempt one organization-target and one account-target reentrancy path.
         handler.attemptOrganizationStateChangingSelector(0, 31);
         handler.attemptAccountStateChangingSelector(address(account), 0, 9, 9, 32);
@@ -390,7 +387,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` recovery-transaction validation reverts whenever `isEnabled ==
     /// false`.
-    function invariant_TXR_INV_19_validateRecoveryTransactionAllowedRevertsWhenDisabled() public {
+    function invariant_validateRecoveryTransactionAllowedRevertsWhenDisabled() public {
         // Setup: force disabled state through the tx-recovery disable path.
         handler.disableRecovery();
 
@@ -405,8 +402,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
     }
 
     /// @dev Verifies `OrganizationTxRecoveryBase` tx-recovery transitions never mutate guardian-recovery state.
-    /// SAG-INV-2
-    function invariant_TXR_INV_20_TXRC_INV_7__SAG_INV_2_txRecoveryTransitionsNeverMutateGuardianRecoveryState() public {
+    function invariant_txRecoveryTransitionsNeverMutateGuardianRecoveryState() public {
         // Setup: execute representative tx-recovery transitions.
         handler.initiateEnable();
         handler.finalizeEnable(true);
@@ -454,7 +450,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` successful recovery execution always uses `nonce=0` and
     /// `policyId=0`.
-    function invariant_TXR_INV_21_TXRC_INV_6_successfulRecoveryExecutionAlwaysUsesNonceZeroAndPolicyIdZero() public {
+    function invariant_successfulRecoveryExecutionAlwaysUsesNonceZeroAndPolicyIdZero() public {
         // Setup: execute recovery against a non-reverting target.
         handler.executeRecoveryToReceiver(6, 456);
 

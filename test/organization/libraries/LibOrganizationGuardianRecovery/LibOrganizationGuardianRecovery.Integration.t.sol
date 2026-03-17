@@ -12,7 +12,7 @@ import {
  */
 contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardianRecoverySuiteBase {
     /// @dev Verifies that complete recovery flow updates guardian in normal storage.
-    function test_OGR_INT_1_completeRecoveryFlow_updatesGuardianInNormalStorage() public {
+    function test_completeRecoveryFlow_updatesGuardianInNormalStorage() public {
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
@@ -28,7 +28,7 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
     }
 
     /// @dev Verifies that cancel during pending then re-init with different address succeeds.
-    function test_OGR_INT_2_cancelDuringPending_thenReInitiateWithDifferentAddress_succeeds() public {
+    function test_cancelDuringPending_thenReInitiateWithDifferentAddress_succeeds() public {
         // Setup: reconfigure baseline recovery address and timelock and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
@@ -46,7 +46,7 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
     }
 
     /// @dev Verifies that cancel after finalize clears state and old pending guardian cannot accept later.
-    function test_OGR_INT_3__OGR_INT_14_cancelAfterFinalize_clearsStateAndOldPendingCannotAcceptLater() public {
+    function test_cancelAfterFinalize_clearsStateAndOldPendingCannotAcceptLater() public {
         // Setup: reconfigure baseline recovery address and timelock, seed pending recovery-guardian update, and
         // position timestamp at timelock boundary.
         _resetAndConfigureRecovery();
@@ -72,7 +72,7 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
     }
 
     /// @dev Verifies that deferred-init lifecycle sets config after timelock finalize.
-    function test_OGR_INT_4_deferredInitLifecycle_configuresRecovery() public {
+    function test_deferredInitLifecycle_configuresRecovery() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
@@ -90,7 +90,7 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
     }
 
     /// @dev Verifies that deferred-init cancel and retry works.
-    function test_OGR_INT_5_deferredInitCancelThenRetry_succeeds() public {
+    function test_deferredInitCancelThenRetry_succeeds() public {
         // Setup: start from clean recovery state and seed pending deferred-init tuple.
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
@@ -108,7 +108,7 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
     }
 
     /// @dev Verifies that deferred-init finalize followed by full recovery update flow succeeds.
-    function test_OGR_INT_6_fullLifecycleAfterDeferredInit_succeeds() public {
+    function test_fullLifecycleAfterDeferredInit_succeeds() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and position timestamp at timelock
         // boundary.
         harness.resetGuardianRecoveryStorageViaHarness();
@@ -130,7 +130,7 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
     }
 
     /// @dev Verifies that recovery and normal guardian flows can run in parallel and complete independently.
-    function test_OGR_INT_7_recoveryAndNormalFlows_parallelAndIndependent() public {
+    function test_recoveryAndNormalFlows_parallelAndIndependent() public {
         // Setup: reconfigure baseline recovery address and timelock and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         harness.initiateGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
@@ -160,7 +160,7 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
     }
 
     /// @dev Verifies that completing one flow does not block later use of the other flow.
-    function test_OGR_INT_8__OGR_INT_9_eachFlowStillUsableAfterOtherCompletes() public {
+    function test_eachFlowStillUsableAfterOtherCompletes() public {
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
@@ -186,7 +186,7 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
     }
 
     /// @dev Verifies that multiple sequential recovery updates can complete.
-    function test_OGR_INT_10_multipleSequentialRecoveryUpdates_complete() public {
+    function test_multipleSequentialRecoveryUpdates_complete() public {
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
@@ -207,7 +207,7 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
     }
 
     /// @dev Verifies that deferred-init finalize/cancel are idempotent with second call reverting.
-    function test_OGR_INT_15_deferredInitIdempotency_secondFinalizeOrCancelRevertsNoPending() public {
+    function test_deferredInitIdempotency_secondFinalizeOrCancelRevertsNoPending() public {
         // Setup: start from clean recovery state and seed pending deferred-init tuple.
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);

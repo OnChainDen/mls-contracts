@@ -51,7 +51,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that an expiration timestamp equal to the current block timestamp passes authorization.
-    function test_NMADM_AUTH_4_LOADM_VAACNOR_6_validateAdminAuth_expirationEqualsBlockTimestamp_succeeds() public {
+    function test_validateAdminAuth_expirationEqualsBlockTimestamp_succeeds() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -84,7 +84,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies signatures are bound to the exact expiration timestamp encoded into the operation hash.
-    function test_LOADM_VAACNOR_5_validateAdminAuth_signedExpirationMismatch_revertsAndDoesNotConsumeNonce() public {
+    function test_validateAdminAuth_signedExpirationMismatch_revertsAndDoesNotConsumeNonce() public {
         // Setup: configure one admin and sign the payload with a different expiration than the call uses.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -179,9 +179,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` succeeds with valid admin auth
     /// and consumes the derived nonce.
-    function test_L_5__NMADM_AUTH_1_LOADM_VAACNOR_1_validateAdminAuth_thresholdOneSingleValidSignature_succeedsAndConsumesNonce()
-        public
-    {
+    function test_validateAdminAuth_thresholdOneSingleValidSignature_succeedsAndConsumesNonce() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -273,7 +271,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that a duplicate signer reverts with `DuplicateOrOutOfOrderAdminSigner`.
-    function test_ADMIN_INV_6_A_validateAdminAuth_duplicateSigner_revertsDuplicateOrOutOfOrder() public {
+    function test_validateAdminAuth_duplicateSigner_revertsDuplicateOrOutOfOrder() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
@@ -308,7 +306,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that out-of-order signers revert with `DuplicateOrOutOfOrderAdminSigner`.
-    function test_ADMIN_INV_6_B_validateAdminAuth_outOfOrderSigners_revertsDuplicateOrOutOfOrder() public {
+    function test_validateAdminAuth_outOfOrderSigners_revertsDuplicateOrOutOfOrder() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
@@ -417,7 +415,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that malformed packed signatures revert with `SignatureRecoveryFailed`.
-    function test_LOA_AAUTH_6_validateAdminAuth_malformedPackedSignatures_revertsSignatureRecoveryFailed() public {
+    function test_validateAdminAuth_malformedPackedSignatures_revertsSignatureRecoveryFailed() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -485,7 +483,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that mixed EOA and ERC-1271 signatures in ascending order pass authorization.
-    function test_LOA_AAUTH_5_validateAdminAuth_mixedEOAAndERC1271_sorted_succeeds() public {
+    function test_validateAdminAuth_mixedEOAAndERC1271_sorted_succeeds() public {
         address contractAdmin = address(validSigner1271);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({
@@ -523,7 +521,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` succeeds once and then rejects a
     /// replay of the same nonce.
-    function test_L_15__NMADM_AUTH_2_validateAdminAuth_nonceReplay_revertsNonceAlreadyUsed() public {
+    function test_validateAdminAuth_nonceReplay_revertsNonceAlreadyUsed() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -598,7 +596,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that the same operation and salt produce different nonces across different organization addresses.
-    function test_INT_ETE_3_validateAdminAuth_differentOrganizationAddresses_produceDifferentNonces() public {
+    function test_validateAdminAuth_differentOrganizationAddresses_produceDifferentNonces() public {
         // Setup: deploy a second harness to change the organization address component.
         LibOrganizationAdminHarness secondHarness = new LibOrganizationAdminHarness();
 
@@ -614,7 +612,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that approval signatures cannot authorize a rejection operation.
-    function test_ADMIN_INV_8_validateAdminAuth_approvalSignatureCannotAuthorizeRejection() public {
+    function test_validateAdminAuth_approvalSignatureCannotAuthorizeRejection() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -648,7 +646,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that rejection signatures cannot authorize an approval operation.
-    function test_LOADM_VAACNOR_2_ADMIN_INV_8_validateAdminAuth_rejectionSignatureCannotAuthorizeApproval() public {
+    function test_validateAdminAuth_rejectionSignatureCannotAuthorizeApproval() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -714,7 +712,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that a failed authorization rolls back nonce consumption.
-    function test_ADMIN_INV_7_validateAdminAuth_failedAuth_rollsBackNonceUsage() public {
+    function test_validateAdminAuth_failedAuth_rollsBackNonceUsage() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -743,9 +741,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that removing an admin after signing but before execution reverts with `SignerIsNotAdmin`.
-    function test_ADMIN_INV_9_A__LOA_AAUTH_3_validateAdminAuth_adminRemovedAfterSigning_revertsSignerIsNotAdmin()
-        public
-    {
+    function test_validateAdminAuth_adminRemovedAfterSigning_revertsSignerIsNotAdmin() public {
         // Setup: configure a two-admin quorum, sign with `admin1`, then remove `admin1` before execution so the
         // signed admin set is stale at validation time.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 1});
@@ -780,9 +776,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that raising the threshold after signing causes the old signature set to revert.
-    function test_ADMIN_INV_9_B__LOA_AAUTH_4_validateAdminAuth_thresholdRaisedAfterSigning_revertsInsufficientAuthorization()
-        public
-    {
+    function test_validateAdminAuth_thresholdRaisedAfterSigning_revertsInsufficientAuthorization() public {
         // Setup: configure a one-of-two admin quorum, sign with one admin, then raise the threshold so the signed
         // bundle no longer satisfies current execution-time state.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 1});
@@ -817,7 +811,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that a chain ID change invalidates previously signed signatures.
-    function test_LOADM_VAACNOR_9_validateAdminAuth_chainIdChange_invalidatesOldSignatures() public {
+    function test_validateAdminAuth_chainIdChange_invalidatesOldSignatures() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -853,7 +847,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies admin signatures valid on one organization fail on another organization.
-    function test_LOADM_VAACNOR_8_validateAdminAuth_crossOrganizationReplay_revertsSignerIsNotAdmin() public {
+    function test_validateAdminAuth_crossOrganizationReplay_revertsSignerIsNotAdmin() public {
         // Setup: deploy a second organization harness and mirror the same admin/member configuration on both.
         LibOrganizationAdminHarness otherHarness = new LibOrganizationAdminHarness();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -886,9 +880,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` leaves expired nonces unused.
-    function test_NMADM_AUTH_3_ADMIN_INV_7__LOA_AAUTH_2_validateAdminAuth_expiredAuth_revertsAndDoesNotConsumeNonce()
-        public
-    {
+    function test_validateAdminAuth_expiredAuth_revertsAndDoesNotConsumeNonce() public {
         uint256 salt = 33;
         uint256 expiration = block.timestamp - 1;
 
@@ -923,9 +915,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` keeps below-threshold nonces
     /// unused.
-    function test_NMADM_AUTH_5__NMADM_AUTH_14__ADMIN_INV_7_validateAdminAuth_belowThreshold_revertsAndDoesNotConsumeNonce()
-        public
-    {
+    function test_validateAdminAuth_belowThreshold_revertsAndDoesNotConsumeNonce() public {
         uint256 salt = 34;
 
         // Setup: require two admin signatures while signing the payload with only one admin key.
@@ -957,7 +947,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` keeps malformed-signature nonces
     /// unused.
-    function test_NMADM_AUTH_6_validateAdminAuth_malformedSignatures_revertAndDoNotConsumeNonce() public {
+    function test_validateAdminAuth_malformedSignatures_revertAndDoNotConsumeNonce() public {
         uint256 salt = 35;
 
         // Setup: configure one-admin auth and bind the nonce to a malformed packed-signature payload.
@@ -983,9 +973,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` rejects changed operation data
     /// without burning nonce.
-    function test_NMADM_AUTH_7_LOADM_VAACNOR_4_validateAdminAuth_signedOperationDataMismatch_revertsAndDoesNotConsumeNonce()
-        public
-    {
+    function test_validateAdminAuth_signedOperationDataMismatch_revertsAndDoesNotConsumeNonce() public {
         bytes memory signedOperationData = baseOperationData;
         // casting string literal to bytes32 is safe because "mutated-operation" fits within 32 bytes
         // forge-lint: disable-next-line(unsafe-typecast)
@@ -1027,9 +1015,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` rejects changed operation types
     /// without burning nonce.
-    function test_NMADM_AUTH_8_LOADM_VAACNOR_3_validateAdminAuth_signedOperationTypeMismatch_revertsAndDoesNotConsumeNonce()
-        public
-    {
+    function test_validateAdminAuth_signedOperationTypeMismatch_revertsAndDoesNotConsumeNonce() public {
         uint256 salt = 37;
 
         // Setup: sign the payload for `ModifyAdmins`, then call validation under `ModifyMembers` with the same bytes
@@ -1067,7 +1053,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies signatures are bound to the exact salt encoded into the operation hash.
-    function test_LOADM_VAACNOR_7_validateAdminAuth_signedSaltMismatch_revertsAndDoesNotConsumeEitherNonce() public {
+    function test_validateAdminAuth_signedSaltMismatch_revertsAndDoesNotConsumeEitherNonce() public {
         // Setup: configure one admin and sign the payload with a different salt than the call uses.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -1108,7 +1094,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` keeps non-admin signer nonces
     /// unused.
-    function test_NMADM_AUTH_9_validateAdminAuth_nonAdminSigner_revertsAndDoesNotConsumeNonce() public {
+    function test_validateAdminAuth_nonAdminSigner_revertsAndDoesNotConsumeNonce() public {
         uint256 nonAdminPk = 0xDEAE;
         uint256 salt = 38;
         address nonAdminSigner = vm.addr(nonAdminPk);
@@ -1144,7 +1130,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` keeps out-of-order signer nonces
     /// unused.
-    function test_NMADM_AUTH_10_ADMIN_INV_6_validateAdminAuth_outOfOrderSigners_revertAndDoNotConsumeNonce() public {
+    function test_validateAdminAuth_outOfOrderSigners_revertAndDoNotConsumeNonce() public {
         uint256 salt = 39;
 
         // Setup: configure threshold-two auth, then intentionally pack the signer set in descending address order.
@@ -1180,9 +1166,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` shares nonce space across approval
     /// and rejection.
-    function test_NMADM_AUTH_11__LOA_AAUTH_1_validateAdminAuth_approvalThenRejection_reusesSharedNonceAndRevertsNonceAlreadyUsed()
-        public
-    {
+    function test_validateAdminAuth_approvalThenRejection_reusesSharedNonceAndRevertsNonceAlreadyUsed() public {
         uint256 salt = 40;
         uint256 expiration = block.timestamp + 1 hours;
 
@@ -1231,7 +1215,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` isolates nonce space by operation
     /// type.
-    function test_NMADM_AUTH_12_validateAdminAuth_differentOperationTypes_canBothSucceed() public {
+    function test_validateAdminAuth_differentOperationTypes_canBothSucceed() public {
         uint256 salt = 41;
         uint256 expiration = block.timestamp + 1 hours;
 
@@ -1280,7 +1264,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` isolates nonce space by salt.
-    function test_NMADM_AUTH_13_validateAdminAuth_differentSalts_canBothSucceed() public {
+    function test_validateAdminAuth_differentSalts_canBothSucceed() public {
         uint256 expiration = block.timestamp + 1 hours;
 
         // Setup: configure one-admin auth and sign the same operation tuple twice with different salts.
@@ -1329,7 +1313,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` enforces shared replay protection
     /// for mixed EOA/ERC-1271 auth.
-    function test_NMADM_AUTH_15_validateAdminAuth_mixedEOAAndERC1271_successThenReplay_revertsSharedNonce() public {
+    function test_validateAdminAuth_mixedEOAAndERC1271_successThenReplay_revertsSharedNonce() public {
         address contractAdmin = address(validSigner1271);
         uint256 salt = 44;
         uint256 expiration = block.timestamp + 1 hours;

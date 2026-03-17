@@ -80,7 +80,7 @@ contract E2ETarget {
 /**
  * @dev End-to-end integration tests for SafeExecutorModule ecosystem.
  *      Covers test plan rows SMI-ETE-*.
- *      Note: SMI-ETE-1, SMI-ETE-4, SMI-ETE-8 through SMI-ETE-10 require full Organization
+ *  Note:, through require full Organization
  *      infrastructure (policies, accounts, guardians) and are out of scope for this mock-based file.
  */
 contract SafeModuleE2ETest is Test, SignatureTestHelpers {
@@ -131,7 +131,7 @@ contract SafeModuleE2ETest is Test, SignatureTestHelpers {
 
     /// @dev Verifies disabled module on Guardian Safe still results in valid signature from module, even if not
     /// accepted by the account.
-    function test_SMI_ETE_2_disabledModuleStillValidatesSignatureAtModuleLevel() public {
+    function test_disabledModuleStillValidatesSignatureAtModuleLevel() public {
         // Setup: deploy a Guardian Safe mock, enable module as a module on it.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule guardianModule =
@@ -162,7 +162,7 @@ contract SafeModuleE2ETest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies module rotation: disable old module + enable new module → old fails, new passes.
-    function test_SMI_ETE_3_moduleRotationOldFailsNewPasses() public {
+    function test_moduleRotationOldFailsNewPasses() public {
         // Setup: deploy old and new modules with different executor keys.
         uint256 oldExecutorPk = 0xDEAD;
         uint256 newExecutorPk = 0xBEEF;
@@ -202,7 +202,7 @@ contract SafeModuleE2ETest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies authorized executor can execute functions through the module path.
-    function test_SMI_ETE_5_authorizedExecutorCanExecuteViaModule() public {
+    function test_authorizedExecutorCanExecuteViaModule() public {
         // Setup: valid calldata.
         bytes memory data = abi.encodeWithSelector(E2ETarget.setValue.selector, 42);
 
@@ -217,7 +217,7 @@ contract SafeModuleE2ETest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies unauthorized caller cannot execute functions through the module path.
-    function test_SMI_ETE_6_unauthorizedCallerCannotExecuteViaModule() public {
+    function test_unauthorizedCallerCannotExecuteViaModule() public {
         // Setup: valid calldata.
         bytes memory data = abi.encodeWithSelector(E2ETarget.setValue.selector, 42);
 
@@ -235,7 +235,7 @@ contract SafeModuleE2ETest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies batched transactions cannot execute Safe management calls (owner/module/threshold).
-    function test_SMI_ETE_7_batchCannotExecuteSafeManagementCalls() public {
+    function test_batchCannotExecuteSafeManagementCalls() public {
         // Setup: batch with sub-transaction targeting the Safe itself.
         bytes[] memory txs = new bytes[](2);
         txs[0] = _encodeTx(address(target), abi.encodeWithSelector(E2ETarget.setValue.selector, 10));
@@ -255,7 +255,7 @@ contract SafeModuleE2ETest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies disabling module on Safe prevents execution and leaves state unchanged.
-    function test_SMI_ETE_11_executionGatingDisabledModuleOrWrongExecutor() public {
+    function test_executionGatingDisabledModuleOrWrongExecutor() public {
         // Setup: prepare valid batch data.
         bytes[] memory txs = new bytes[](1);
         txs[0] = _encodeTx(address(target), abi.encodeWithSelector(E2ETarget.setValue.selector, 42));

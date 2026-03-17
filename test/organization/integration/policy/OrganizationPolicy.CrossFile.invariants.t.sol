@@ -63,7 +63,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
     }
 
     /// @dev Verifies that policy root changes only through set policies.
-    function invariant_POL_INV_1_policyRootChangesOnlyThroughSetPolicies() public view {
+    function invariant_policyRootChangesOnlyThroughSetPolicies() public view {
         // Setup: configure a valid fixture for policy root changes only through set policies.
         // Call: execute `getPoliciesRoot` with the happy-path payload.
         assertEq(harness.getPoliciesRoot(), handler.modelPoliciesRoot(), "policy root must match handler model");
@@ -88,8 +88,8 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         assertEq(actualFunctionLeaf, expectedFunctionLeaf, "function leaf must use double hash");
     }
 
-    /// @dev Verifies invalid policy proofs never authorize transaction or signature flows. [POL-INV-2]
-    function invariant_POL_INV_2_invalidPolicyProofCannotAuthorizeTransactionOrSignature() public {
+    /// @dev Verifies invalid policy proofs never authorize transaction or signature flows.
+    function invariant_invalidPolicyProofCannotAuthorizeTransactionOrSignature() public {
         // Setup: build fixture inputs where invalid policy proof cannot authorize transaction or signature should be
         // denied.
         Policy memory policy = _buildBasePolicy();
@@ -135,19 +135,19 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
     }
 
     /// @dev Verifies that usage monotonic on successful updates.
-    function invariant_TXRL_INV_1_usageMonotonicOnSuccessfulUpdates() public view {
+    function invariant_usageMonotonicOnSuccessfulUpdates() public view {
         // Setup: build fixture inputs where usage monotonic on successful updates should be denied.
         assertFalse(handler.usageMonotonicViolation(), "usage should not decrease after successful updates");
     }
 
-    /// @dev Verifies exceeded rate-limit checks leave usage unchanged. [TXRL-INV-7]
-    function invariant_TXRL_INV_7_exceededRateLimitNeverMutatesUsage() public view {
+    /// @dev Verifies exceeded rate-limit checks leave usage unchanged.
+    function invariant_exceededRateLimitNeverMutatesUsage() public view {
         // Setup: build fixture inputs where exceeded rate limit never mutates usage should be denied.
         assertFalse(handler.exceededLimitMutationViolation(), "exceeded-limit updates must not mutate usage");
     }
 
-    /// @dev Verifies manual approvals require the configured threshold and do not pass short. [POL-INV-6]
-    function invariant_POL_INV_6_manualPoliciesCannotPassWithFewerApprovalsThanRequired() public view {
+    /// @dev Verifies manual approvals require the configured threshold and do not pass short.
+    function invariant_manualPoliciesCannotPassWithFewerApprovalsThanRequired() public view {
         // Setup: build fixture inputs where manual policies cannot pass with fewer approvals than required should be
         // denied.
         Policy memory policy = _buildBasePolicy();
@@ -253,7 +253,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
     }
 
     /// @dev Verifies that desired any initiator must not authorize non members.
-    function invariant_POL_INV_7_desiredAnyInitiatorMustNotAuthorizeNonMembers() public view {
+    function invariant_desiredAnyInitiatorMustNotAuthorizeNonMembers() public view {
         // Setup: build fixture inputs where desired any initiator must not authorize non members should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.initiator.anyInitiator = true;
@@ -266,7 +266,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
     }
 
     /// @dev Verifies that token threshold uses inclusive max semantics.
-    function invariant_POL_INV_9_tokenThresholdUsesInclusiveMax() public view {
+    function invariant_tokenThresholdUsesInclusiveMax() public view {
         // Setup: configure a valid fixture for token threshold uses inclusive max semantics.
         Policy memory policy = _buildBasePolicy();
         policy.config.token.hasAmountThreshold = true;
@@ -280,7 +280,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
     }
 
     /// @dev Verifies that malformed constraints revert in policy-check paths and never authorize.
-    function invariant_POL_INV_8_malformedConstraintsRevertInPolicyCheckPaths() public {
+    function invariant_malformedConstraintsRevertInPolicyCheckPaths() public {
         // Setup: configure a contract-interaction policy and inject malformed constraints that trigger decode failure.
         Policy memory policy = _buildBasePolicy();
         policy.config.transactionType = TransactionType.ContractInteractions;

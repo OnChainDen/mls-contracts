@@ -15,7 +15,7 @@ import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 contract LibOrganizationGuardianRecoveryInitializeTest is LibOrganizationGuardianRecoverySuiteBase {
     /// @dev Verifies `LibOrganizationGuardianRecovery.initializeGuardianRecovery` valid config sets recovery address
     /// and timelock, and values are readable.
-    function test_LOGR_IGR_1__LOGR_IGR_2__LOGR_IGR_8_validConfig_setsAndIsReadable() public {
+    function test_validConfig_setsAndIsReadable() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
@@ -30,7 +30,7 @@ contract LibOrganizationGuardianRecoveryInitializeTest is LibOrganizationGuardia
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initializeGuardianRecovery` zero recovery address reverts with
     /// `InvalidGuardianRecoveryAddress`.
-    function test_LOGR_IGR_3__GREC_INV_11_A_zeroAddress_revertsInvalidGuardianRecoveryAddress() public {
+    function test_zeroAddress_revertsInvalidGuardianRecoveryAddress() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
@@ -48,7 +48,7 @@ contract LibOrganizationGuardianRecoveryInitializeTest is LibOrganizationGuardia
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initializeGuardianRecovery` below-min and above-max timelock
     /// values revert `InvalidTimelockDuration`.
-    function test_LOGR_IGR_4__LOGR_IGR_5__GREC_INV_11_B_outOfRangeTimelock_revertsInvalidTimelockDuration() public {
+    function test_outOfRangeTimelock_revertsInvalidTimelockDuration() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
@@ -83,7 +83,7 @@ contract LibOrganizationGuardianRecoveryInitializeTest is LibOrganizationGuardia
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initializeGuardianRecovery` any preconfigured recovery field
     /// causes `GuardianRecoveryAlreadyConfigured`.
-    function test_LOGR_IGR_6__LOGR_IGR_7_eitherPreconfiguredField_revertsGuardianRecoveryAlreadyConfigured() public {
+    function test_eitherPreconfiguredField_revertsGuardianRecoveryAlreadyConfigured() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryConfig(GUARDIAN_RECOVERY_ADDRESS_B, 0);
@@ -112,7 +112,7 @@ contract LibOrganizationGuardianRecoveryInitializeTest is LibOrganizationGuardia
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initializeGuardianRecovery` initialize only mutates config fields
     /// and does not change pending/update init state.
-    function test_LOGR_IGR_9_initializeOnlyMutatesConfigFields_pendingStateUnchanged() public {
+    function test_initializeOnlyMutatesConfigFields_pendingStateUnchanged() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and seed pending recovery-guardian
         // update.
         harness.resetGuardianRecoveryStorageViaHarness();

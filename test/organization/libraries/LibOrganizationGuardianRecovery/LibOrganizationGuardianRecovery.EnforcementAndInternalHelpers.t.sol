@@ -14,9 +14,7 @@ import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
  */
 contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is LibOrganizationGuardianRecoverySuiteBase {
     /// @dev Verifies that enforce-only-recovery-address pass/fail behavior and revert payload fields.
-    function test_LOGR_EOGRA_1__LOGR_EOGRA_2__LOGR_EOGRA_3__LOGR_EOGRA_4_enforceOnlyGuardianRecoveryAddress_behavesAsExpected()
-        public
-    {
+    function test_enforceOnlyGuardianRecoveryAddress_behavesAsExpected() public {
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
@@ -53,9 +51,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     }
 
     /// @dev Verifies that enforce-only-pending-guardian pass/fail behavior including cancel/accept transitions.
-    function test_LOGR_EORPG_1__LOGR_EORPG_2__LOGR_EORPG_3__LOGR_EORPG_4__LOGR_EORPG_5_enforceOnlyRecoveryPendingGuardian_behavesAsExpected()
-        public
-    {
+    function test_enforceOnlyRecoveryPendingGuardian_behavesAsExpected() public {
         // Setup: reconfigure baseline recovery address and timelock and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
@@ -109,10 +105,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     }
 
     /// @dev Verifies that internal clear helper resets pending-init and leaves other fields untouched.
-    /// Plan rows: LOGR-AOTCPGRIT-1, LOGR-AOTCPGRIT-2.
-    function test_LOGR_CPGRIT_1__LOGR_CPGRIT_2__LOGR_CPGRIT_3__LOGR_CPGRIT_4__LOGR_CPGRIT_5__LOGR_AOTCPGRIT_1__LOGR_AOTCPGRIT_2_clearPendingInit_helperBehavior()
-        public
-    {
+    function test_clearPendingInit_helperBehavior() public {
         // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending
         // recovery-guardian update.
         _resetAndConfigureRecovery();
@@ -151,10 +144,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     }
 
     /// @dev Verifies that not-configured validation helper accepts all-zero and reverts on any configured field.
-    /// Plan rows: LOGR-AOTVGRNCOR-1, LOGR-AOTVGRNCOR-2, LOGR-AOTVGRNCOR-3, LOGR-AOTVGRNCOR-4.
-    function test_LOGR_VGRNCOR_1__LOGR_VGRNCOR_2__LOGR_VGRNCOR_3__LOGR_VGRNCOR_4__LOGR_AOTVGRNCOR_1__LOGR_AOTVGRNCOR_2__LOGR_AOTVGRNCOR_3__LOGR_AOTVGRNCOR_4_validateNotConfigured_helperBehavior()
-        public
-    {
+    function test_validateNotConfigured_helperBehavior() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
@@ -182,11 +172,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     }
 
     /// @dev Verifies that params validation helper enforces address checks, range checks, and boundaries.
-    /// Plan rows: LOGR-AOTVGRPOR-1, LOGR-AOTVGRPOR-2, LOGR-AOTVGRPOR-3, LOGR-AOTVGRPOR-4, LOGR-AOTVGRPOR-5,
-    /// LOGR-AOTVGRPOR-6.
-    function test_LOGR_VGRPOR_1__LOGR_VGRPOR_2__LOGR_VGRPOR_3__LOGR_VGRPOR_4__LOGR_VGRPOR_5__LOGR_VGRPOR_6__LOGR_VGRPOR_7__LOGR_VGRPOR_8__LOGR_AOTVGRPOR_1__LOGR_AOTVGRPOR_2__LOGR_AOTVGRPOR_3__LOGR_AOTVGRPOR_4__LOGR_AOTVGRPOR_5__LOGR_AOTVGRPOR_6_validateParams_helperBehavior()
-        public
-    {
+    function test_validateParams_helperBehavior() public {
         // Setup: reuse suite baseline where recovery is preconfigured.
 
         // Call: validate boundary and non-boundary in-range recovery params, then assert invalid branches revert.

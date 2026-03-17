@@ -24,7 +24,7 @@ contract OrganizationSignaturesBaseTest is Test {
     }
 
     /// @dev Verifies `OrganizationSignaturesBase.computeNonce` matches the direct library formula.
-    function test_NMSB_CN_1_computeNonce_matchesDirectLibraryComputation() public view {
+    function test_computeNonce_matchesDirectLibraryComputation() public view {
         // Setup: define one nonce tuple and the formula-equivalent expected value.
         bytes memory operationData = abi.encode(address(0xA11CE), uint256(31));
         uint256 expected =
@@ -38,7 +38,7 @@ contract OrganizationSignaturesBaseTest is Test {
     }
 
     /// @dev Verifies `OrganizationSignaturesBase.computeNonce` is callable by arbitrary callers.
-    function test_NMSB_CN_2_computeNonce_isCallableByAnyCaller() public {
+    function test_computeNonce_isCallableByAnyCaller() public {
         // Setup: use a non-guardian, non-admin caller and a deterministic payload.
         address arbitraryCaller = address(0xCAFE);
         bytes memory operationData = abi.encode(address(0xBEEF), uint256(32));
@@ -56,7 +56,7 @@ contract OrganizationSignaturesBaseTest is Test {
     }
 
     /// @dev Verifies `OrganizationSignaturesBase.isNonceUsed` reflects nonce consumption from another flow.
-    function test_NMSB_INU_1_isNonceUsed_tracksNonceConsumptionFromAnotherFlow() public {
+    function test_isNonceUsed_tracksNonceConsumptionFromAnotherFlow() public {
         // Setup: derive a nonce and confirm it starts unused before another flow consumes it.
         bytes memory operationData = abi.encode(address(0xD00D), uint256(33));
         uint256 nonce = harness.computeNonce(OperationType.ModifyPolicies, operationData, 33);
@@ -70,7 +70,7 @@ contract OrganizationSignaturesBaseTest is Test {
     }
 
     /// @dev Verifies `OrganizationSignaturesBase.isNonceUsed` is callable by arbitrary callers.
-    function test_NMSB_INU_2_isNonceUsed_isCallableByAnyCaller() public {
+    function test_isNonceUsed_isCallableByAnyCaller() public {
         // Setup: seed one nonce as used and query it from a caller with no special role.
         uint256 nonce = 34;
         address arbitraryCaller = address(0xFACE);

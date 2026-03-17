@@ -45,7 +45,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
      * @param policyIdSeed Raw policy id used to derive a bounded non-zero policy id
      * @param mutationSelector Chooses which policy field to mutate after the exact-tuple control check
      */
-    function testFuzz_FLOP_MERKLE_56_isPolicyInOrg_exactTuplePassesAndPolicyOrProofMutationFails(
+    function testFuzz_isPolicyInOrg_exactTuplePassesAndPolicyOrProofMutationFails(
         uint256 policyIdSeed,
         uint8 mutationSelector
     ) public {
@@ -118,7 +118,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
      * @param allowedAccount Account included in the source-account merkle tree
      * @param otherAccount Distinct account excluded from the source-account merkle tree
      */
-    function testFuzz_FLOP_SOURCE_57_isSourceAccountAllowedByPolicy_anySourceAcceptsOtherwiseExactProofRequired(
+    function testFuzz_isSourceAccountAllowedByPolicy_anySourceAcceptsOtherwiseExactProofRequired(
         address allowedAccount,
         address otherAccount
     ) public {
@@ -220,13 +220,15 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
     }
 
     /// @dev Verifies that source account proofs only pass for exact tuple.
-    function testFuzz_POL_INV_3_sourceAccountProofsOnlyPassForExactTuple(
+    function testFuzz_sourceAccountProofsOnlyPassForExactTuple(
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for source account proofs only pass
         // for exact tuple.
         address accountA,
         address accountB,
         bool useFirst
-    ) public {
+    )
+        public
+    {
         vm.assume(accountA != address(0));
         vm.assume(accountB != address(0));
         vm.assume(accountA != accountB);
@@ -395,8 +397,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
     }
 
     /// @dev Verifies that rate limit scope collision matches scope model.
-    /// SAG-FUZ-5
-    function testFuzz_SAG_FUZ_5_rateLimitScopeCollisionMatchesScopeModel(
+    function testFuzz_rateLimitScopeCollisionMatchesScopeModel(
         // Setup: configure a valid fixture for rate limit scope collision matches scope model.
         uint8 sourceScopeSeed,
         uint8 destinationScopeSeed,
@@ -492,7 +493,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
      * @param tokenContract ERC-20 token contract used for the token-transfer branch
      * @param amountRaw Raw transfer amount used to derive a bounded non-zero amount
      */
-    function testFuzz_FLOP_TX_58_isTransactionAllowedByPolicy_tokenTransferPoliciesOnlyAcceptActualMatchingTransfers(
+    function testFuzz_isTransactionAllowedByPolicy_tokenTransferPoliciesOnlyAcceptActualMatchingTransfers(
         bool useERC20,
         address allowedDestination,
         address deniedDestination,
@@ -541,7 +542,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
      * @param allowedArg Argument value that satisfies the exact parameter constraint
      * @param deniedArg Distinct argument value that violates the parameter constraint
      */
-    function testFuzz_FLOP_TX_59_isTransactionAllowedByPolicy_contractInteractionPoliciesRejectTokenTransfersAndEnforceChecks(
+    function testFuzz_isTransactionAllowedByPolicy_contractInteractionPoliciesRejectTokenTransfersAndEnforceChecks(
         address allowedDestination,
         address deniedDestination,
         uint256 allowedArg,
@@ -642,7 +643,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
      * @param tokenContract ERC-20 token contract used for the ERC-20 transfer branch
      * @param amountRaw Raw amount used to derive a bounded non-zero transfer amount
      */
-    function testFuzz_FLOP_TX_60_isTransactionAllowedByPolicy_anyPoliciesAcceptBothTransactionClassesOnlyWhenDestinationAllowed(
+    function testFuzz_isTransactionAllowedByPolicy_anyPoliciesAcceptBothTransactionClassesOnlyWhenDestinationAllowed(
         bool useTokenTransfer,
         bool useERC20,
         address allowedDestination,
@@ -697,7 +698,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
      * @param tokenContract ERC-20 token contract used for the ERC-20 transfer branch
      * @param amountRaw Raw amount used to derive a bounded non-zero transfer amount
      */
-    function testFuzz_FLOP_TX_61_isTransactionAllowedByPolicy_signaturesPoliciesNeverAuthorizeAccountTransactionPaths(
+    function testFuzz_isTransactionAllowedByPolicy_signaturesPoliciesNeverAuthorizeAccountTransactionPaths(
         bool useTokenTransfer,
         bool useERC20,
         address destination,

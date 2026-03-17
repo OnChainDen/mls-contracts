@@ -18,7 +18,7 @@ contract ImplementationWhitelistIntegrationTest is ImplementationWhitelistSuiteB
     // forgefmt: disable-next-item
     /// @dev Verifies unwhitelisted implementation is rejected by `validateIsImplementationWhitelistedOrRevert` for both
     // Organization and Account contract types, covering all enforcement entrypoints.
-    function test_IWC_INT_1_unwhitelistedImplementation_rejectedByAllEnforcementEntrypoints() public {
+    function test_unwhitelistedImplementation_rejectedByAllEnforcementEntrypoints() public {
         // Setup: target addresses have never been whitelisted on the real whitelist proxy.
         address orgTarget = organizationImplementationA;
         address accountTarget = accountImplementationA;
@@ -49,7 +49,7 @@ contract ImplementationWhitelistIntegrationTest is ImplementationWhitelistSuiteB
     // forgefmt: disable-next-item
     /// @dev Verifies type separation end-to-end: Account whitelist never unlocks Organization validation and vice
     // versa, across the real whitelist proxy.
-    function test_IWC_INT_2_typeSeparation_accountWhitelistDoesNotUnlockOrganizationAndViceVersa() public {
+    function test_typeSeparation_accountWhitelistDoesNotUnlockOrganizationAndViceVersa() public {
         // Setup: whitelist impl A under Account only, impl B under Organization only.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(
@@ -86,7 +86,7 @@ contract ImplementationWhitelistIntegrationTest is ImplementationWhitelistSuiteB
     // forgefmt: disable-next-item
     /// @dev Verifies unwhitelisting an implementation blocks future validation but does not break already-deployed
     // contracts currently using it.
-    function test_IWC_INT_3_unwhitelisting_blocksFutureUseButDoesNotBreakDeployedContracts() public {
+    function test_unwhitelisting_blocksFutureUseButDoesNotBreakDeployedContracts() public {
         // Setup: whitelist org and account implementations, then confirm validation passes.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(
@@ -139,7 +139,7 @@ contract ImplementationWhitelistIntegrationTest is ImplementationWhitelistSuiteB
     }
 
     /// @dev Verifies re-whitelisting a previously removed implementation re-enables eligible validation flows.
-    function test_IWC_INT_4_reWhitelisting_reEnablesEligibleFlows() public {
+    function test_reWhitelisting_reEnablesEligibleFlows() public {
         // Setup: add, remove, then re-add Organization implementation.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(
@@ -191,8 +191,8 @@ contract ImplementationWhitelistIntegrationTest is ImplementationWhitelistSuiteB
         );
     }
 
-    /// @dev IWC-INT-5: Upgrading whitelist contract preserves existing whitelist state and enforcement behavior.
-    function test_IWC_INT_5_whitelistUpgrade_preservesStateAndEnforcement() public {
+    /// @dev : Upgrading whitelist contract preserves existing whitelist state and enforcement behavior.
+    function test_whitelistUpgrade_preservesStateAndEnforcement() public {
         // Setup: seed whitelist state with one Organization and one Account implementation.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(
@@ -230,8 +230,8 @@ contract ImplementationWhitelistIntegrationTest is ImplementationWhitelistSuiteB
         );
     }
 
-    /// @dev IWC-INT-6: Ownership transfer of whitelist contract immediately changes who can alter implementations.
-    function test_IWC_INT_6_ownershipTransfer_immediatelyChangesMutationRights() public {
+    /// @dev : Ownership transfer of whitelist contract immediately changes who can alter implementations.
+    function test_ownershipTransfer_immediatelyChangesMutationRights() public {
         // Setup: transfer ownership from OWNER to NEW_OWNER via two-step transfer.
         vm.prank(OWNER);
         whitelistProxy.transferOwnership(NEW_OWNER);
@@ -261,7 +261,7 @@ contract ImplementationWhitelistIntegrationTest is ImplementationWhitelistSuiteB
     // forgefmt: disable-next-item
     /// @dev Verifies deployment path remains atomic: whitelist validation failure prevents any state
     // changes on the whitelist proxy itself, proving no partial state exposure.
-    function test_IWC_INT_7_deploymentPath_atomicWithWhitelistValidationAndInitialization() public {
+    function test_deploymentPath_atomicWithWhitelistValidationAndInitialization() public {
         // Setup: seed whitelist with one org implementation, attempt validation on a non-whitelisted one.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(

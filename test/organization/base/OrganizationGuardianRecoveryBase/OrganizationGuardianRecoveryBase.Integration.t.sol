@@ -13,7 +13,7 @@ import {AdminAuthParams} from "types/AdminTypes.sol";
  */
 contract OrganizationGuardianRecoveryBaseIntegrationTest is OrganizationGuardianRecoveryBaseSuiteBase {
     /// @dev Verifies that stale finalize signatures become invalid after cancel + re-init with new params.
-    function test_OGR_INT_11_staleFinalizeSignaturesInvalidAfterCancelAndReInit() public {
+    function test_staleFinalizeSignaturesInvalidAfterCancelAndReInit() public {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -78,7 +78,7 @@ contract OrganizationGuardianRecoveryBaseIntegrationTest is OrganizationGuardian
     }
 
     /// @dev Verifies that stale cancel signatures become invalid once pending params change.
-    function test_OGR_INT_12_staleCancelSignaturesInvalidAfterPendingParamsChange() public {
+    function test_staleCancelSignaturesInvalidAfterPendingParamsChange() public {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -143,7 +143,7 @@ contract OrganizationGuardianRecoveryBaseIntegrationTest is OrganizationGuardian
 
     /// @dev Verifies that unconfigured recovery address causes base recovery entry points to revert via
     /// onlyGuardianRecoveryAddress.
-    function test_OGR_INT_13_unconfiguredRecoveryAddress_baseRecoveryEntryPointsAlwaysRevertAndStateUnchanged() public {
+    function test_unconfiguredRecoveryAddress_baseRecoveryEntryPointsAlwaysRevertAndStateUnchanged() public {
         // Setup: start from clean recovery state.
         recoveryStateHarness.resetGuardianRecoveryStorage();
 

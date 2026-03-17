@@ -46,10 +46,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     event Upgraded(address indexed implementation);
 
     /// @dev Verifies valid guardian + admin auth + whitelisted implementation + empty data upgrades successfully.
-    /// [OI-UTCWA-3, OIMP-UCA-1]
-    function test_OI_UTACWA_1__OI_UTCWA_3__OIMP_UCA_1_upgradesSuccessfullyWithValidGuardianAuthAndWhitelistedImplementation()
-        public
-    {
+    function test_upgradesSuccessfullyWithValidGuardianAuthAndWhitelistedImplementation() public {
         // Setup: configure valid admin auth and whitelist a UUPS-compatible Organization target.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -71,8 +68,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         );
     }
 
-    /// @dev Verifies non-empty migration calldata executes successfully during authorized upgrade. [OI-UTCWA-11]
-    function test_OI_UTACWA_2__OI_UTCWA_11_upgradesSuccessfullyAndExecutesMigrationCall() public {
+    /// @dev Verifies non-empty migration calldata executes successfully during authorized upgrade.
+    function test_upgradesSuccessfullyAndExecutesMigrationCall() public {
         // Setup: configure auth/whitelist and migration payload for the post-upgrade delegatecall.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -98,7 +95,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies non-guardian callers are rejected by `onlyGuardian`.
-    function test_OI_UTACWA_3_nonGuardianCaller_revertsOnlyGuardian() public {
+    function test_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup: prepare otherwise-valid auth and whitelist entries.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -118,7 +115,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies expired admin auth reverts during authorization validation.
-    function test_OI_UTACWA_4_expiredAdminAuth_reverts() public {
+    function test_expiredAdminAuth_reverts() public {
         // Setup: configure valid admin membership and whitelist with already-expired auth params.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -138,7 +135,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies insufficient admin signatures revert `InsufficientAdminAuthorization`.
-    function test_OI_UTACWA_5_insufficientAdminSignatures_reverts() public {
+    function test_insufficientAdminSignatures_reverts() public {
         // Setup: require two admin signatures but provide only one.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -158,7 +155,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies replaying the same admin-auth nonce reverts after first successful execution.
-    function test_OI_UTACWA_6__NMOI_UTACWA_1_replayWithSameNonce_reverts() public {
+    function test_replayWithSameNonce_reverts() public {
         // Setup: execute one successful authorized upgrade with deterministic nonce.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -185,7 +182,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies `upgradeToAndCallWithAuthorization` can reuse the same implementation and idempotent
     /// migration calldata under different admin-auth salts.
-    function test_NMOI_UTACWA_2_sameUpgradeTupleDifferentSalts_canBothSucceed() public {
+    function test_sameUpgradeTupleDifferentSalts_canBothSucceed() public {
         // Setup: whitelist the same upgrade target and build two auth payloads for identical
         // `(newImplementation, migrationData)` using different salts and idempotent marker-setting calldata.
         _setSingleAdminThresholdOne();
@@ -231,7 +228,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies nonces already consumed via rejection flow cannot be reused for upgrade execution.
-    function test_OI_UTACWA_7__OIMP_UCA_6_rejectedNonce_revertsWhenUsedForUpgrade() public {
+    function test_rejectedNonce_revertsWhenUsedForUpgrade() public {
         // Setup: reject the exact Upgrade operation nonce using valid rejection signatures.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -265,7 +262,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies signatures for a different target implementation cannot authorize current upgrade call.
-    function test_OI_UTACWA_8_signaturesForDifferentImplementation_reverts() public {
+    function test_signaturesForDifferentImplementation_reverts() public {
         // Setup: sign auth for V2 while attempting execution against V3.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -286,7 +283,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies signatures for different operation type cannot authorize Organization upgrade.
-    function test_OI_UTACWA_9_signaturesForWrongOperationType_reverts() public {
+    function test_signaturesForWrongOperationType_reverts() public {
         // Setup: build signatures over `OperationType.UpgradeAccount` instead of `OperationType.Upgrade`.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -308,7 +305,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies rejection-intent signatures (`isApproval=false`) cannot execute upgrades.
-    function test_OI_UTACWA_10_rejectionIntentSignatures_cannotExecuteUpgrade() public {
+    function test_rejectionIntentSignatures_cannotExecuteUpgrade() public {
         // Setup: build signatures for the same operation with `isApproval = false`.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -327,8 +324,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), rejectionAuth);
     }
 
-    /// @dev Verifies non-whitelisted Organization implementation reverts `ImplementationNotWhitelisted`. [OI-UTCWA-1]
-    function test_OI_UTACWA_11__OI_UTCWA_1_nonWhitelistedImplementation_reverts() public {
+    /// @dev Verifies non-whitelisted Organization implementation reverts `ImplementationNotWhitelisted`.
+    function test_nonWhitelistedImplementation_reverts() public {
         // Setup: configure valid auth but leave target implementation un-whitelisted.
         _setSingleAdminThresholdOne();
         (AdminAuthParams memory auth, bytes memory operationData) = _buildUpgradeAuth({
@@ -353,10 +350,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies implementations whitelisted only for `ContractType.Account` cannot upgrade Organization proxy.
-    /// [OI-UTCWA-2]
-    function test_OI_UTACWA_12__OI_UTCWA_2_accountTypeOnlyWhitelistedImplementation_revertsForOrganizationUpgrade()
-        public
-    {
+    function test_accountTypeOnlyWhitelistedImplementation_revertsForOrganizationUpgrade() public {
         // Setup: whitelist the target under Account type only.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(address(implementationV2), true);
@@ -380,7 +374,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies upgrade to non-UUPS target reverts due UUPS safety checks.
-    function test_OI_UTACWA_13_nonUUPSTarget_reverts() public {
+    function test_nonUUPSTarget_reverts() public {
         // Setup: whitelist a non-UUPS contract target and prepare valid auth.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(nonUupsImplementation), true);
@@ -402,7 +396,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies upgrade to UUPS target with incompatible `proxiableUUID` reverts.
-    function test_OI_UTACWA_14_incompatibleProxiableUUID_reverts() public {
+    function test_incompatibleProxiableUUID_reverts() public {
         // Setup: whitelist incompatible-UUID UUPS target and prepare valid auth.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(wrongUuidImplementation), true);
@@ -424,7 +418,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies successful upgrade emits ERC-1967 `Upgraded` event with the new implementation.
-    function test_OI_UTACWA_15_success_emitsUpgradedEvent() public {
+    function test_success_emitsUpgradedEvent() public {
         // Setup: configure valid upgrade auth and whitelist target implementation.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -446,7 +440,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies Organization state is preserved across UUPS implementation upgrade.
-    function test_OI_UTACWA_16__OIMP_UCA_4_upgrade_preservesOrganizationState() public {
+    function test_upgrade_preservesOrganizationState() public {
         // Setup: seed representative Organization state across members/admins/groups/policies/guardian/recovery
         // plus one consumed nonce.
         _setSingleAdminThresholdOne();
@@ -555,7 +549,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies account-factory state remains intact across Organization UUPS upgrades.
-    function test_OI_UTACWA_17_upgrade_preservesAccountFactoryState() public {
+    function test_upgrade_preservesAccountFactoryState() public {
         // Setup: seed account implementation pointer and deployed-account tracking before upgrade.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -586,7 +580,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies sequential upgrades preserve state and expected behavior at each version.
-    function test_OI_UTACWA_18_sequentialUpgrades_preserveStateAndFunctionality() public {
+    function test_sequentialUpgrades_preserveStateAndFunctionality() public {
         // Setup: whitelist V2/V3 and seed account-implementation state to check persistence.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -624,9 +618,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies reverting migration calldata reverts the full transaction and keeps implementation unchanged.
-    function test_UPG_CTRL_9_A__OI_UTACWA_19__OIMP_UCA_3_revertingMigrationCall_revertsAtomicallyAndKeepsImplementation()
-        public
-    {
+    function test_revertingMigrationCall_revertsAtomicallyAndKeepsImplementation() public {
         // Setup: whitelist target and build migration payload that intentionally reverts.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -655,7 +647,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies failing upgrade paths do not consume nonce and the same auth can succeed after fix.
-    function test_OI_UTACWA_20_failedPath_doesNotConsumeNonceAndCanRetry() public {
+    function test_failedPath_doesNotConsumeNonceAndCanRetry() public {
         // Setup: build valid auth while leaving target temporarily un-whitelisted.
         _setSingleAdminThresholdOne();
         (AdminAuthParams memory auth, bytes memory operationData) = _buildUpgradeAuth({
@@ -687,7 +679,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies `upgradeToAndCallWithAuthorization` rolls back nonce usage when whitelist validation, UUPS
     /// checks, or migration execution reverts.
-    function test_NMOI_UTACWA_4_whitelistUUPSAndMigrationFailures_rollBackNonce() public {
+    function test_whitelistUUPSAndMigrationFailures_rollBackNonce() public {
         // Setup: prepare one auth payload per failure class so each branch reaches a different downstream revert after
         // admin auth validation succeeds.
         _setSingleAdminThresholdOne();
@@ -774,10 +766,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies authorized-upgrade target is non-zero only during upgrade execution and zero before/after.
-    /// [OI-UTCWA-6, OI-UTCWA-8, OIMP-UCA-5]
-    function test_OI_UTACWA_21__OI_UTCWA_6__OI_UTCWA_8__OIMP_UCA_5_upgradeAuthorizationFlag_scopedToExecutionWindow()
-        public
-    {
+    function test_upgradeAuthorizationFlag_scopedToExecutionWindow() public {
         // Setup: whitelist target and use migration helper that requires in-flight upgrade authorization.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -806,11 +795,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies failed upgrade paths never leave authorized-upgrade target stuck set.
-    /// [OI-UTCWA-7, OI-UTCWA-9, OIMP-UCA-5]
-    /// OI-AUPG-2
-    function test_OI_AUPG_2__UPG_CTRL_9_B__OI_UTACWA_22__OI_UTCWA_7__OI_UTCWA_9__OIMP_UCA_5_failedUpgrade_neverLeavesAuthorizationFlagTrue()
-        public
-    {
+    function test_failedUpgrade_neverLeavesAuthorizationFlagTrue() public {
         // Setup: use reverting migration payload to force rollback path.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -835,11 +820,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies direct calls to inherited `upgradeToAndCall` always revert `UnauthorizedUpgrade`.
-    /// [OI-UTCWA-10, OIMP-UCA-2]
-    /// OI-AUPG-1
-    function test_OI_AUPG_1__OI_UTACWA_23__OI_UTCWA_10__OIMP_UCA_2_directUpgradeToAndCall_revertsUnauthorizedUpgrade()
-        public
-    {
+    function test_directUpgradeToAndCall_revertsUnauthorizedUpgrade() public {
         // Setup: ensure target is UUPS-compatible and whitelisted to isolate bypass check.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -851,7 +832,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies direct `upgradeToAndCall` reverts even when caller is guardian.
-    function test_OI_UTACWA_24_directUpgradeToAndCall_byGuardianStillRevertsUnauthorizedUpgrade() public {
+    function test_directUpgradeToAndCall_byGuardianStillRevertsUnauthorizedUpgrade() public {
         // Setup: isolate bypass path with compatible target.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -864,11 +845,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies `upgradeToAndCallWithAuthorization` binds signatures to both `newImplementation` and migration
-    /// `data`. [OI-UTCWA-12, OIMP-UCA-7]
-    /// OI-AUPG-5
-    function test_OI_AUPG_5__UPG_CTRL_7__OI_UTACWA_25__OI_UTCWA_12__NMOI_UTACWA_3__OIMP_UCA_7_adminAuthMustBindMigrationData()
-        public
-    {
+    /// `data`.
+    function test_adminAuthMustBindMigrationData() public {
         // Setup: build auth for target implementation and then mutate only migration calldata at execution time.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -890,9 +868,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies migration calldata cannot trigger a nested second upgrade without fresh authorization.
-    /// [OI-UTCWA-13, OIMP-UCA-8]
-    /// OI-AUPG-6
-    function test_OI_AUPG_6__OI_UTACWA_26__OI_UTCWA_13__OIMP_UCA_8_nestedSecondUpgradeFromMigration_reverts() public {
+    function test_nestedSecondUpgradeFromMigration_reverts() public {
         // Setup: whitelist first target only, then craft migration payload to attempt nested upgrade to un-whitelisted
         // V3.
         _setSingleAdminThresholdOne();
@@ -917,8 +893,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies chained upgrades still fail when the second target is also whitelisted and UUPS-compatible.
-    /// [OIMP-UCA-8]
-    function test_OI_UTACWA_27__OIMP_UCA_8_nestedSecondUpgradeToWhitelistedTarget_revertsWithoutFreshAuth() public {
+    function test_nestedSecondUpgradeToWhitelistedTarget_revertsWithoutFreshAuth() public {
         // Setup: whitelist both targets but provide fresh admin auth only for first upgrade.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -942,8 +917,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), nestedData, auth);
     }
 
-    /// @dev Verifies upgrades fail closed when the configured whitelist address has no code. [OI-UTCWA-5]
-    function test_OI_UTACWA_28__OI_UTCWA_5_whitelistAddressWithoutCode_revertsFailClosed() public {
+    /// @dev Verifies upgrades fail closed when the configured whitelist address has no code.
+    function test_whitelistAddressWithoutCode_revertsFailClosed() public {
         // Setup: configure upgrade storage with an EOA/no-code whitelist address.
         _setSingleAdminThresholdOne();
         organizationProxy.setUpgradeState(address(0xABCD), address(0));
@@ -969,8 +944,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies upgrade reverts when the whitelist validation call reverts, confirming the upgrade path reads
-    ///      the stored whitelist address from proxy storage. [OI-UTCWA-4, ORP-CON-2]
-    function test_OI_UTACWA_29__OI_UTCWA_4__ORP_CON_2_whitelistValidationRevert_provesStoredWhitelistIsUsed() public {
+    ///  the stored whitelist address from proxy storage.
+    function test_whitelistValidationRevert_provesStoredWhitelistIsUsed() public {
         // Setup: configure revert-on-validate whitelist behavior.
         _setSingleAdminThresholdOne();
         RevertingValidationWhitelistMock revertingWhitelist = new RevertingValidationWhitelistMock();
@@ -1000,11 +975,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies whitelist validation runs before the authorization target is exposed in upgrade storage.
-    /// [OI-UTCWA-6, OI-UTCWA-7]
-    /// OI-AUPG-3
-    function test_OI_AUPG_3__OI_UTACWA_31__OI_UTCWA_6__OI_UTCWA_7_whitelistValidation_runsBeforeAuthorizationFlagIsSet()
-        public
-    {
+    function test_whitelistValidation_runsBeforeAuthorizationFlagIsSet() public {
         // Setup: route validation through a mock that inspects upgrade storage during the whitelist call.
         _setSingleAdminThresholdOne();
         ValidationOrderWhitelistMock validatingWhitelist = new ValidationOrderWhitelistMock(organizationProxy);
@@ -1032,10 +1003,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies `upgradeToAndCallWithAuthorization` rejects zero and no-code targets even when whitelisted.
-    /// [OI-UTCWA-14, OI-UTCWA-15, OIMP-UCA-9]
-    function test_OI_UTACWA_30__OI_UTCWA_14__OI_UTCWA_15__OIMP_UCA_9_zeroImplementationEvenIfWhitelisted_reverts()
-        public
-    {
+    function test_zeroImplementationEvenIfWhitelisted_reverts() public {
         // Setup: whitelist zero and no-code targets under Organization type and build matching auth payloads.
         _setSingleAdminThresholdOne();
         address noCodeImplementation = address(0xCA11);
@@ -1082,8 +1050,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies upgrading the real whitelist proxy preserves Organization upgrade enforcement for current and
-    ///      future targets. [IWC-INT-5]
-    function test_OI_UTACWA_32__IWC_INT_5_whitelistUpgrade_preservesOrganizationUpgradeEnforcement() public {
+    ///  future targets.
+    function test_whitelistUpgrade_preservesOrganizationUpgradeEnforcement() public {
         // Setup: point Organization upgrade storage at a real whitelist proxy that already allows V2, then prepare a
         // whitelist upgrade target and Organization upgrade auth.
         address whitelistOwner = address(0xD451);
@@ -1132,8 +1100,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies transferring whitelist ownership immediately changes who can unlock Organization upgrades.
-    ///      [IWC-INT-6]
-    function test_OI_UTACWA_33__IWC_INT_6_whitelistOwnershipTransfer_immediatelyControlsOrganizationUpgrades() public {
+    function test_whitelistOwnershipTransfer_immediatelyControlsOrganizationUpgrades() public {
         // Setup: route Organization upgrade checks through a real whitelist proxy that starts without V2 approved,
         // then prepare a reusable authorized upgrade payload.
         address whitelistOwner = address(0xD452);
@@ -1189,7 +1156,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies `implementation()` returns the current account implementation from storage.
-    function test_OI_IMP_1_implementation_returnsCurrentAccountImplementationFromStorage() public {
+    function test_implementation_returnsCurrentAccountImplementationFromStorage() public {
         // Setup: seed account-implementation storage with a code-bearing implementation.
         address accountImplementation = address(new AccountImplementation());
         organizationProxy.setAccountImplementationStorage(accountImplementation);
@@ -1202,7 +1169,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies `implementation()` reverts `AccountImplementationNotSet` when unset.
-    function test_OI_IMP_2_implementation_whenUnset_revertsAccountImplementationNotSet() public {
+    function test_implementation_whenUnset_revertsAccountImplementationNotSet() public {
         // Setup: leave account implementation storage unset.
 
         // Verify: getter should revert with canonical Organization error.
@@ -1211,8 +1178,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         organizationProxy.implementation();
     }
 
-    /// @dev Verifies `_authorizeUpgrade` reverts `UnauthorizedUpgrade` when no target is authorized. [OIMP-AU-1]
-    function test_OI_AU_1__OIMP_AU_1_authorizeUpgrade_whenFlagFalse_revertsUnauthorizedUpgrade() public {
+    /// @dev Verifies `_authorizeUpgrade` reverts `UnauthorizedUpgrade` when no target is authorized.
+    function test_authorizeUpgrade_whenFlagFalse_revertsUnauthorizedUpgrade() public {
         // Setup: ensure no authorized target is set.
         organizationProxy.setUpgradeState(address(whitelist), address(0));
 
@@ -1222,8 +1189,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         organizationProxy.exposeAuthorizeUpgrade(address(implementationV2));
     }
 
-    /// @dev Verifies `_authorizeUpgrade` succeeds only during authorized wrapper flow. [OIMP-AU-1]
-    function test_OI_AU_2__OIMP_AU_1_authorizeUpgrade_succeedsViaAuthorizedWrapperFlow() public {
+    /// @dev Verifies `_authorizeUpgrade` succeeds only during authorized wrapper flow.
+    function test_authorizeUpgrade_succeedsViaAuthorizedWrapperFlow() public {
         // Setup: configure valid admin auth and whitelist target.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -1246,8 +1213,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies `_authorizeUpgrade` should be bound to a specific `newImplementation`, not only a boolean flag.
-    /// [OIMP-AU-2]
-    function test_OI_AU_3__OIMP_AU_2_authorizeUpgradeMustBindSpecificImplementation() public {
+    function test_authorizeUpgradeMustBindSpecificImplementation() public {
         // Setup: manually set an authorized target that does not match the requested implementation.
         organizationProxy.setUpgradeState(address(whitelist), address(0xBEEF));
 
@@ -1258,7 +1224,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies calling `upgradeToAndCall` on implementation contract directly reverts due `onlyProxy` guard.
-    function test_OI_UUPS_1_upgradeToAndCallOnImplementationContract_revertsOnlyProxy() public {
+    function test_upgradeToAndCallOnImplementationContract_revertsOnlyProxy() public {
         // Setup: implementation contract call context (not proxy/delegatecall).
 
         // Verify: UUPS entrypoint enforces proxy-only call context.
@@ -1268,8 +1234,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies direct implementation-contract calls to `upgradeToAndCallWithAuthorization` revert because the
-    /// guardian is unset in implementation storage. [OIMP-IDCP-3]
-    function test_OIMP_IDCP_3_upgradeToAndCallWithAuthorizationOnImplementation_revertsUnauthorizedGuardian() public {
+    /// guardian is unset in implementation storage.
+    function test_upgradeToAndCallWithAuthorizationOnImplementation_revertsUnauthorizedGuardian() public {
         // Setup: call the implementation contract directly with zeroed auth while using its own guardian storage.
         AdminAuthParams memory auth;
         address implementationGuardian = implementationV1.guardian();
@@ -1286,8 +1252,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies direct implementation-contract calls to `initialize` revert `InvalidInitialization` via the
-    /// constructor-time initializer lockout. [OIMP-IDCP-4]
-    function test_OIMP_IDCP_4_initializeOnImplementation_revertsInvalidInitialization() public {
+    /// constructor-time initializer lockout.
+    function test_initializeOnImplementation_revertsInvalidInitialization() public {
         // Setup: call the implementation contract directly with defaulted initialization params.
         InitializationParams memory params;
 
@@ -1299,7 +1265,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies calling `proxiableUUID` through proxy reverts due `notDelegated` guard.
-    function test_OI_UUPS_2_proxiableUUIDThroughProxy_revertsNotDelegated() public {
+    function test_proxiableUUIDThroughProxy_revertsNotDelegated() public {
         // Setup: proxy call path into UUPS `proxiableUUID`.
 
         // Verify: `proxiableUUID` cannot be called through delegatecall/proxy context.

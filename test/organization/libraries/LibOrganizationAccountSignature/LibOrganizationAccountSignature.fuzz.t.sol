@@ -58,7 +58,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that random message hashes validate under a fully valid policy-signature fixture.
-    function testFuzz_AS_FUZ_1__FLOAS_SIG_97_isValidSignature_randomHashesWithValidPolicySignature_prefix01ReturnsMagic(bytes32 randomMessageHash)
+    function testFuzz_isValidSignature_randomHashesWithValidPolicySignature_prefix01ReturnsMagic(bytes32 randomMessageHash)
         public
     {
         // Setup: configure valid auto-approve fixture bound to fuzzed message hash.
@@ -103,7 +103,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that random unsupported type prefixes always return ERC-1271 invalid value.
-    function testFuzz_AS_FUZ_2__FLOAS_SIG_97__FCF_ASREC_162_isValidSignature_randomUnsupportedTypePrefixes_returnInvalid(
+    function testFuzz_isValidSignature_randomUnsupportedTypePrefixes_returnInvalid(
         uint8 typePrefix,
         bytes calldata payload
     ) public {
@@ -124,9 +124,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
      *      `0x00` type prefix.
      * @param recoveryPkRaw Raw private key used to derive the configured recovery signer
      */
-    function testFuzz_FLOAS_SIG_97__FCF_ASREC_162_isValidSignature_validRecoveryPrefix00ReturnsMagic(uint256 recoveryPkRaw)
-        public
-    {
+    function testFuzz_isValidSignature_validRecoveryPrefix00ReturnsMagic(uint256 recoveryPkRaw) public {
         // Setup: derive a bounded recovery signer, enable tx recovery, and build a valid type-prefixed recovery
         // signature.
         uint256 recoveryPk = bound(recoveryPkRaw, 1, SECP256K1_CURVE_ORDER - 1);
@@ -143,7 +141,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies expiration behavior: future/equal timestamps pass, strictly past timestamps fail.
-    function testFuzz_AS_FUZ_3__FLOAS_POLICY_99_validatePolicyBasedSignature_randomExpirationTimestamp_futurePassPastFail(uint256 expirationTimestamp)
+    function testFuzz_validatePolicyBasedSignature_randomExpirationTimestamp_futurePassPastFail(uint256 expirationTimestamp)
         public
     {
         // Setup: configure valid auto-approve fixture bound to fuzzed expiration timestamp.
@@ -190,9 +188,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that random policy IDs validate when matched with corresponding valid roots/proofs.
-    function testFuzz_AS_FUZ_4_isValidSignature_randomPolicyIdsWithValidProofs_returnsMagic(uint256 policyIdRaw)
-        public
-    {
+    function testFuzz_isValidSignature_randomPolicyIdsWithValidProofs_returnsMagic(uint256 policyIdRaw) public {
         // Setup: bound policy id to a non-zero range and build valid fixture around it.
         uint256 policyId = bound(policyIdRaw, 1, type(uint96).max);
         policyStateHarness.setGuardian(guardianSigner);
@@ -239,8 +235,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
      * @dev Verifies malformed `0x01` policy payloads fail closed without reverting.
      * @param malformedPayload Arbitrary malformed ABI body placed after the policy-type prefix.
      */
-    /// SAG-FUZ-2
-    function testFuzz_SAG_FUZ_2_isValidSignature_randomMalformedPolicyPayloads_returnInvalidNoRevert(bytes calldata malformedPayload)
+    function testFuzz_isValidSignature_randomMalformedPolicyPayloads_returnInvalidNoRevert(bytes calldata malformedPayload)
         public
     {
         vm.assume(malformedPayload.length > 0);
@@ -264,7 +259,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that random guardian EOA keys are accepted when signer matches configured guardian.
-    function testFuzz_AS_FUZ_5__FLOAS_GUARD_100_isValidGuardianSignature_randomGuardianEOAKeyMatchingSigner_returnsTrue(uint256 guardianPkRaw)
+    function testFuzz_isValidGuardianSignature_randomGuardianEOAKeyMatchingSigner_returnsTrue(uint256 guardianPkRaw)
         public
     {
         // Setup: derive bounded guardian private key and configure matching guardian address.
@@ -282,7 +277,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that reviewer signature counts below threshold always fail manual approvals.
-    function testFuzz_AS_FUZ_6__FLOAS_POLICY_99_validatePolicyBasedSignature_reviewSignerCountsBelowThreshold_returnInvalid(uint8 signerCountRaw)
+    function testFuzz_validatePolicyBasedSignature_reviewSignerCountsBelowThreshold_returnInvalid(uint8 signerCountRaw)
         public
     {
         // Setup: bound signer count below threshold and build manual group-approval fixture.
@@ -340,7 +335,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies random recovery signers: matching signer passes, non-matching signer fails.
-    function testFuzz_AS_FUZ_7__FLOAS_RECOV_98_validateRecoverySignature_randomRecoverySigner_matchPassMismatchFail(
+    function testFuzz_validateRecoverySignature_randomRecoverySigner_matchPassMismatchFail(
         uint256 recoveryPkRaw,
         uint256 wrongPkRaw
     ) public {
@@ -373,7 +368,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
      * @param enableRecovery Whether to mark tx recovery enabled
      * @param useMatchingSigner Whether the submitted signature should use the configured signer
      */
-    function testFuzz_FLOAS_RECOV_98__FCF_ASREC_162_validateRecoverySignature_requiresConfiguredEnabledStateAndMatchingSigner(
+    function testFuzz_validateRecoverySignature_requiresConfiguredEnabledStateAndMatchingSigner(
         uint256 recoveryPkRaw,
         uint256 wrongPkRaw,
         bool configureRecovery,
@@ -402,7 +397,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that different initiator signatures produce different review hashes.
-    function testFuzz_AS_FUZ_8_getReviewSignatureHash_differentInitiatorSignatures_returnDifferentHashes(
+    function testFuzz_getReviewSignatureHash_differentInitiatorSignatures_returnDifferentHashes(
         uint256 initiatorPkARaw,
         uint256 initiatorPkBRaw
     ) public view {
@@ -444,7 +439,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
      * @param randomMessageHash Message hash used to build the valid signature tuple
      * @param otherChainIdRaw Raw chain id used to derive a distinct replay domain
      */
-    function testFuzz_FLOAS_E712_102__FCF_SIGSYS_161_isValidSignature_crossOrgAndCrossChainReplayAlwaysFails(
+    function testFuzz_isValidSignature_crossOrgAndCrossChainReplayAlwaysFails(
         bytes32 randomMessageHash,
         uint256 otherChainIdRaw
     ) public {
@@ -509,7 +504,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies random account behavior for `anySourceAccount` versus specific-source policies.
-    function testFuzz_AS_FUZ_9_isERC1271SignatureAllowedByPolicy_randomAccounts_anySourceVsSpecificSource(
+    function testFuzz_isERC1271SignatureAllowedByPolicy_randomAccounts_anySourceVsSpecificSource(
         address accountA,
         address accountB
     ) public {
@@ -555,10 +550,10 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that changing message hash changes both initiator and review hashes.
-    function testFuzz_AS_FUZ_10_hashBuilders_messageHashMutation_changesInitiatorAndReviewHashes(
-        bytes32 hashA,
-        bytes32 hashB
-    ) public view {
+    function testFuzz_hashBuilders_messageHashMutation_changesInitiatorAndReviewHashes(bytes32 hashA, bytes32 hashB)
+        public
+        view
+    {
         // Setup: ensure fuzzed message hashes are distinct.
         vm.assume(hashA != hashB);
         uint256 expiration = block.timestamp + 1 days;
@@ -592,7 +587,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that authorization outcome depends on policy authorization, not signature encoding mode.
-    function testFuzz_AS_FUZ_12__FLOAS_POLICY_99_validatePolicyBasedSignature_authorizedSignerMixes_dependOnAuthorizationNotEncoding(
+    function testFuzz_validatePolicyBasedSignature_authorizedSignerMixes_dependOnAuthorizationNotEncoding(
         bool initiatorAsContract,
         bool reviewerAsContract,
         bool reviewerAuthorized
@@ -684,7 +679,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
      * @param alternateInitiatorPkRaw Raw private key used to derive a non-authorized initiator signer
      * @param alternateGuardianPkRaw Raw private key used to derive a non-guardian signer
      */
-    function testFuzz_FLOAS_POLICY_99_validatePolicyBasedSignature_enforcesInitiatorGuardianAndPolicyApplicability(
+    function testFuzz_validatePolicyBasedSignature_enforcesInitiatorGuardianAndPolicyApplicability(
         address otherAccount,
         uint256 alternateInitiatorPkRaw,
         uint256 alternateGuardianPkRaw
@@ -788,7 +783,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     /// @dev Verifies module-signature acceptance always follows the guardian Safe's current enabled state.
     /// @param enabledMask Bitmask whose low bits drive the enabled/disabled state applied at each step.
     /// @param stepCountRaw Fuzzed number of enablement transitions to evaluate.
-    function testFuzz_SMI_FUZ_7__FLOAS_GUARD_100_isValidGuardianSignature_moduleAcceptanceMatchesEnabledState(
+    function testFuzz_isValidGuardianSignature_moduleAcceptanceMatchesEnabledState(
         uint256 enabledMask,
         uint8 stepCountRaw
     ) public {
@@ -816,7 +811,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     /// @param alternateSignerPkRaw Fuzzed seed for a non-authorized signer key.
     /// @param wrongHash Fuzzed alternate hash for wrong-hash module signatures.
     /// @param malformedInnerSignature Arbitrary malformed inner-signature bytes.
-    function testFuzz_SMI_FUZ_8__FLOAS_GUARD_100_isValidGuardianSignature_onlyAuthorizedExecutorInnerSignatureValid(
+    function testFuzz_isValidGuardianSignature_onlyAuthorizedExecutorInnerSignatureValid(
         uint8 caseSelector,
         uint256 alternateSignerPkRaw,
         bytes32 wrongHash,

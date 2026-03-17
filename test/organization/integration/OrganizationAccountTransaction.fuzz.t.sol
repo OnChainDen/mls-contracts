@@ -44,7 +44,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies random valid auto-approve transactions execute validation successfully.
-    function testFuzz_AT_FZ_1__FLOAT_APPROVE_88_validateApproval_autoApproveRandomValidPayload_succeeds(
+    function testFuzz_validateApproval_autoApproveRandomValidPayload_succeeds(
         address account,
         address to,
         uint128 value,
@@ -68,10 +68,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies random expiration timestamps: future passes, past fails.
-    function testFuzz_AT_FZ_2__FLOAT_APPROVE_88_validateApproval_expirationFuturePassPastFail(
-        uint64 offsetSeconds,
-        bool shouldBeFuture
-    ) public {
+    function testFuzz_validateApproval_expirationFuturePassPastFail(uint64 offsetSeconds, bool shouldBeFuture) public {
         // Setup: build payload with fuzzed relative expiration.
         bytes memory data = abi.encodeWithSelector(bytes4(0x71717171), uint256(1));
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
@@ -100,7 +97,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies random salt values produce unique account-transaction nonces.
-    function testFuzz_AT_FZ_3_nonce_randomSaltsProduceUniqueNonces(uint256 saltA, uint256 saltB) public view {
+    function testFuzz_nonce_randomSaltsProduceUniqueNonces(uint256 saltA, uint256 saltB) public view {
         // Setup: constrain salts to distinct values.
         vm.assume(saltA != saltB);
         bytes memory operationData = abi.encode(ACCOUNT, DESTINATION, 0, keccak256(bytes("nonce")), DEFAULT_POLICY_ID);
@@ -114,11 +111,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies replaying a nonce across execute and reject entry points always reverts once either path succeeds.
-    /// SAG-FUZ-6
-    function testFuzz_NMFZ_3__FOATB_ENTRY_95__SAG_FUZ_6_executeRejectReplayAcrossMixedEntryPointsAlwaysReverts(
-        uint256 saltRaw,
-        bool rejectFirst
-    ) public {
+    function testFuzz_executeRejectReplayAcrossMixedEntryPointsAlwaysReverts(uint256 saltRaw, bool rejectFirst) public {
         // Setup: deploy a fresh organization/account pair, configure one auto-approve policy, and bind both execute
         // and reject signatures to the same account-transaction tuple under one salt.
         uint256 salt = bound(saltRaw, 1, type(uint256).max);
@@ -231,10 +224,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies random calldata produces deterministic initiator hash values.
-    function testFuzz_AT_FZ_4__LOAT_CIHFP_12_computeInitiatorHash_randomDataDeterministic(
-        bytes calldata data,
-        uint256 salt
-    ) public view {
+    function testFuzz_computeInitiatorHash_randomDataDeterministic(bytes calldata data, uint256 salt) public view {
         // Call: compute initiator hash twice with identical inputs.
         bytes32 hashA = harness.computeInitiatorHashFromParamsViaLibrary(
             ACCOUNT, DESTINATION, 0, salt, block.timestamp + 1 days, DEFAULT_POLICY_ID, data, true
@@ -248,7 +238,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies review hash changes when initiator signature bytes change.
-    function testFuzz_AT_FZ_5_computeReviewHash_differentInitiatorSignaturesProduceDifferentHashes(
+    function testFuzz_computeReviewHash_differentInitiatorSignaturesProduceDifferentHashes(
         bytes calldata data,
         uint256 salt
     ) public view {
@@ -274,7 +264,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies fuzzed transaction shapes compute destination/usage per policy rules.
-    function testFuzz_AT_FZ_6__FLOAT_RATE_92_validateAndUpdateRateLimit_randomShapes_computeExpectedDestinationAndUsage(
+    function testFuzz_validateAndUpdateRateLimit_randomShapes_computeExpectedDestinationAndUsage(
         uint8 shape,
         uint96 amount
     ) public {
@@ -329,7 +319,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies random manual thresholds reject below-threshold valid signatures.
-    function testFuzz_AT_FZ_7_validateManual_thresholdInsufficientAlwaysRejected(uint8 rawThreshold) public {
+    function testFuzz_validateManual_thresholdInsufficientAlwaysRejected(uint8 rawThreshold) public {
         // Setup: bound threshold to available reviewer universe [2..3].
         uint8 threshold = uint8(bound(uint256(rawThreshold), 2, 3));
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
@@ -372,7 +362,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies changing any single core field changes initiator hash.
-    function testFuzz_AT_FZ_8__LOAT_CIHFP_2__LOAT_CIHFP_3__LOAT_CIHFP_4__NMATL_RHB_1_computeInitiatorHash_singleFieldMutationsChangeHash(
+    function testFuzz_computeInitiatorHash_singleFieldMutationsChangeHash(
         address account,
         address to,
         uint96 value,
@@ -465,7 +455,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies changing transaction fields changes review hash for fixed initiator signature.
-    function testFuzz_AT_FZ_9__NMATL_RHB_3_computeReviewHash_fieldMutationsChangeHash(
+    function testFuzz_computeReviewHash_fieldMutationsChangeHash(
         address account,
         address to,
         uint96 value,
@@ -568,7 +558,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies random undeployed accounts are always rejected by base execution path.
-    function testFuzz_AT_FZ_10__FOATB_ENTRY_94_executeAccountTransaction_randomUndeployedAccount_revertsAccountNotDeployed(address account)
+    function testFuzz_executeAccountTransaction_randomUndeployedAccount_revertsAccountNotDeployed(address account)
         public
     {
         // Setup: constrain random account to non-zero and leave it undeployed.
@@ -589,7 +579,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies rejection handler routing by policy type (auto-approve succeeds, manual without review fails).
-    function testFuzz_AT_FZ_11__FLOAT_REJECT_89_validateRejection_routesByPolicyType(bool useManualPolicy) public {
+    function testFuzz_validateRejection_routesByPolicyType(bool useManualPolicy) public {
         // Setup: shared tuple/signatures with policy type selected by fuzz boolean.
         bytes memory data = abi.encodeWithSelector(bytes4(0x75757575), uint256(5));
         uint256 expiration = block.timestamp + 1 days;
@@ -626,7 +616,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
      * @dev Verifies approval and rejection signature roles stay separated for the same transaction tuple.
      * @param saltRaw Raw salt used to derive a bounded shared transaction salt
      */
-    function testFuzz_FLOAT_FLOW_93_approvalAndRejectionSignaturesCannotReplayAcrossRoles(uint256 saltRaw) public {
+    function testFuzz_approvalAndRejectionSignaturesCannotReplayAcrossRoles(uint256 saltRaw) public {
         uint256 salt = bound(saltRaw, 1, type(uint256).max);
 
         // Setup: configure one auto-approve policy and sign the same tuple once for approval and once for rejection.

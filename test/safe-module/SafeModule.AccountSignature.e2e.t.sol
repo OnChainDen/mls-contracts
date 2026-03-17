@@ -104,9 +104,7 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
 
     /// @dev Verifies `Account.isValidSignature` accepts enabled-module guardian signatures from the authorized
     /// executor.
-    function test_SMI_ETE_1__OAS_VSFA_5__OAS_IVGS_2_accountIsValidSignature_acceptsEnabledModuleGuardianSignature()
-        public
-    {
+    function test_accountIsValidSignature_acceptsEnabledModuleGuardianSignature() public {
         // Setup: configure a valid auto-approve policy signature backed by an enabled SafeExecutorModule guardian.
         (, bytes memory signature,,,) =
             _buildAccountPolicySignatureWithModuleGuardian(AUTHORIZED_EXECUTOR_PK, true, AUTHORIZED_EXECUTOR_PK);
@@ -119,9 +117,7 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
     }
 
     /// @dev Verifies disabling the guardian module invalidates equivalent account signatures without org changes.
-    function test_SMI_ETE_2__OAS_VSFA_5__OAS_IVGS_3_accountIsValidSignature_rejectsDisabledModuleGuardianSignature()
-        public
-    {
+    function test_accountIsValidSignature_rejectsDisabledModuleGuardianSignature() public {
         // Setup: build a valid signature, then disable the module on the guardian Safe before validation.
         (MockGuardianSafe guardianSafe, bytes memory signature, SafeExecutorModule module,,) =
             _buildAccountPolicySignatureWithModuleGuardian(AUTHORIZED_EXECUTOR_PK, true, AUTHORIZED_EXECUTOR_PK);
@@ -138,7 +134,7 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
     /// immediately through the full account path.
     /// @param oldExecutorPkRaw Raw private key used for the original module executor.
     /// @param newExecutorPkRaw Raw private key used for the replacement module executor.
-    function testFuzz_SMI_ETE_3__FCF_MODULE_164__INT_ETE_7_accountIsValidSignature_moduleRotationOldFailsNewPasses(
+    function testFuzz_accountIsValidSignature_moduleRotationOldFailsNewPasses(
         uint256 oldExecutorPkRaw,
         uint256 newExecutorPkRaw
     ) public {
@@ -235,9 +231,7 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
     }
 
     /// @dev Verifies the direct guardian signature path still works when the module path is unavailable.
-    function test_SMI_ETE_4__OAS_VSFA_5__OAS_IVGS_1_accountIsValidSignature_directGuardianPathStillWorksWithoutModule()
-        public
-    {
+    function test_accountIsValidSignature_directGuardianPathStillWorksWithoutModule() public {
         // Setup: configure a valid direct-guardian auto-approve signature without any module path.
         policyStateHarness.setGuardian(guardianSigner);
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);

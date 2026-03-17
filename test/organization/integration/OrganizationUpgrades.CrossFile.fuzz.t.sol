@@ -16,9 +16,7 @@ import {ContractType, OperationType} from "types/CommonTypes.sol";
  */
 contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileSuiteBase {
     /// @dev Verifies fuzzed non-whitelisted Organization upgrade targets are always rejected.
-    function testFuzz_UPG_FZ_1__IWC_FUZZ_1__FOI_UPGRADE_134__FIWI_ENFORCE_142_fuzz_nonWhitelistedOrganizationTargetsAreRejected(address candidate)
-        public
-    {
+    function testFuzz_fuzz_nonWhitelistedOrganizationTargetsAreRejected(address candidate) public {
         // Setup: configure valid guardian/admin auth for an arbitrary non-zero candidate without whitelisting it.
         _setSingleAdminThresholdOne();
         vm.assume(candidate != address(0));
@@ -42,9 +40,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
     }
 
     /// @dev Verifies fuzzed non-whitelisted Account implementation targets are always rejected.
-    function testFuzz_UPG_FZ_2__IWC_FUZZ_1__FIWI_ENFORCE_142_fuzz_nonWhitelistedAccountTargetsAreRejected(address candidate)
-        public
-    {
+    function testFuzz_fuzz_nonWhitelistedAccountTargetsAreRejected(address candidate) public {
         // Setup: configure valid admin auth for arbitrary account implementation candidate without whitelisting.
         _setSingleAdminThresholdOne();
         vm.assume(!whitelist.isImplementationWhitelisted(ContractType.Account, candidate));
@@ -69,9 +65,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
     }
 
     /// @dev Verifies fuzzed successful upgrade sequences preserve core state across repeated upgrades.
-    function testFuzz_UPG_FZ_3__IWC_FUZZ_4__FOI_UPGRADE_134_fuzz_successfulUpgradeSequences_preserveState(uint8 rounds)
-        public
-    {
+    function testFuzz_fuzz_successfulUpgradeSequences_preserveState(uint8 rounds) public {
         // Setup: bound rounds and seed stable core state to verify persistence.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -104,7 +98,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
     }
 
     /// @dev Verifies fuzzed malformed migration calldata reverts atomically with no partial implementation change.
-    function test_UPG_FZ_4_fuzz_malformedMigrationCalldata_revertsAtomically(bytes calldata malformedData) public {
+    function test_fuzz_malformedMigrationCalldata_revertsAtomically(bytes calldata malformedData) public {
         // Setup: whitelist V2 target and fuzz malformed migration payload.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -135,10 +129,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
     }
 
     /// @dev Verifies fuzzed nested migration payloads cannot trigger an unauthorized second upgrade.
-    /// SAG-FUZ-7
-    function testFuzz_UPG_FZ_5__IWC_FUZZ_5__FOI_UPGRADE_137__SAG_FUZ_7_fuzz_nestedUpgradeFromRandomPayload_reverts(bytes memory randomData)
-        public
-    {
+    function testFuzz_fuzz_nestedUpgradeFromRandomPayload_reverts(bytes memory randomData) public {
         // Setup: whitelist both V2 and V3 and craft migration payload that attempts nested second upgrade.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -164,7 +155,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
     /// @dev Verifies direct `upgradeToAndCall` calls always revert `UnauthorizedUpgrade` without wrapper auth.
     /// @param useGuardianCaller Fuzzed switch selecting guardian vs non-guardian caller for the direct call.
     /// @param randomData Fuzzed migration calldata passed into the direct UUPS entrypoint.
-    function testFuzz_FOI_AUTH_135_directUpgradeToAndCallWithoutWrapperAuthAlwaysReverts(
+    function testFuzz_directUpgradeToAndCallWithoutWrapperAuthAlwaysReverts(
         bool useGuardianCaller,
         bytes memory randomData
     ) public {
@@ -182,10 +173,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
     /// @dev Verifies the authorized-upgrade flag stays cleared before and after a successful wrapper-driven upgrade.
     /// @param useV3Target Fuzzed switch selecting which whitelisted upgrade target to use.
     /// @param saltSeed Fuzzed entropy used to derive the admin-auth salt.
-    function testFuzz_FOI_FLAG_136_authorizedUpgradeFlagIsFalseOutsideWrapperExecution(
-        bool useV3Target,
-        uint256 saltSeed
-    ) public {
+    function testFuzz_authorizedUpgradeFlagIsFalseOutsideWrapperExecution(bool useV3Target, uint256 saltSeed) public {
         // Setup: whitelist the candidate targets and confirm the auth flag starts cleared.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);

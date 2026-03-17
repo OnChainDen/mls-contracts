@@ -20,7 +20,7 @@ contract OrganizationAccountSignatureBaseFuzzTest is OrganizationAccountSignatur
      * @param hash Message hash forwarded to signature validation
      * @param signature Arbitrary signature bytes forwarded to the base entry point
      */
-    function testFuzz_FOASB_SIG_104_isValidSignatureForAccount_senderMustEqualAccount(
+    function testFuzz_isValidSignatureForAccount_senderMustEqualAccount(
         address account,
         address caller,
         bytes32 hash,
@@ -47,7 +47,7 @@ contract OrganizationAccountSignatureBaseFuzzTest is OrganizationAccountSignatur
      * @param hash Message hash forwarded to signature validation
      * @param signature Arbitrary signature bytes forwarded to the base entry point
      */
-    function testFuzz_FOASB_SIG_104_isValidSignatureForAccount_accountMustBeDeployedByOrganization(
+    function testFuzz_isValidSignatureForAccount_accountMustBeDeployedByOrganization(
         address account,
         bytes32 hash,
         bytes calldata signature

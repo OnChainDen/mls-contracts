@@ -48,7 +48,7 @@ contract LibOrganizationGuardianInvariants is OrganizationAdminTestBase {
     }
 
     /// @dev Verifies the configured guardian is never the zero address after initialization.
-    function invariant_GINV_1_GUARD_INV_1_guardianAlwaysSet_afterInitialization() public view {
+    function invariant_guardianAlwaysSet_afterInitialization() public view {
         // Setup
         // Call
         address currentGuardian = harness.getGuardianViaLibrary();
@@ -58,7 +58,7 @@ contract LibOrganizationGuardianInvariants is OrganizationAdminTestBase {
     }
 
     /// @dev Verifies normal guardian flow never stages more than one pending update at a time.
-    function invariant_GINV_2_GUARD_INV_2_pendingExclusivity_atMostOnePendingUpdate() public {
+    function invariant_pendingExclusivity_atMostOnePendingUpdate() public {
         // Setup
         address pendingGuardian = harness.getPendingGuardianViaLibrary();
 
@@ -74,7 +74,7 @@ contract LibOrganizationGuardianInvariants is OrganizationAdminTestBase {
     }
 
     /// @dev Verifies accept cannot succeed before finalize and timelock-ready preconditions are met.
-    function invariant_GINV_3_GUARD_INV_4_timelockEnforcement_guardianCannotChangeOutsideAccept() public view {
+    function invariant_timelockEnforcement_guardianCannotChangeOutsideAccept() public view {
         // Setup
         // Call
         bool outsideAcceptViolation = handler.guardianChangedOutsideAcceptViolation();
@@ -88,7 +88,7 @@ contract LibOrganizationGuardianInvariants is OrganizationAdminTestBase {
     }
 
     /// @dev Verifies clearing the pending guardian also clears its timestamp and readiness flag.
-    function invariant_GINV_4_GUARD_INV_3_stateConsistency_noPendingImpliesClearedTimestampAndReadyFlag() public view {
+    function invariant_stateConsistency_noPendingImpliesClearedTimestampAndReadyFlag() public view {
         // Setup
         address pendingGuardian = harness.getPendingGuardianViaLibrary();
         uint256 pendingTimestamp = harness.getPendingGuardianUpdateTimestampViaLibrary();
@@ -103,7 +103,7 @@ contract LibOrganizationGuardianInvariants is OrganizationAdminTestBase {
     }
 
     /// @dev Verifies successful acceptance clears every staged normal-flow guardian update field.
-    function invariant_GINV_5_GUARD_INV_5_acceptClearsAll_pendingStateResetAfterAccept() public view {
+    function invariant_acceptClearsAll_pendingStateResetAfterAccept() public view {
         // Setup
         // Call
         bool violation = handler.acceptDidNotClearPendingStateViolation();
@@ -112,8 +112,8 @@ contract LibOrganizationGuardianInvariants is OrganizationAdminTestBase {
         assertFalse(violation, "successful accept did not clear pending guardian state");
     }
 
-    /// @dev Verifies GINV-6: in normal flow, guardian mutation only occurs through accept path.
-    function invariant_GINV_6_guardianMutationPoint_onlyAcceptMutatesGuardian() public view {
+    /// @dev Verifies guardian mutation only occurs through the normal-flow accept path.
+    function invariant_guardianMutationPoint_onlyAcceptMutatesGuardian() public view {
         // Setup
         // Call
         bool violation = handler.guardianChangedOutsideAcceptViolation();
@@ -122,8 +122,8 @@ contract LibOrganizationGuardianInvariants is OrganizationAdminTestBase {
         assertFalse(violation, "guardian mutated outside normal-flow accept path");
     }
 
-    /// @dev Verifies GINV-7: ready state implies pending guardian and pending timestamp are both set.
-    function invariant_GINV_7_readyStateCoherence_readyImpliesPendingGuardianAndTimestamp() public view {
+    /// @dev Verifies ready state implies pending guardian and pending timestamp are both set.
+    function invariant_readyStateCoherence_readyImpliesPendingGuardianAndTimestamp() public view {
         // Setup
         bool isReady = harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary();
         address pendingGuardian = harness.getPendingGuardianViaLibrary();
@@ -137,8 +137,8 @@ contract LibOrganizationGuardianInvariants is OrganizationAdminTestBase {
         }
     }
 
-    /// @dev Verifies GINV-8: pending guardian implies non-zero pending timestamp.
-    function invariant_GINV_8_pendingTimestampCoherence_pendingGuardianImpliesTimestamp() public view {
+    /// @dev Verifies a pending guardian implies a non-zero pending timestamp.
+    function invariant_pendingTimestampCoherence_pendingGuardianImpliesTimestamp() public view {
         // Setup
         address pendingGuardian = harness.getPendingGuardianViaLibrary();
         uint256 pendingTimestamp = harness.getPendingGuardianUpdateTimestampViaLibrary();

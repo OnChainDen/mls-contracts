@@ -14,9 +14,7 @@ import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 contract LibOrganizationGuardianRecoveryCancelRecoveryGuardianUpdateTest is LibOrganizationGuardianRecoverySuiteBase {
     /// @dev Verifies `LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate` cancel clears pending fields, emits
     /// event, and preserves config/pending-init.
-    function test_LOGR_CRGU_1__LOGR_CRGU_2__LOGR_CRGU_3__LOGR_CRGU_5__LOGR_CRGU_6__LOGR_CRGU_8__LOGR_CRGU_9_cancelClearsPendingAndPreservesOtherState()
-        public
-    {
+    function test_cancelClearsPendingAndPreservesOtherState() public {
         // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending
         // recovery-guardian update.
         _resetAndConfigureRecovery();
@@ -59,7 +57,7 @@ contract LibOrganizationGuardianRecoveryCancelRecoveryGuardianUpdateTest is LibO
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate` no pending update reverts with
     /// `NoPendingRecoveryGuardianUpdate`.
-    function test_LOGR_CRGU_4_noPendingUpdate_revertsNoPendingRecoveryGuardianUpdate() public {
+    function test_noPendingUpdate_revertsNoPendingRecoveryGuardianUpdate() public {
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
@@ -77,7 +75,7 @@ contract LibOrganizationGuardianRecoveryCancelRecoveryGuardianUpdateTest is LibO
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate` cancel after finalize still clears
     /// pending and ready-for-acceptance state.
-    function test_LOGR_CRGU_7_cancelAfterFinalize_clearsReadyForAcceptanceState() public {
+    function test_cancelAfterFinalize_clearsReadyForAcceptanceState() public {
         // Setup: reconfigure baseline recovery address and timelock, seed pending recovery-guardian update, and
         // position timestamp at timelock boundary.
         _resetAndConfigureRecovery();

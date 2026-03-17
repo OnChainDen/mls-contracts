@@ -16,7 +16,7 @@ import {GroupModification} from "types/CommonTypes.sol";
  */
 contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
     /// @dev Verifies that any failing item in a fuzzed batch rolls back prior successful writes.
-    function testFuzz_FLOG_HAR_53_modifyGroups_failingItemPreservesAtomicity(
+    function testFuzz_modifyGroups_failingItemPreservesAtomicity(
         uint256 rawExistingGroupId,
         uint256 rawFailingGroupId,
         address existingMember,
@@ -61,7 +61,7 @@ contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
     }
 
     /// @dev Verifies valid create/update/delete batches preserve the expected group lifecycle semantics.
-    function testFuzz_FLOG_GROUP_49_modifyGroups_validLifecycleBatchesPreserveCreateUpdateDeleteSemantics(
+    function testFuzz_modifyGroups_validLifecycleBatchesPreserveCreateUpdateDeleteSemantics(
         uint256 rawGroupId,
         address memberA,
         address memberB,
@@ -105,7 +105,7 @@ contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
     }
 
     /// @dev Verifies fuzzed group IDs cannot be reused after delete.
-    function testFuzz_FLOG_GROUP_50_modifyGroups_deletedGroupIdsNeverReusable(uint256 groupId, address member) public {
+    function testFuzz_modifyGroups_deletedGroupIdsNeverReusable(uint256 groupId, address member) public {
         vm.assume(member != address(0));
         groupsStateHarness.setMemberStatus(member, true);
 
@@ -119,9 +119,7 @@ contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
     }
 
     /// @dev Verifies duplicate helper additions are idempotent for arbitrary non-zero members.
-    function testFuzz_FLOG_HAR_53_addGroupMembers_duplicateAdditionsRemainConsistent(address member, uint256 rawGroupId)
-        public
-    {
+    function testFuzz_addGroupMembers_duplicateAdditionsRemainConsistent(address member, uint256 rawGroupId) public {
         vm.assume(member != address(0));
         uint256 groupId = bound(rawGroupId, 1, 50_000);
 
@@ -151,7 +149,7 @@ contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
 
     /// @dev Verifies create/update helper wrappers roll back atomically when a later zero-address member triggers the
     ///      documented validation error.
-    function testFuzz_FLOG_HAR_53_createAndUpdateHelpersRevertAtomicallyOnInvalidMember(
+    function testFuzz_createAndUpdateHelpersRevertAtomicallyOnInvalidMember(
         uint256 rawGroupId,
         address validMember,
         bool useCreatePath
@@ -209,11 +207,9 @@ contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
 
     /// @dev Verifies any member-add batch containing zero address reverts with `InvalidMemberAddress`
     ///      when the paired non-zero address is otherwise valid.
-    function testFuzz_FLOG_GROUP_51_addGroupMembers_zeroAddressAlwaysReverts(
-        uint256 rawGroupId,
-        address otherMember,
-        bool zeroFirst
-    ) public {
+    function testFuzz_addGroupMembers_zeroAddressAlwaysReverts(uint256 rawGroupId, address otherMember, bool zeroFirst)
+        public
+    {
         uint256 groupId = bound(rawGroupId, 1, 50_000);
         vm.assume(otherMember != address(0));
         groupsStateHarness.setGroupStatus(groupId, true);
@@ -235,10 +231,9 @@ contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
 
     /// @dev Verifies the desired behavior that arbitrary non-member addresses always revert with
     ///      `MemberDoesNotExist`.
-    function testFuzz_FLOG_GROUP_52_addGroupMembers_nonMembersAlwaysRevertMemberDoesNotExist(
-        uint256 rawGroupId,
-        address nonMember
-    ) public {
+    function testFuzz_addGroupMembers_nonMembersAlwaysRevertMemberDoesNotExist(uint256 rawGroupId, address nonMember)
+        public
+    {
         uint256 groupId = bound(rawGroupId, 1, 50_000);
         vm.assume(nonMember != address(0));
 
@@ -251,11 +246,9 @@ contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
     }
 
     /// @dev Verifies remove/delete helper wrappers keep group state consistent across successful cleanup flows.
-    function testFuzz_FLOG_HAR_53_removeAndDeleteHelpersKeepStateConsistent(
-        uint256 rawGroupId,
-        address memberA,
-        address memberB
-    ) public {
+    function testFuzz_removeAndDeleteHelpersKeepStateConsistent(uint256 rawGroupId, address memberA, address memberB)
+        public
+    {
         uint256 groupId = bound(rawGroupId, 1, 50_000);
         vm.assume(memberA != address(0) && memberB != address(0));
         vm.assume(memberA != memberB);

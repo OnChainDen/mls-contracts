@@ -28,7 +28,7 @@ contract LibOrganizationSignaturesFuzzTest is Test {
     /// @param rawOperationType Fuzzed operation type seed bounded into the valid enum range.
     /// @param operationData Fuzzed operation payload used to derive the nonce.
     /// @param salt Fuzzed salt used to derive the nonce.
-    function testFuzz_FLOS_NONCE_32_validateAndConsumeNonce_monotonicAndReplayProtected(
+    function testFuzz_validateAndConsumeNonce_monotonicAndReplayProtected(
         uint8 rawOperationType,
         bytes calldata operationData,
         uint256 salt
@@ -52,7 +52,7 @@ contract LibOrganizationSignaturesFuzzTest is Test {
     /// @param rawOperationType Fuzzed operation type seed bounded into the valid enum range.
     /// @param operationData Fuzzed operation payload used to derive the nonce.
     /// @param salt Fuzzed salt used to derive the nonce.
-    function testFuzz_FLOS_ROLL_33_failedParentTransaction_rollsBackNonceConsumption(
+    function testFuzz_failedParentTransaction_rollsBackNonceConsumption(
         uint8 rawOperationType,
         bytes calldata operationData,
         uint256 salt

@@ -15,9 +15,7 @@ import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is LibOrganizationGuardianRecoverySuiteBase {
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` finalize emits event, sets ready
     /// flag only, and preserves other fields.
-    function test_LOGR_FRGU_1__LOGR_FRGU_5__LOGR_FRGU_6__LOGR_FRGU_7__LOGR_FRGU_9_finalizeSetsReadyAndPreservesOtherFields()
-        public
-    {
+    function test_finalizeSetsReadyAndPreservesOtherFields() public {
         // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending
         // recovery-guardian update.
         _resetAndConfigureRecovery();
@@ -70,10 +68,7 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` finalize reverts before expiry
     /// and succeeds exactly at expiry.
-    /// Plan rows: LOGR-AOTFRGU-1, LOGR-AOTFRGU-2.
-    function test_LOGR_FRGU_2__LOGR_FRGU_3__LOGR_AOTFRGU_1__LOGR_AOTFRGU_2_beforeExpiryReverts_exactlyAtExpirySucceeds()
-        public
-    {
+    function test_beforeExpiryReverts_exactlyAtExpirySucceeds() public {
         // Setup: reconfigure baseline recovery address and timelock and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
@@ -100,7 +95,7 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` no pending update reverts with
     /// `NoPendingRecoveryGuardianUpdate`.
-    function test_LOGR_FRGU_4_noPendingUpdate_revertsNoPendingRecoveryGuardianUpdate() public {
+    function test_noPendingUpdate_revertsNoPendingRecoveryGuardianUpdate() public {
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
@@ -116,7 +111,7 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` double finalize is an idempotent
     /// no-op after first success.
-    function test_LOGR_FRGU_8_doubleFinalize_secondCallIsNoOp() public {
+    function test_doubleFinalize_secondCallIsNoOp() public {
         // Setup: reconfigure baseline recovery address and timelock, seed pending recovery-guardian update, and
         // position timestamp at timelock boundary.
         _resetAndConfigureRecovery();
@@ -142,7 +137,7 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` succeeds when
     /// `block.timestamp` is strictly greater than the pending guardian timestamp.
-    function test_LOGR_AOTFRGU_3_finalizeRecoveryGuardianUpdate_afterPendingTimestampSucceeds() public {
+    function test_finalizeRecoveryGuardianUpdate_afterPendingTimestampSucceeds() public {
         // Setup: configure guardian recovery, stage a recovery guardian update, and advance one second past expiry.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_C);

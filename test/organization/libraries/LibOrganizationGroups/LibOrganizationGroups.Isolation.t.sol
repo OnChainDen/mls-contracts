@@ -12,7 +12,7 @@ import {
 contract LibOrganizationGroupsIsolationTest is LibOrganizationGroupsSuiteBase {
     /// @dev Verifies `LibOrganizationGroups.modifyGroups` does not change admin counters, threshold, or existing
     /// admin/member flags while creating, updating, and deleting groups.
-    function test_GROUP_INV_6_modifyGroups_doesNotAlterAdminCountersThresholdOrMembershipFlags() public {
+    function test_modifyGroups_doesNotAlterAdminCountersThresholdOrMembershipFlags() public {
         // Setup: seed a two-admin organization with one extra member, snapshot the admin/member state, and build a
         // create-update-delete sequence against a single group ID.
         _setMembersAndAdmins({

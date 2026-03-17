@@ -27,7 +27,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
      * @param offsetSeconds Raw expiration offset used to derive a bounded past/future timestamp
      * @param shouldBeFuture Whether to test the successful future branch or the reverting past branch
      */
-    function testFuzz_FLOA_AUTH_38_validateAdminAuth_expirationBoundaryFuturePassesPastFails(
+    function testFuzz_validateAdminAuth_expirationBoundaryFuturePassesPastFails(
         uint64 offsetSeconds,
         bool shouldBeFuture
     ) public {
@@ -89,7 +89,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
      * @param saltRaw Raw salt used to derive a bounded nonce salt
      * @param offsetSeconds Raw expiration offset used to derive a bounded future expiration
      */
-    function testFuzz_FLOA_AUTH_39__FCF_SIGSYS_161_validateAdminAuth_signaturesBindOperationTypeDataSaltAndApproval(
+    function testFuzz_validateAdminAuth_signaturesBindOperationTypeDataSaltAndApproval(
         uint8 mutationSelector,
         bytes32 signedSeed,
         bytes32 mutatedSeed,
@@ -158,7 +158,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
      * @param offsetSeconds Raw expiration offset used to derive a bounded future expiration
      * @param useMirrorHarness Whether to mutate the organization address instead of the chain id
      */
-    function testFuzz_FLOA_AUTH_39__FCF_SIGSYS_161_validateAdminAuth_signaturesBindChainIdAndOrganizationAddress(
+    function testFuzz_validateAdminAuth_signaturesBindChainIdAndOrganizationAddress(
         bytes32 signedSeed,
         uint256 saltRaw,
         uint64 offsetSeconds,
@@ -272,7 +272,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
     /**
      * @dev Verifies that invalid threshold updates (`0` or `> finalAdminCount`) always revert.
      */
-    function testFuzz_FLOA_ADMINS_42_modifyAdmins_invalidThresholdUpdatesAlwaysRevert(
+    function testFuzz_modifyAdmins_invalidThresholdUpdatesAlwaysRevert(
         uint256 tooHighThresholdRaw,
         bool useZeroThreshold
     ) public {
@@ -302,7 +302,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
     /**
      * @dev Verifies that different salts for the same payload produce unique nonces.
      */
-    function testFuzz_NMFZ_2_differentSaltsProduceDifferentNonces(uint256 saltA, uint256 saltB) public view {
+    function testFuzz_differentSaltsProduceDifferentNonces(uint256 saltA, uint256 saltB) public view {
         // Setup: constrain fuzz inputs to valid preconditions for this scenario.
         vm.assume(saltA != saltB);
 
@@ -326,7 +326,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
      * @dev Verifies that random `(operationType, operationData, salt)` tuples produce distinct nonces whenever any
      * input differs.
      */
-    function testFuzz_NMFZ_1_randomNonceTuplesRemainDistinctWhenInputsDiffer(
+    function testFuzz_randomNonceTuplesRemainDistinctWhenInputsDiffer(
         uint8 rawOperationTypeA,
         bytes calldata operationDataA,
         uint256 saltA,
@@ -356,9 +356,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
     /**
      * @dev Verifies that including a signer who is neither admin nor member causes `SignerIsNotAdmin`.
      */
-    function testFuzz_FLOA_SIGS_41_validateAdminAuth_nonAdminNonMemberSignerRevertsSignerIsNotAdmin(uint256 nonAdminPk)
-        public
-    {
+    function testFuzz_validateAdminAuth_nonAdminNonMemberSignerRevertsSignerIsNotAdmin(uint256 nonAdminPk) public {
         // Arrange: threshold=2 ensures both signatures are evaluated.
         // Setup: configure the initial organization state for this scenario.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
@@ -400,9 +398,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
     /**
      * @dev Verifies that including a signer who is a member but not an admin causes `SignerIsNotAdmin`.
      */
-    function testFuzz_FLOA_SIGS_41_validateAdminAuth_nonAdminMemberSignerRevertsSignerIsNotAdmin(uint256 memberNonAdminPk)
-        public
-    {
+    function testFuzz_validateAdminAuth_nonAdminMemberSignerRevertsSignerIsNotAdmin(uint256 memberNonAdminPk) public {
         memberNonAdminPk = bound(memberNonAdminPk, 1, SECP256K1_CURVE_ORDER - 1);
         address memberNonAdmin = vm.addr(memberNonAdminPk);
         // Setup: constrain fuzz inputs to valid preconditions for this scenario.
@@ -496,7 +492,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
     /**
      * @dev Verifies that expired or otherwise invalid admin-auth attempts never leave nonce state consumed.
      */
-    function testFuzz_NMFZ_4_invalidOrExpiredAdminAuthNeverConsumesNonce(
+    function testFuzz_invalidOrExpiredAdminAuthNeverConsumesNonce(
         bytes32 signedSeed,
         bytes32 executedSeed,
         uint256 salt,
@@ -608,8 +604,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
      * @dev Verifies that mixed EOA/ERC-1271 signature streams accept sorted admin signers and reject ordering/admin
      * violations while parsing variable inner-signature lengths.
      */
-    /// SAG-FUZ-4
-    function testFuzz_NMFZ_5__FLOA_SIGS_40__SAG_FUZ_4_areAdminSignaturesValid_mixedEOAAndERC1271StreamsEnforceOrderingAndAdminChecks(
+    function testFuzz_areAdminSignaturesValid_mixedEOAAndERC1271StreamsEnforceOrderingAndAdminChecks(
         bytes calldata innerSig,
         uint8 rawMode,
         bool useNonAdminContract
@@ -699,7 +694,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
      * @dev Verifies a nonce consumed successfully by `rejectAdminOperation` cannot be replayed through
      * `upgradeToAndCallWithAuthorization`.
      */
-    function testFuzz_NMFZ_3_rejectThenUpgradeReplaySameNonceAlwaysReverts(uint256 saltRaw) public {
+    function testFuzz_rejectThenUpgradeReplaySameNonceAlwaysReverts(uint256 saltRaw) public {
         // Setup: deploy a fresh organization harness and bind both approval and rejection auth to the same upgrade
         // tuple.
         uint256 salt = bound(saltRaw, 1, type(uint256).max);
@@ -753,7 +748,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
     /**
      * @dev Verifies unauthorized callers cannot burn nonces on either rejection or upgrade entry points.
      */
-    function testFuzz_NMFZ_6_unauthorizedCallerAttemptsNeverBurnNonce(uint256 saltRaw, bool useUpgradePath) public {
+    function testFuzz_unauthorizedCallerAttemptsNeverBurnNonce(uint256 saltRaw, bool useUpgradePath) public {
         // Setup: deploy a fresh organization harness and build valid auth for the selected nonce-consuming path.
         uint256 salt = bound(saltRaw, 1, type(uint256).max);
         OrganizationImplementationHarness org = new OrganizationImplementationHarness();
@@ -797,7 +792,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
      * @dev Verifies that successful and reverted random add/remove calls never leave zero admins and keep successful
      *      thresholds within `[1, adminCount]`.
      */
-    function testFuzz_FLOA_ADMINS_42__FLOA_ADMINS_43_modifyAdmins_randomMixedAddRemoveNeverLeavesZeroAdminsAndKeepsThresholdValid(
+    function testFuzz_modifyAdmins_randomMixedAddRemoveNeverLeavesZeroAdminsAndKeepsThresholdValid(
         bool addCandidate,
         bool removeAdmin1,
         bool removeAdmin2,

@@ -56,7 +56,7 @@ contract LibPolicyRateLimitsFuzzTest is PolicyLibrariesFuzzTestBase {
     /// @param policyId The policy identifier used for the tracked usage entry.
     /// @param rawCurrentUsage The seeded usage already stored in the current time window.
     /// @param rawIncrement The additional usage applied by the fuzzed call.
-    function testFuzz_FLPRL_RATE_84_checkAndUpdateRateLimit_withinLimitIncrementsExactly(
+    function testFuzz_checkAndUpdateRateLimit_withinLimitIncrementsExactly(
         uint256 policyId,
         uint96 rawCurrentUsage,
         uint96 rawIncrement
@@ -87,7 +87,7 @@ contract LibPolicyRateLimitsFuzzTest is PolicyLibrariesFuzzTestBase {
     /// @param policyId The policy identifier used for the tracked usage entry.
     /// @param rawCurrentUsage The seeded usage already stored in the current time window.
     /// @param rawRemaining The remaining budget before reaching the configured limit.
-    function testFuzz_FLPRL_RATE_85_checkAndUpdateRateLimit_overLimitDoesNotMutateUsage(
+    function testFuzz_checkAndUpdateRateLimit_overLimitDoesNotMutateUsage(
         uint256 policyId,
         uint96 rawCurrentUsage,
         uint96 rawRemaining
@@ -120,11 +120,9 @@ contract LibPolicyRateLimitsFuzzTest is PolicyLibrariesFuzzTestBase {
     /// @param policyId The policy identifier used for the tracked usage entry.
     /// @param rawHours The interval length in hours, bounded to a small non-zero range.
     /// @param rawUsage The usage amount consumed in each window.
-    function testFuzz_FLPRL_WINDOW_86_usageIsWindowLocalAndResetsAcrossWindows(
-        uint256 policyId,
-        uint16 rawHours,
-        uint96 rawUsage
-    ) public {
+    function testFuzz_usageIsWindowLocalAndResetsAcrossWindows(uint256 policyId, uint16 rawHours, uint96 rawUsage)
+        public
+    {
         uint16 intervalHours = uint16(bound(uint256(rawHours), 1, 48));
         uint256 usageAmount = bound(uint256(rawUsage), 1, type(uint96).max);
 
@@ -170,10 +168,9 @@ contract LibPolicyRateLimitsFuzzTest is PolicyLibrariesFuzzTestBase {
     /// arithmetic approaches `uint256` overflow.
     /// @param policyId The policy identifier used for the tracked usage entry.
     /// @param deltaRaw The small gap between the seeded usage and `type(uint256).max`.
-    function testFuzz_FLPRL_RATE_87_checkAndUpdateRateLimit_nearOverflowFailsClosedWithoutPanic(
-        uint256 policyId,
-        uint8 deltaRaw
-    ) public {
+    function testFuzz_checkAndUpdateRateLimit_nearOverflowFailsClosedWithoutPanic(uint256 policyId, uint8 deltaRaw)
+        public
+    {
         uint256 delta = bound(uint256(deltaRaw), 0, 3);
         uint256 currentUsage = type(uint256).max - delta;
         uint256 usageAmount = delta + 1;

@@ -23,7 +23,7 @@ contract OrganizationAccountTransactionBaseFuzzTest is OrganizationAccountTransa
      * @param saltRaw Raw salt used to derive a bounded replay-domain salt
      * @param payloadArg Fuzzed payload argument used to vary calldata while keeping the replay tuple exact
      */
-    function testFuzz_FOATB_EXEC_96_executeAccountTransaction_reentrantReplayFailsAfterNonceConsumption(
+    function testFuzz_executeAccountTransaction_reentrantReplayFailsAfterNonceConsumption(
         uint256 saltRaw,
         uint256 payloadArg
     ) public {

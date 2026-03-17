@@ -28,7 +28,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
 
     /// @dev Verifies `OrganizationGroupsBase.modifyGroups` executes the create/update/delete lifecycle with guardian
     /// authorization and valid admin signatures.
-    function test_OGB_MG_1_modifyGroups_guardianWithValidAuth_createUpdateDeleteLifecycle_succeeds() public {
+    function test_modifyGroups_guardianWithValidAuth_createUpdateDeleteLifecycle_succeeds() public {
         uint256 groupId = 7901;
 
         // Setup: configure one guardian-authorized admin plus two valid organization members so the group can be
@@ -82,7 +82,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
     }
 
     /// @dev Verifies `OrganizationGroupsBase.modifyGroups` prevents group-id reuse after a successful deletion.
-    function test_OGB_MG_2_modifyGroups_deletedGroupCannotBeRecreated() public {
+    function test_modifyGroups_deletedGroupCannotBeRecreated() public {
         uint256 groupId = 7902;
 
         // Setup: create and delete one group through valid guardian-authorized executions, then prepare a fresh
@@ -135,8 +135,8 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
     }
 
     /// @dev Verifies `OrganizationGroupsBase.modifyGroups` rejects create batches that add non-members and rolls back
-    /// nonce consumption. [OGB-MG-7]
-    function test_OGB_MG_7_modifyGroups_createWithNonMember_revertsAndDoesNotConsumeNonce() public {
+    /// nonce consumption.
+    function test_modifyGroups_createWithNonMember_revertsAndDoesNotConsumeNonce() public {
         uint256 groupId = 7915;
         address nonMember = address(0xD15EA5E);
 
@@ -231,7 +231,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
     }
 
     /// @dev Verifies replaying the same salt/operation after success reverts with `NonceAlreadyUsed`.
-    function test_NMGB_MG_1_modifyGroups_replaySameNonce_revertsAfterSuccessfulExecution() public {
+    function test_modifyGroups_replaySameNonce_revertsAfterSuccessfulExecution() public {
         uint256 groupId = 7904;
 
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -259,7 +259,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
     }
 
     /// @dev Verifies `OrganizationGroupsBase.modifyGroups` treats modification ordering as part of the nonce domain.
-    function test_NMGB_MG_2_modifyGroups_sameSemanticsDifferentOrdering_producesDifferentNonce() public view {
+    function test_modifyGroups_sameSemanticsDifferentOrdering_producesDifferentNonce() public view {
         // Setup: define two semantically equivalent multi-create batches whose independent group creations appear in
         // opposite array order.
         GroupModification[] memory orderedModifications = _buildModificationsArray(
@@ -281,7 +281,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
 
     /// @dev Verifies `OrganizationGroupsBase.modifyGroups` can reapply the same modification array after a state reset
     /// when the admin-auth salt changes.
-    function test_NMGB_MG_3_modifyGroups_sameModificationArrayDifferentSalts_canBothSucceed() public {
+    function test_modifyGroups_sameModificationArrayDifferentSalts_canBothSucceed() public {
         uint256 groupId = 7914;
 
         // Setup: seed an existing group, prepare an update that adds one member, and build an inverse reset update so
@@ -432,7 +432,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
     }
 
     /// @dev Verifies library custom errors bubble through base unchanged.
-    function test_NMGB_MG_4_modifyGroups_libraryCustomErrors_bubbleThroughBaseUnchanged() public {
+    function test_modifyGroups_libraryCustomErrors_bubbleThroughBaseUnchanged() public {
         uint256 nonExistentGroupId = 7908;
 
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -459,7 +459,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
     }
 
     /// @dev Verifies member-level custom errors bubble through base unchanged and nonce is rolled back.
-    function test_NMGB_MG_4_modifyGroups_memberDoesNotExist_bubblesThroughBaseAndDoesNotConsumeNonce() public {
+    function test_modifyGroups_memberDoesNotExist_bubblesThroughBaseAndDoesNotConsumeNonce() public {
         uint256 groupId = 7911;
         address nonMember = address(0xD00D);
 
@@ -524,9 +524,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
 
     /// @dev Verifies `OrganizationGroupsBase.modifyGroups` rolls back an entire failing batch and allows the same
     /// signed batch to be retried once the downstream condition is fixed.
-    function test_NMGB_MG_4__OGB_MG_4_modifyGroups_libraryRevert_doesNotConsumeNonceAndCanRetrySameSaltAndOperation()
-        public
-    {
+    function test_modifyGroups_libraryRevert_doesNotConsumeNonceAndCanRetrySameSaltAndOperation() public {
         uint256 groupId = 7910;
 
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -562,7 +560,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
 
     /// @dev Verifies `OrganizationGroupsBase.modifyGroups` rejects create operations that include
     /// `membersToRemove`.
-    function test_OGB_MG_6_modifyGroups_createWithMembersToRemove_revertsInvalidGroupCreationOperation() public {
+    function test_modifyGroups_createWithMembersToRemove_revertsInvalidGroupCreationOperation() public {
         uint256 groupId = 7915;
 
         // Setup: configure one-admin auth and build a malformed create modification that includes
@@ -593,7 +591,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
     }
 
     /// @dev Verifies `OrganizationGroupsBase.modifyGroups` rejects delete operations with non-empty member arrays.
-    function test_OGB_MG_6_modifyGroups_deleteWithNonEmptyMemberArrays_revertsInvalidGroupDeletionOperation() public {
+    function test_modifyGroups_deleteWithNonEmptyMemberArrays_revertsInvalidGroupDeletionOperation() public {
         uint256 groupId = 7916;
 
         // Setup: configure one-admin auth and build a malformed delete modification that includes member arrays the

@@ -10,8 +10,8 @@ import {
  * @dev Unit tests for `OrganizationGuardianBase` view functions.
  */
 contract OrganizationGuardianBaseViewsTest is OrganizationGuardianBaseSuiteBase {
-    /// @dev Verifies OGB-VIEW-1: `guardian()` returns current guardian via library getter.
-    function test_OGB_VIEW_1_guardian_returnsCurrentGuardian() public {
+    /// @dev Verifies `guardian()` returns current guardian via library getter.
+    function test_guardian_returnsCurrentGuardian() public {
         // Setup
         guardianStateHarness.setGuardian(NEW_GUARDIAN_A);
 
@@ -22,8 +22,8 @@ contract OrganizationGuardianBaseViewsTest is OrganizationGuardianBaseSuiteBase 
         assertEq(currentGuardian, NEW_GUARDIAN_A, "guardian() should return current guardian address");
     }
 
-    /// @dev Verifies OGB-VIEW-2: `pendingGuardian()` returns current pending guardian.
-    function test_OGB_VIEW_2_pendingGuardian_returnsCurrentPendingGuardian() public {
+    /// @dev Verifies `pendingGuardian()` returns current pending guardian.
+    function test_pendingGuardian_returnsCurrentPendingGuardian() public {
         // Setup
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
 
@@ -34,8 +34,8 @@ contract OrganizationGuardianBaseViewsTest is OrganizationGuardianBaseSuiteBase 
         assertEq(pending, NEW_GUARDIAN_A, "pendingGuardian() should return pending guardian address");
     }
 
-    /// @dev Verifies OGB-VIEW-3: `pendingGuardianUpdateTimestamp()` returns current pending timestamp.
-    function test_OGB_VIEW_3_pendingGuardianUpdateTimestamp_returnsCurrentPendingTimestamp() public {
+    /// @dev Verifies `pendingGuardianUpdateTimestamp()` returns current pending timestamp.
+    function test_pendingGuardianUpdateTimestamp_returnsCurrentPendingTimestamp() public {
         // Setup
         uint256 expectedTimestamp = block.timestamp + 4 days;
         guardianStateHarness.setPendingGuardianUpdateTimestamp(expectedTimestamp);
@@ -49,8 +49,8 @@ contract OrganizationGuardianBaseViewsTest is OrganizationGuardianBaseSuiteBase 
         );
     }
 
-    /// @dev Verifies OGB-VIEW-4: `isGuardianUpdateReadyForAcceptance()` returns current ready flag.
-    function test_OGB_VIEW_4_isGuardianUpdateReadyForAcceptance_returnsCurrentReadyFlag() public {
+    /// @dev Verifies `isGuardianUpdateReadyForAcceptance()` returns current ready flag.
+    function test_isGuardianUpdateReadyForAcceptance_returnsCurrentReadyFlag() public {
         // Setup
         guardianStateHarness.setIsGuardianUpdateReadyForAcceptance(true);
 
@@ -61,8 +61,8 @@ contract OrganizationGuardianBaseViewsTest is OrganizationGuardianBaseSuiteBase 
         assertTrue(isReady, "isGuardianUpdateReadyForAcceptance() should return true when set");
     }
 
-    /// @dev Verifies OGB-VIEW-5: all guardian view functions are callable by any address.
-    function test_OGB_VIEW_5_viewFunctions_callableByAnyone() public {
+    /// @dev Verifies all guardian view functions are callable by any address.
+    function test_viewFunctions_callableByAnyone() public {
         // Setup
         guardianStateHarness.setGuardian(NEW_GUARDIAN_A);
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_B);

@@ -30,7 +30,7 @@ contract OrganizationPolicyBaseFuzzTest is OrganizationPolicyBaseSuiteBase {
      * @param cidSeed Random seed used to derive a deterministic IPFS CID string
      * @param saltRaw Raw salt used to derive a bounded admin-auth salt
      */
-    function testFuzz_FOPB_USAGE_63_setPolicies_isGuardianOnlyAndLeavesNonceUnused(
+    function testFuzz_setPolicies_isGuardianOnlyAndLeavesNonceUnused(
         address caller,
         bytes32 newRoot,
         bytes32 cidSeed,
@@ -70,7 +70,7 @@ contract OrganizationPolicyBaseFuzzTest is OrganizationPolicyBaseSuiteBase {
      * @param saltRaw Raw salt used to derive a bounded admin-auth salt
      * @param mutationSelector Chooses whether to mutate the signed root or the signed CID hash before replaying auth
      */
-    function testFuzz_FOPB_USAGE_63_setPolicies_signaturesBindToExactRootAndCidHash(
+    function testFuzz_setPolicies_signaturesBindToExactRootAndCidHash(
         bytes32 signedRoot,
         bytes32 signedCidSeed,
         bytes32 mutatedCidSeed,
@@ -133,7 +133,7 @@ contract OrganizationPolicyBaseFuzzTest is OrganizationPolicyBaseSuiteBase {
      * @param initiator Initiator used for the queried usage tuple
      * @param rootSeed Seed used to randomize policy fields that contribute to the stored merkle root
      */
-    function testFuzz_FOPB_USAGE_63_getPolicyUsage_invalidProofAlwaysReverts(
+    function testFuzz_getPolicyUsage_invalidProofAlwaysReverts(
         uint256 rawPolicyId,
         uint8 mutationSelector,
         address account,

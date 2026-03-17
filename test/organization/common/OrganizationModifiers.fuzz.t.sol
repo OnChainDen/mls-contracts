@@ -31,8 +31,7 @@ contract OrganizationModifiersFuzzTest is Test {
     }
 
     /// @dev Verifies only the stored guardian can pass the guardian-only modifier.
-    /// OMOD-AFUZ-1
-    function testFuzz_OMOD_AFUZ_1_A_randomCaller_onlyGuardianExactMatchPasses(address guardian, address caller) public {
+    function testFuzz_randomCaller_onlyGuardianExactMatchPasses(address guardian, address caller) public {
         vm.assume(guardian != address(0));
 
         // Setup: configure the guardian slot with the fuzzed guardian and seed fallback values elsewhere.
@@ -44,8 +43,7 @@ contract OrganizationModifiersFuzzTest is Test {
     }
 
     /// @dev Verifies only the stored deployer can pass the deployer-only modifier.
-    /// OMOD-AFUZ-1
-    function testFuzz_OMOD_AFUZ_1_B_randomCaller_onlyDeployerExactMatchPasses(address deployer, address caller) public {
+    function testFuzz_randomCaller_onlyDeployerExactMatchPasses(address deployer, address caller) public {
         vm.assume(deployer != address(0));
 
         // Setup: configure the deployer slot with the fuzzed deployer and seed fallback values elsewhere.
@@ -57,10 +55,7 @@ contract OrganizationModifiersFuzzTest is Test {
     }
 
     /// @dev Verifies only the stored tx-recovery address can pass the tx-recovery-only modifier.
-    /// OMOD-AFUZ-1
-    function testFuzz_OMOD_AFUZ_1_C_randomCaller_onlyTxRecoveryExactMatchPasses(address txRecovery, address caller)
-        public
-    {
+    function testFuzz_randomCaller_onlyTxRecoveryExactMatchPasses(address txRecovery, address caller) public {
         vm.assume(txRecovery != address(0));
 
         // Setup: configure the tx-recovery slot with the fuzzed address and seed fallback values elsewhere.
@@ -72,11 +67,9 @@ contract OrganizationModifiersFuzzTest is Test {
     }
 
     /// @dev Verifies only the stored guardian-recovery address can pass the guardian-recovery-only modifier.
-    /// OMOD-AFUZ-1
-    function testFuzz_OMOD_AFUZ_1_D_randomCaller_onlyGuardianRecoveryExactMatchPasses(
-        address guardianRecovery,
-        address caller
-    ) public {
+    function testFuzz_randomCaller_onlyGuardianRecoveryExactMatchPasses(address guardianRecovery, address caller)
+        public
+    {
         vm.assume(guardianRecovery != address(0));
 
         // Setup: configure the guardian-recovery slot with the fuzzed address and seed fallback values elsewhere.
@@ -88,11 +81,7 @@ contract OrganizationModifiersFuzzTest is Test {
     }
 
     /// @dev Verifies only the stored pending guardian can pass the pending-guardian-only modifier.
-    /// OMOD-AFUZ-1
-    function testFuzz_OMOD_AFUZ_1_E_randomCaller_onlyPendingGuardianExactMatchPasses(
-        address pendingGuardian,
-        address caller
-    ) public {
+    function testFuzz_randomCaller_onlyPendingGuardianExactMatchPasses(address pendingGuardian, address caller) public {
         vm.assume(pendingGuardian != address(0));
 
         // Setup: configure the pending-guardian slot with the fuzzed address and seed fallback values elsewhere.
@@ -104,8 +93,7 @@ contract OrganizationModifiersFuzzTest is Test {
     }
 
     /// @dev Verifies only the stored recovery pending guardian can pass its acceptance modifier.
-    /// OMOD-AFUZ-1
-    function testFuzz_OMOD_AFUZ_1_F_randomCaller_onlyRecoveryPendingGuardianExactMatchPasses(
+    function testFuzz_randomCaller_onlyRecoveryPendingGuardianExactMatchPasses(
         address recoveryPendingGuardian,
         address caller
     ) public {
@@ -123,8 +111,7 @@ contract OrganizationModifiersFuzzTest is Test {
     }
 
     /// @dev Verifies guardian-only access returns the exact typed guardian revert for non-matching callers.
-    /// OMOD-AFUZ-2
-    function testFuzz_OMOD_AFUZ_2_A_randomGuardianAddress_exactMatchPassesOtherwiseTypedRevert(
+    function testFuzz_randomGuardianAddress_exactMatchPassesOtherwiseTypedRevert(
         address configuredGuardian,
         address caller
     ) public {
@@ -146,8 +133,7 @@ contract OrganizationModifiersFuzzTest is Test {
     }
 
     /// @dev Verifies deployer-only access returns the exact typed deployer revert for non-matching callers.
-    /// OMOD-AFUZ-2
-    function testFuzz_OMOD_AFUZ_2_B_randomDeployerAddress_exactMatchPassesOtherwiseTypedRevert(
+    function testFuzz_randomDeployerAddress_exactMatchPassesOtherwiseTypedRevert(
         address configuredDeployer,
         address caller
     ) public {
@@ -167,8 +153,7 @@ contract OrganizationModifiersFuzzTest is Test {
     }
 
     /// @dev Verifies tx-recovery-only access returns the exact typed revert for non-matching callers.
-    /// OMOD-AFUZ-2
-    function testFuzz_OMOD_AFUZ_2_C_randomTxRecoveryAddress_exactMatchPassesOtherwiseTypedRevert(
+    function testFuzz_randomTxRecoveryAddress_exactMatchPassesOtherwiseTypedRevert(
         address configuredTxRecovery,
         address caller
     ) public {
@@ -190,8 +175,7 @@ contract OrganizationModifiersFuzzTest is Test {
     }
 
     /// @dev Verifies guardian-recovery-only access returns the exact typed revert for non-matching callers.
-    /// OMOD-AFUZ-2
-    function testFuzz_OMOD_AFUZ_2_D_randomGuardianRecoveryAddress_exactMatchPassesOtherwiseTypedRevert(
+    function testFuzz_randomGuardianRecoveryAddress_exactMatchPassesOtherwiseTypedRevert(
         address configuredGuardianRecovery,
         address caller
     ) public {
@@ -215,8 +199,7 @@ contract OrganizationModifiersFuzzTest is Test {
     }
 
     /// @dev Verifies pending-guardian-only access returns the exact typed revert for non-matching callers.
-    /// OMOD-AFUZ-2
-    function testFuzz_OMOD_AFUZ_2_E_randomPendingGuardianAddress_exactMatchPassesOtherwiseTypedRevert(
+    function testFuzz_randomPendingGuardianAddress_exactMatchPassesOtherwiseTypedRevert(
         address configuredPendingGuardian,
         address caller
     ) public {
@@ -238,8 +221,7 @@ contract OrganizationModifiersFuzzTest is Test {
     }
 
     /// @dev Verifies recovery-pending-guardian-only access returns the exact typed revert for non-matching callers.
-    /// OMOD-AFUZ-2
-    function testFuzz_OMOD_AFUZ_2_F_randomRecoveryPendingGuardianAddress_exactMatchPassesOtherwiseTypedRevert(
+    function testFuzz_randomRecoveryPendingGuardianAddress_exactMatchPassesOtherwiseTypedRevert(
         address configuredRecoveryPendingGuardian,
         address caller
     ) public {

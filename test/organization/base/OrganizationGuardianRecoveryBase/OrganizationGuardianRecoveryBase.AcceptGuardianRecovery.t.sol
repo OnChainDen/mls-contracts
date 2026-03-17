@@ -11,10 +11,8 @@ import {
  */
 contract OrganizationGuardianRecoveryBaseAcceptGuardianRecoveryTest is OrganizationGuardianRecoveryBaseSuiteBase {
     /// @dev Verifies recovery-only guardian entrypoints reject unauthorized callers before a staged recovery guardian
-    /// can be accepted. [OREC-GRF-2]
-    function test_OGRB_AGR_1__OREC_GRF_2__GREC_INV_7_nonPendingGuardianCaller_revertsOnlyRecoveryPendingGuardian()
-        public
-    {
+    /// can be accepted.
+    function test_nonPendingGuardianCaller_revertsOnlyRecoveryPendingGuardian() public {
         // Setup: seed pending recovery-guardian update.
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp, true);
 
@@ -29,7 +27,7 @@ contract OrganizationGuardianRecoveryBaseAcceptGuardianRecoveryTest is Organizat
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.acceptGuardianRecovery` recovery pending guardian caller
     /// delegates to library and completes acceptance.
-    function test_OGRB_AGR_2_recoveryPendingGuardianCaller_delegatesAndAccepts() public {
+    function test_recoveryPendingGuardianCaller_delegatesAndAccepts() public {
         // Setup: seed pending recovery-guardian update.
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp, true);
 
@@ -51,8 +49,8 @@ contract OrganizationGuardianRecoveryBaseAcceptGuardianRecoveryTest is Organizat
     }
 
     /// @dev Verifies a configured recovery address can rotate the guardian after the recovery timelock without any
-    /// participation from the current guardian. [OREC-GRF-1]
-    function test_OREC_GRF_1_recoveryAddressRotatesGuardianAfterTimelockWithoutCurrentGuardianParticipation() public {
+    /// participation from the current guardian.
+    function test_recoveryAddressRotatesGuardianAfterTimelockWithoutCurrentGuardianParticipation() public {
         // Setup: start from the suite baseline where guardian recovery is configured and no recovery update is
         // pending.
         address originalGuardian = recoveryStateHarness.getGuardianStorage();
@@ -86,8 +84,8 @@ contract OrganizationGuardianRecoveryBaseAcceptGuardianRecoveryTest is Organizat
     }
 
     /// @dev Verifies normal guardian updates and guardian-recovery updates can coexist without corrupting each
-    /// other's pending state. [OREC-GRF-4]
-    function test_OREC_GRF_4_recoveryAndNormalGuardianUpdateFlowsRemainIsolated() public {
+    /// other's pending state.
+    function test_recoveryAndNormalGuardianUpdateFlowsRemainIsolated() public {
         // Setup: stage a normal guardian update directly in base guardian storage, then start a separate recovery
         // guardian update through the recovery-only entrypoint.
         recoveryStateHarness.setPendingGuardian(NEW_GUARDIAN_B);

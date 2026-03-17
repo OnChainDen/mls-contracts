@@ -18,10 +18,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
 {
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery` valid initiate-init writes
     /// pending tuple, computes timestamp, and emits event.
-    /// Plan rows: LOGR-AOTIIGR-1, LOGR-AOTIIGR-2, LOGR-AOTIIGR-3, LOGR-AOTIIGR-4.
-    function test_LOGR_IIGR_1__LOGR_IIGR_2__LOGR_IIGR_3__LOGR_IIGR_9__LOGR_AOTIIGR_1__LOGR_AOTIIGR_2__LOGR_AOTIIGR_3__LOGR_AOTIIGR_4_validInitiateInit_writesPendingTupleAndEmits()
-        public
-    {
+    function test_validInitiateInit_writesPendingTupleAndEmits() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
         uint256 expectedCanFinalizeAt = block.timestamp + ADMIN_OPERATION_TIMELOCK;
@@ -48,8 +45,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` reverts in the same block
     /// the deferred initialization was initiated.
-    /// Plan rows: LOGR-AOTIIGR-5.
-    function test_LOGR_AOTIIGR_5_finalizeInitializeGuardianRecovery_sameBlockRevertsTimelockNotExpired() public {
+    function test_finalizeInitializeGuardianRecovery_sameBlockRevertsTimelockNotExpired() public {
         // Setup: start from clean recovery state and stage a deferred initialization in the current block.
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
@@ -84,7 +80,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery` validation order checks
     /// configured state before already-pending state.
-    function test_LOGR_IIGR_4__LOGR_IIGR_10_notConfiguredValidationRunsBeforeAlreadyPendingCheck() public {
+    function test_notConfiguredValidationRunsBeforeAlreadyPendingCheck() public {
         // Setup: start from clean recovery state and seed pending deferred-init tuple.
         harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryConfig(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
@@ -106,7 +102,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery` already-pending check runs
     /// before parameter validation.
-    function test_LOGR_IIGR_5__LOGR_IIGR_11_alreadyPendingCheckRunsBeforeParameterValidation() public {
+    function test_alreadyPendingCheckRunsBeforeParameterValidation() public {
         // Setup: start from clean recovery state and seed pending deferred-init tuple.
         harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -128,7 +124,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery` zero address and out-of-range
     /// timelock values revert.
-    function test_LOGR_IIGR_6__LOGR_IIGR_7__LOGR_IIGR_8_invalidParams_revert() public {
+    function test_invalidParams_revert() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
@@ -166,7 +162,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery` initiate-init mutates only
     /// pendingInit fields.
-    function test_LOGR_IIGR_12_initiateInitOnlyMutatesPendingInitFields() public {
+    function test_initiateInitOnlyMutatesPendingInitFields() public {
         // Setup: start from clean recovery state and seed pending recovery-guardian update.
         harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp + 5 days, true);
@@ -187,7 +183,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery` boundary timelocks (2 days,
     /// 30 days) are accepted.
-    function test_LOGR_IIGR_13_boundaryTimelocks_minAndMax_areAccepted() public {
+    function test_boundaryTimelocks_minAndMax_areAccepted() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 

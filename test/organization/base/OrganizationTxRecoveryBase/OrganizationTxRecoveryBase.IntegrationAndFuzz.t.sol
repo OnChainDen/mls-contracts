@@ -51,8 +51,8 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
     }
 
     /// @dev Verifies deferred tx/ERC1271 recovery initialization can be finalized after the admin timelock and then
-    /// execute a recovery transaction once the recovery mechanism is enabled. [OREC-DRI-1, OREC-TRF-3]
-    function test_TXR_INT_1__OREC_DRI_1__OREC_TRF_3_deferredSetupLifecycle_fullFlow_succeeds() public {
+    /// execute a recovery transaction once the recovery mechanism is enabled.
+    function test_deferredSetupLifecycle_fullFlow_succeeds() public {
         // Setup
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
 
@@ -99,8 +99,8 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         assertTrue(harness.getTxRecoveryState().isEnabled, "recovery should be enabled at end of lifecycle");
     }
 
-    /// @dev Verifies TXR-INT-2: init-time configured lifecycle supports enable/execute/disable/re-enable/execute.
-    function test_TXR_INT_2_initTimeSetupLifecycle_enableDisableReenable_executesAgain() public {
+    /// @dev Verifies init-time configured lifecycle supports enable/execute/disable/re-enable/execute.
+    function test_initTimeSetupLifecycle_enableDisableReenable_executesAgain() public {
         // Setup
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
@@ -128,10 +128,8 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
     }
 
     /// @dev Verifies tx/ERC1271 recovery disable is immediate, clears any pending enable state, and prevents the
-    /// stale enable-finalize from succeeding later. [OREC-TRF-1]
-    function test_TXR_INT_3__OREC_TRF_1__TXRC_INV_3_emergencyDisableLifecycle_pendingEnableThenDisable_finalizeFails()
-        public
-    {
+    /// stale enable-finalize from succeeding later.
+    function test_emergencyDisableLifecycle_pendingEnableThenDisable_finalizeFails() public {
         // Setup
         vm.prank(TX_RECOVERY);
         harness.initiateEnableTransactionAndERC1271Recovery();
@@ -150,8 +148,8 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         assertEq(state.pendingEnableTimestamp, 0, "disable should clear pending enable");
     }
 
-    /// @dev Verifies TXR-INT-5: tx recovery operations do not mutate guardian-recovery state.
-    function test_TXR_INT_5_txRecoveryAndGuardianRecovery_independentState_noCrossCorruption() public {
+    /// @dev Verifies tx recovery operations do not mutate guardian-recovery state.
+    function test_txRecoveryAndGuardianRecovery_independentState_noCrossCorruption() public {
         // Setup
         GuardianRecoveryState memory beforeState = GuardianRecoveryState({
             recoveryAddress: address(0xABC1),
@@ -208,9 +206,9 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         );
     }
 
-    /// @dev Verifies TXR-INT-6: guardian cannot call tx-recovery-only entrypoints and tx-recovery cannot call
+    /// @dev Verifies guardian cannot call tx-recovery-only entrypoints and tx-recovery cannot call
     /// guardian-only entrypoints.
-    function test_TXR_INT_6_roleIsolation_guardianAndTxRecovery_cannotCrossCall() public {
+    function test_roleIsolation_guardianAndTxRecovery_cannotCrossCall() public {
         // Setup
         (AdminAuthParams memory auth,) = _buildTxRecoveryAuth({
             operationType: OperationType.InitiateInitializeTransactionRecovery,
@@ -234,8 +232,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
     }
 
     /// @dev Verifies stale deferred-init admin signatures fail once the pending tx/ERC1271 recovery tuple changes.
-    /// [OREC-DRI-4]
-    function test_TXR_INT_7__OREC_DRI_4_staleAdminSignatures_pendingValuesChanged_revert() public {
+    function test_staleAdminSignatures_pendingValuesChanged_revert() public {
         // Setup
         address initialPendingRecovery = address(0xF100);
         address mutatedPendingRecovery = address(0xF200);
@@ -285,10 +282,8 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
     }
 
     /// @dev Verifies recovery execution bypasses guardian and policy checks but still requires the target account to
-    /// be deployed by this organization. [OREC-TRF-3, OREC-TRF-4]
-    function test_TXR_INT_8__OREC_TRF_3__OREC_TRF_4_recoveryExecution_bypassesGuardianPolicyButEnforcesAccountDeployment()
-        public
-    {
+    /// be deployed by this organization.
+    function test_recoveryExecution_bypassesGuardianPolicyButEnforcesAccountDeployment() public {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction deployedAccount =
@@ -311,11 +306,9 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         assertEq(deployedAccount.executionCount(), 1, "deployed-account execution should succeed exactly once");
     }
 
-    /// @dev Verifies TXR-INT-9, TXR-INT-10, TXR-INT-11, TXR-INT-12, and TXR-INT-13: recovery account call-chains to
+    /// @dev Verifies recovery account call-chains to
     /// organization operations fail closed and leave state unchanged.
-    function test_TXR_INT_9__TXR_INT_10__TXR_INT_11__TXR_INT_12__TXR_INT_13_recoveryCallChainsToOrganizationOps_revertAndLeaveStateUnchanged()
-        public
-    {
+    function test_recoveryCallChainsToOrganizationOps_revertAndLeaveStateUnchanged() public {
         // Setup
         _enableTxRecovery();
 
@@ -362,9 +355,9 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         );
     }
 
-    /// @dev Verifies TXR-INT-14: organization non-view selector-matrix targets via recovery always revert and preserve
+    /// @dev Verifies organization non-view selector-matrix targets via recovery always revert and preserve
     /// state.
-    function test_TXR_INT_14_selectorMatrixToOrganization_alwaysRevertsAndPreservesState() public {
+    function test_selectorMatrixToOrganization_alwaysRevertsAndPreservesState() public {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
@@ -397,9 +390,9 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         );
     }
 
-    /// @dev Verifies TXR-INT-15: account non-view selector-matrix targets via recovery always revert and preserve
+    /// @dev Verifies account non-view selector-matrix targets via recovery always revert and preserve
     /// state.
-    function test_TXR_INT_15_selectorMatrixToAccount_alwaysRevertsAndPreservesState() public {
+    function test_selectorMatrixToAccount_alwaysRevertsAndPreservesState() public {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
@@ -437,10 +430,8 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         assertEq(account.executionCount(), 0, "account selector sweep should never execute");
     }
 
-    /// @dev Verifies TXR-FZ-6: fuzz non-recovery callers are unauthorized across tx-recovery-protected entrypoints.
-    function testFuzz_TXR_FZ_6__FOTRB_ENTRY_121_nonRecoveryCallers_entrypointsAlwaysRevertUnauthorized(address caller)
-        public
-    {
+    /// @dev Verifies fuzz non-recovery callers are unauthorized across tx-recovery-protected entrypoints.
+    function testFuzz_nonRecoveryCallers_entrypointsAlwaysRevertUnauthorized(address caller) public {
         // Setup
         vm.assume(caller != TX_RECOVERY);
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
@@ -470,11 +461,10 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         // Verify
     }
 
-    /// @dev Verifies TXR-FZ-7: fuzzed recovery-execution tuples forward exact `to/value/data` on successful targets.
-    function testFuzz_TXR_FZ_7_recoveryExecution_successfulTargets_forwardExactTuple(
-        bytes calldata data,
-        uint128 rawValue
-    ) public {
+    /// @dev Verifies fuzzed recovery-execution tuples forward exact `to/value/data` on successful targets.
+    function testFuzz_recoveryExecution_successfulTargets_forwardExactTuple(bytes calldata data, uint128 rawValue)
+        public
+    {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
@@ -500,8 +490,8 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         assertEq(target.lastData(), data, "target calldata should match");
     }
 
-    /// @dev Verifies TXR-FZ-8: fuzzed non-view selector sweep to organization target always reverts.
-    function testFuzz_TXR_FZ_8_selectorSweepToOrganizationStateChanging_alwaysReverts(uint8 rawIndex) public {
+    /// @dev Verifies fuzzed non-view selector sweep to organization target always reverts.
+    function testFuzz_selectorSweepToOrganizationStateChanging_alwaysReverts(uint8 rawIndex) public {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
@@ -521,8 +511,8 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         assertEq(account.executionCount(), 0, "organization selector sweep should fully revert account execution");
     }
 
-    /// @dev Verifies TXR-FZ-9: fuzzed non-view selector sweep to account target always reverts.
-    function testFuzz_TXR_FZ_9_selectorSweepToAccountStateChanging_alwaysReverts(
+    /// @dev Verifies fuzzed non-view selector sweep to account target always reverts.
+    function testFuzz_selectorSweepToAccountStateChanging_alwaysReverts(
         address nestedTo,
         uint128 rawNestedValue,
         bytes calldata nestedData,
@@ -546,8 +536,8 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         assertEq(account.executionCount(), 0, "account selector sweep should fully revert account execution");
     }
 
-    /// @dev Verifies TXR-FZ-11: repeated enable/disable cycles preserve immutable config and legal transitions.
-    function testFuzz_TXR_FZ_11_repeatedEnableDisable_cyclesPreserveConfig(uint8 rawCycles) public {
+    /// @dev Verifies repeated enable/disable cycles preserve immutable config and legal transitions.
+    function testFuzz_repeatedEnableDisable_cyclesPreserveConfig(uint8 rawCycles) public {
         // Setup
         uint8 cycles = uint8(bound(rawCycles, 1, 16));
         TxRecoveryState memory baseline = harness.getTxRecoveryState();
@@ -585,11 +575,10 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         // Verify
     }
 
-    /// @dev Verifies TXR-FZ-12: mixed enable/finalize/disable sequences maintain enabled-state invariants.
-    function testFuzz_TXR_FZ_12_mixedEnableFinalizeDisable_sequencesMaintainEnabledInvariants(
-        bytes32 seed,
-        uint8 rawSteps
-    ) public {
+    /// @dev Verifies mixed enable/finalize/disable sequences maintain enabled-state invariants.
+    function testFuzz_mixedEnableFinalizeDisable_sequencesMaintainEnabledInvariants(bytes32 seed, uint8 rawSteps)
+        public
+    {
         // Setup
         uint8 steps = uint8(bound(rawSteps, 1, 64));
 

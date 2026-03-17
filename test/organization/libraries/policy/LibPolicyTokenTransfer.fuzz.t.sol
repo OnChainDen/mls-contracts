@@ -16,7 +16,7 @@ contract LibPolicyTokenTransferFuzzTest is PolicyLibrariesFuzzTestBase {
     /// @param threshold The configured threshold and tested transfer amount.
     /// @param recipient The ERC-20 recipient used in the token-transfer branch.
     /// @param useNativeTransfer Whether to exercise the native-transfer amount path.
-    function testFuzz_FLPT_AMOUNT_67_isTokenAmountAllowed_treatsThresholdAsInclusiveUpperBound(
+    function testFuzz_isTokenAmountAllowed_treatsThresholdAsInclusiveUpperBound(
         uint256 threshold,
         address recipient,
         bool useNativeTransfer
@@ -40,7 +40,7 @@ contract LibPolicyTokenTransferFuzzTest is PolicyLibrariesFuzzTestBase {
     /// calldata bypass token checks.
     /// @param token The configured token contract used by the exact-token policy.
     /// @param rawShortLength The malformed calldata length, bounded below the 68-byte ERC-20 transfer minimum.
-    function testFuzz_FLPT_ALLOW_68_isTokenTransferAllowed_malformedTokenCalldataCannotBypassChecks(
+    function testFuzz_isTokenTransferAllowed_malformedTokenCalldataCannotBypassChecks(
         address token,
         uint8 rawShortLength
     ) public {

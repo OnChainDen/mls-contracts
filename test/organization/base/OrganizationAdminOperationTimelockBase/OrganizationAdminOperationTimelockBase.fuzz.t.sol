@@ -104,7 +104,7 @@ contract OrganizationAdminOperationTimelockBaseFuzzTest is Test {
 
     /// @dev Verifies `OrganizationAdminOperationTimelockBase.adminOperationTimelockDurationSeconds` returns the value
     /// stored through `LibOrganizationAdminOperationTimelock`.
-    function test_OAOTB_AOTDS_1_adminOperationTimelockDurationSeconds_returnsStoredLibraryValue() public {
+    function test_adminOperationTimelockDurationSeconds_returnsStoredLibraryValue() public {
         // Setup: persist a valid admin-operation timelock duration through the shared library helper.
         uint256 configuredDuration = 11 days;
         harness.initializeAdminOperationTimelockViaLibrary(configuredDuration);
@@ -117,7 +117,7 @@ contract OrganizationAdminOperationTimelockBaseFuzzTest is Test {
     }
 
     /// @dev Verifies `OrganizationAdminOperationTimelockBase.adminOperationTimelockDurationSeconds` is permissionless.
-    function test_OAOTB_AOTDS_2_adminOperationTimelockDurationSeconds_callableByAnyAddress() public {
+    function test_adminOperationTimelockDurationSeconds_callableByAnyAddress() public {
         // Setup: persist a valid admin-operation timelock duration through the shared library helper.
         uint256 configuredDuration = TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS + 1;
         address randomCaller = address(0xA0A7);

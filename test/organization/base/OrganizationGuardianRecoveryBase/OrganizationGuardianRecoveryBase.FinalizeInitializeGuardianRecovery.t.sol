@@ -22,7 +22,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 {
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` reverts when called by a
     /// non-guardian.
-    function test_OGRB_FIGR_1_nonGuardianCaller_revertsOnlyGuardian() public {
+    function test_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -55,7 +55,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` insufficient admin
     /// signatures revert.
-    function test_OGRB_FIGR_2_insufficientAdminSignatures_reverts() public {
+    function test_insufficientAdminSignatures_reverts() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -84,7 +84,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` successful nonce replay
     /// reverts with `NonceAlreadyUsed`.
-    function test_OGRB_FIGR_3__NMGRB_IGR_3_replaySameNonce_revertsNonceAlreadyUsed() public {
+    function test_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -118,10 +118,8 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
     }
 
     /// @dev Verifies deferred guardian-recovery finalization commits the staged tuple after the admin timelock and
-    /// preserves helper-enforced storage integrity. [OREC-DRI-1, OREC-PH-1]
-    function test_OGRB_FIGR_4__OGRB_FIGR_5__OGRB_FIGR_6__OGRB_FIGR_7__OREC_DRI_1__OREC_PH_1_finalizeApprovalPathBindsPendingTupleAndDelegates()
-        public
-    {
+    /// preserves helper-enforced storage integrity.
+    function test_finalizeApprovalPathBindsPendingTupleAndDelegates() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -173,10 +171,8 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
     }
 
     /// @dev Verifies deferred guardian-recovery finalize and cancel signatures are bound to the current pending tuple
-    /// values, so stale signatures fail after any pending-value mutation. [OREC-DRI-4]
-    function test_OGRB_FIGR_8__OGRB_FIGR_10__OGRB_FIGR_11__NMGRB_IGR_8__OREC_DRI_4_stalePendingTupleSignatures_revertAfterPendingValuesChange()
-        public
-    {
+    /// values, so stale signatures fail after any pending-value mutation.
+    function test_stalePendingTupleSignatures_revertAfterPendingValuesChange() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -236,8 +232,8 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
     }
 
     /// @dev Verifies deferred guardian-recovery finalization reverts before the admin timelock expires and succeeds
-    /// at the exact boundary without requiring new signatures. [OREC-DRI-3]
-    function test_OGRB_FIGR_9__NMGRB_IGR_10__OREC_DRI_3_downstreamRevert_rollsBackNonceAndAllowsRetry() public {
+    /// at the exact boundary without requiring new signatures.
+    function test_downstreamRevert_rollsBackNonceAndAllowsRetry() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         uint256 canFinalizeAt = block.timestamp + 1 days;
@@ -279,7 +275,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` expired auth reverts and
     /// nonce is not burned.
-    function test_OGRB_FIGR_12_expiredAuth_revertsWithoutBurningNonce_andFreshSignaturesSucceed() public {
+    function test_expiredAuth_revertsWithoutBurningNonce_andFreshSignaturesSucceed() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -327,7 +323,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` rejection signatures cannot
     /// execute finalization.
-    function test_OGRB_FIGR_13_rejectionSignatures_cannotExecuteFinalization() public {
+    function test_rejectionSignatures_cannotExecuteFinalization() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -359,7 +355,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` signatures for a different
     /// operation type cannot authorize finalization.
-    function test_OGRB_FIGR_14__NMGRB_IGR_7_signaturesForDifferentOperationType_cannotAuthorizeFinalization() public {
+    function test_signaturesForDifferentOperationType_cannotAuthorizeFinalization() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -390,9 +386,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` can finalize the same
     /// pending tuple on fresh organization instances with different salts.
-    function test_NMGRB_IGR_4_finalizeInitializeGuardianRecovery_samePendingTupleDifferentSalts_succeedsPerFreshOrg()
-        public
-    {
+    function test_finalizeInitializeGuardianRecovery_samePendingTupleDifferentSalts_succeedsPerFreshOrg() public {
         // Setup: deploy two fresh harnesses with the same pending deferred-init tuple and build finalize auth with
         // different salts for each organization address.
         OrganizationGuardianRecoveryBaseHarness secondHarness = new OrganizationGuardianRecoveryBaseHarness();

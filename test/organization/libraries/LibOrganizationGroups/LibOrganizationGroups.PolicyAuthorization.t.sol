@@ -31,7 +31,7 @@ contract LibOrganizationGroupsPolicyAuthorizationTest is LibOrganizationPolicySu
 
     /// @dev Verifies group-based policy authorization fails when `isGroup(groupId)` is false even if member bits are
     /// still set.
-    function test_GROUP_INV_3_groupBasedAuthorizationFailsWhenGroupIsInactiveEvenIfMembershipBitsExist() public {
+    function test_groupBasedAuthorizationFailsWhenGroupIsInactiveEvenIfMembershipBitsExist() public {
         // Setup: configure a shared group policy, keep both addresses as current org members, and seed the raw
         // group-member bits without marking the group itself active.
         Policy memory policy = _buildSharedGroupPolicy(AUTHORIZATION_GROUP_ID);
@@ -61,7 +61,7 @@ contract LibOrganizationGroupsPolicyAuthorizationTest is LibOrganizationPolicySu
 
     /// @dev Verifies an address removed from organization membership cannot remain effectively authorized through a
     /// stale group-membership bit.
-    function test_GROUP_INV_8_removedOrgMemberCannotRemainEffectivelyAuthorizedViaGroupPolicy() public {
+    function test_removedOrgMemberCannotRemainEffectivelyAuthorizedViaGroupPolicy() public {
         // Setup: configure a live group policy, seed both addresses as org members plus group members, and verify the
         // policy is initially usable.
         Policy memory policy = _buildSharedGroupPolicy(AUTHORIZATION_GROUP_ID);

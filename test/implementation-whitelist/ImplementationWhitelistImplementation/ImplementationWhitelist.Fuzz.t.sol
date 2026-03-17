@@ -22,7 +22,7 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
     /// @param addresses The implementation addresses mutated across the sequence.
     /// @param shouldAdd Whether each sequence step adds or removes its corresponding address.
     /// @param useAccountType Whether to mutate the Account or Organization whitelist bucket.
-    function testFuzz_IWC_FUZZ_2__FIWI_HELPER_143_internalWhitelistHelpers_matchReferenceModel(
+    function testFuzz_internalWhitelistHelpers_matchReferenceModel(
         address[5] calldata addresses,
         bool[5] calldata shouldAdd,
         bool useAccountType
@@ -64,11 +64,9 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
     /// @param addr The shared implementation address mutated under both buckets.
     /// @param addToOrg Whether the Organization bucket receives the address.
     /// @param addToAccount Whether the Account bucket receives the address.
-    function testFuzz_IWC_FUZZ_3__FIWI_MAP_141_fuzz_mixedTypeOperations_mappingsRemainIndependent(
-        address addr,
-        bool addToOrg,
-        bool addToAccount
-    ) public {
+    function testFuzz_fuzz_mixedTypeOperations_mappingsRemainIndependent(address addr, bool addToOrg, bool addToAccount)
+        public
+    {
         // Setup: start from a clean initialized proxy with both buckets unset for the fuzzed address.
 
         // Call: apply owner-authorized mutations to each bucket independently.
@@ -98,7 +96,7 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
     /// @param randomAddr The fuzzed implementation address being checked.
     /// @param useAccountType Whether to use the Account or Organization whitelist bucket.
     /// @param shouldWhitelist Whether to seed the fuzzed address into the chosen whitelist bucket.
-    function testFuzz_IWC_FUZZ_1_validateHelper_matchesWhitelistMapping(
+    function testFuzz_validateHelper_matchesWhitelistMapping(
         address randomAddr,
         bool useAccountType,
         bool shouldWhitelist
@@ -133,7 +131,7 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
     /// @param secondOwner The owner proposed during the rejected second initialization.
     /// @param secondOrgOnly A second Organization implementation unique to the rejected re-entry attempt.
     /// @param secondAccountOnly A second Account implementation unique to the rejected re-entry attempt.
-    function testFuzz_FIWI_INIT_138_initialize_isOneTimeAndPreservesFirstConfiguration(
+    function testFuzz_initialize_isOneTimeAndPreservesFirstConfiguration(
         address initialOwner,
         address[3] calldata orgSeeds,
         address[3] calldata accountSeeds,
@@ -197,7 +195,7 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
     /// @param useAccountType Whether to mutate the Account or Organization whitelist bucket.
     /// @param addOperation Whether the mutation is an add or a remove operation.
     /// @param implementationAddress The implementation address targeted by the mutation.
-    function testFuzz_FIWI_WHITELIST_140_whitelistImplementations_onlyOwnerCanMutate(
+    function testFuzz_whitelistImplementations_onlyOwnerCanMutate(
         address caller,
         bool useAccountType,
         bool addOperation,
@@ -242,7 +240,7 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
     // forgefmt: disable-next-item
     /// @dev Verifies fuzz `(salt, implementation, whitelist)` tuples produce deterministic and
     // sensitivity-preserving outputs from `computeOrganizationAddress` via a locally deployed factory.
-    function test_IWC_FUZZ_4_fuzz_computeOrganizationAddress_deterministicAndSensitivityPreserving(
+    function test_fuzz_computeOrganizationAddress_deterministicAndSensitivityPreserving(
         bytes32 saltA,
         bytes32 saltB,
         address implA,
@@ -274,11 +272,9 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
         assertTrue(computedA1 != differentWhitelist, "different whitelist should change computed address");
     }
 
-    /// @dev IWC-FUZZ-6: Fuzz proxy initialization inputs — malformed init data never leaves partially initialized
+    /// @dev Fuzz proxy initialization inputs — malformed init data never leaves partially initialized
     /// proxy.
-    function test_IWC_FUZZ_6_fuzz_malformedInitData_neverLeavesPartiallyInitializedProxy(bytes calldata randomInitData)
-        public
-    {
+    function test_fuzz_malformedInitData_neverLeavesPartiallyInitializedProxy(bytes calldata randomInitData) public {
         // Setup: filter out valid initialize selector to ensure data is malformed.
         vm.assume(randomInitData.length > 0);
         // casting to 'bytes4' is safe because the short-circuit guard ensures length >= 4 before the cast
