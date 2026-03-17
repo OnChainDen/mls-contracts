@@ -188,9 +188,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
 
     /// @dev Verifies `OrganizationGuardianBase.cancelGuardianUpdate` rejects initiate-stage signatures reused during
     /// cancel-stage authorization.
-    function test_differentOperationTypeSignatures_cannotAuthorizeCancellation()
-        public
-    {
+    function test_differentOperationTypeSignatures_cannotAuthorizeCancellation() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3906);
@@ -268,9 +266,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
 
     /// @dev Verifies `OrganizationGuardianBase.cancelGuardianUpdate` can cancel the same pending guardian twice with
     /// different salts when the pending value is recreated in between.
-    function test_cancelGuardianUpdate_samePendingGuardianDifferentSalts_canCancelTwiceAcrossReinitiation()
-        public
-    {
+    function test_cancelGuardianUpdate_samePendingGuardianDifferentSalts_canCancelTwiceAcrossReinitiation() public {
         // Setup: create one pending guardian update, prepare two cancel salts for the same guardian, and prepare a
         // re-initiation step between the cancels.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -320,9 +316,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
 
     /// @dev Verifies `OrganizationGuardianBase.cancelGuardianUpdate` can cancel a guardian update after finalize but
     /// before accept, restoring the lifecycle to a fresh re-initiable state.
-    function test_cancelAfterFinalizeBeforeAccept_clearsReadyStateAndAllowsFreshUpdate()
-        public
-    {
+    function test_cancelAfterFinalizeBeforeAccept_clearsReadyStateAndAllowsFreshUpdate() public {
         // Setup: stage a normal guardian update through finalize so the pending guardian is ready for acceptance.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory initiateAuth,) = _buildInitiateGuardianUpdateAuth({

@@ -597,9 +597,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
 
     /// @dev Verifies guardian rotation and policy-governed account execution remain coherent after both the
     /// organization implementation and account implementation are upgraded.
-    function test_guardianUpdateAndTransactionExecution_remainCoherentAcrossOrganizationAndAccountUpgrades()
-        public
-    {
+    function test_guardianUpdateAndTransactionExecution_remainCoherentAcrossOrganizationAndAccountUpgrades() public {
         // Setup: deploy an organization/account pair on v1 implementations, publish one policy root, and fund the
         // account before running the upgrade and guardian-rotation sequence.
         OrganizationImplementationHarness organization = _deployOrganizationHarness(bytes32(uint256(15_601)));
@@ -957,10 +955,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
     /// @dev Verifies organization and account CREATE2 precomputes match their runtime deployments for fuzzed salts.
     /// @param organizationSalt CREATE2 salt used for organization deployment.
     /// @param accountSalt CREATE2 salt used for account deployment.
-    function testFuzz_factoryAndAccountPrecomputesMatchRuntime(
-        bytes32 organizationSalt,
-        bytes32 accountSalt
-    ) public {
+    function testFuzz_factoryAndAccountPrecomputesMatchRuntime(bytes32 organizationSalt, bytes32 accountSalt) public {
         // Setup: precompute both deployment addresses before executing the real factory and account-factory paths.
         address expectedOrganization =
             factory.computeOrganizationAddress(organizationSalt, address(lifecycleImplementation), address(whitelist));

@@ -246,9 +246,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies initiate-enable sets pending timestamp, emits event
     /// and keeps recovery disabled.
-    function test_initiateEnable_setsPendingAndEmitsWhileRemainingDisabled()
-        public
-    {
+    function test_initiateEnable_setsPendingAndEmitsWhileRemainingDisabled() public {
         // Setup
         uint256 expectedTimestamp = block.timestamp + TX_TIMELOCK;
 
@@ -397,9 +395,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies finalize-enable succeeds at
     /// exact pending timestamp, enables recovery, clears pending, emits event, and preserves config.
-    function test_finalizeEnable_atExactTimestamp()
-        public
-    {
+    function test_finalizeEnable_atExactTimestamp() public {
         // Setup
         harness.initiateEnableTxRecovery();
         TxRecoveryState memory beforeState = harness.getTxRecoveryState();
@@ -455,9 +451,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies cancel-enable clears pending
     /// emits, does not enable, works after expiry, and keeps config stable.
-    function test_cancelEnable_successSemantics()
-        public
-    {
+    function test_cancelEnable_successSemantics() public {
         // Setup
         harness.initiateEnableTxRecovery();
         TxRecoveryState memory beforeState = harness.getTxRecoveryState();
@@ -483,9 +477,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies disable
     /// clears enabled/pending state, emits, is idempotent, and keeps config immutable across pending cases.
-    function test_disable_semantics()
-        public
-    {
+    function test_disable_semantics() public {
         // Setup
         harness.initiateEnableTxRecovery();
         uint256 pending = harness.getTxRecoveryState().pendingEnableTimestamp;
@@ -603,9 +595,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies deferred-init initiation writes pending
     /// fields and emits expected event tuple.
-    function test_initiateInitialize_writesPendingAndEmits()
-        public
-    {
+    function test_initiateInitialize_writesPendingAndEmits() public {
         // Setup
         harness.resetTxRecoveryState();
         uint256 expectedFinalizeAt = block.timestamp + ADMIN_OPERATION_TIMELOCK;
@@ -660,9 +650,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies deferred-init initiation
     /// rejects configured/pending/invalid params.
-    function test_initiateInitialize_rejectsInvalidStatesAndParams()
-        public
-    {
+    function test_initiateInitialize_rejectsInvalidStatesAndParams() public {
         // Setup
 
         // Call
@@ -777,9 +765,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies finalize-deferred-init
     /// succeeds at boundary, writes config, clears pending, emits event, and leaves recovery disabled.
-    function test_finalizeInitialize_successSemantics()
-        public
-    {
+    function test_finalizeInitialize_successSemantics() public {
         // Setup
         harness.resetTxRecoveryState();
         harness.initiateInitializeTxRecovery(recoveryAddress, TX_TIMELOCK);
@@ -821,9 +807,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies if downstream initialize reverts, pending init remains unchanged and
     /// finalization event is not emitted.
-    function test_finalizeInitialize_downstreamRevert_keepsPendingAndNoEvent()
-        public
-    {
+    function test_finalizeInitialize_downstreamRevert_keepsPendingAndNoEvent() public {
         // Setup
         uint256 pendingTimestamp = block.timestamp + ADMIN_OPERATION_TIMELOCK;
         harness.setTxRecoveryState(
@@ -871,9 +855,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
     }
 
     /// @dev Verifies cancel-deferred-init reverts when no pending init exists.
-    function test_cancelInitialize_withoutPending_revertsNoTxRecoveryInitializationPending()
-        public
-    {
+    function test_cancelInitialize_withoutPending_revertsNoTxRecoveryInitializationPending() public {
         // Setup
 
         // Call
@@ -885,9 +867,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies
     /// cancel-deferred-init clears pending fields, emits event, preserves active config, and allows re-initiation.
-    function test_cancelInitialize_successSemantics()
-        public
-    {
+    function test_cancelInitialize_successSemantics() public {
         // Setup
         harness.resetTxRecoveryState();
         harness.initiateInitializeTxRecovery(recoveryAddress, TX_TIMELOCK);
@@ -914,9 +894,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies
     /// validation success/failure and check precedence.
-    function test_validateRecoveryAccountTransactionAllowed_semantics()
-        public
-    {
+    function test_validateRecoveryAccountTransactionAllowed_semantics() public {
         // Setup
         harness.setTxRecoveryState(
             TxRecoveryState({
@@ -996,9 +974,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
     /// @dev Verifies,
     /// , and
     /// across EOA/ERC1271 and malformed-signature behaviors.
-    function test_isValidRecoverySignature_comprehensiveSemantics()
-        public
-    {
+    function test_isValidRecoverySignature_comprehensiveSemantics() public {
         // Setup
         harness.setTxRecoveryState(
             TxRecoveryState({
@@ -1150,9 +1126,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies caller enforcement accepts configured
     /// recovery address and rejects mismatches/zero-config.
-    function test_enforceOnlyTxRecoveryAddress_semantics()
-        public
-    {
+    function test_enforceOnlyTxRecoveryAddress_semantics() public {
         // Setup
 
         // Call
@@ -1192,9 +1166,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies enabled-view helper tracks
     /// unconfigured/configured/pending/enabled/disabled transitions.
-    function test_isRecoveryEnabledForTxAndERC1271_tracksStateTransitions()
-        public
-    {
+    function test_isRecoveryEnabledForTxAndERC1271_tracksStateTransitions() public {
         // Setup
         harness.resetTxRecoveryState();
 
@@ -1224,9 +1196,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies internal clear-pending helper zeros
     /// all fields and is idempotent.
-    function test_clearPendingTxRecoveryInitTimelock_internalHelper()
-        public
-    {
+    function test_clearPendingTxRecoveryInitTimelock_internalHelper() public {
         // Setup
         harness.setTxRecoveryState(
             TxRecoveryState({
@@ -1260,9 +1230,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies helper reverts whenever either/both
     /// config fields are non-zero.
-    function test_validateNotConfigured_internalHelper()
-        public
-    {
+    function test_validateNotConfigured_internalHelper() public {
         // Setup
         harness.resetTxRecoveryState();
 
@@ -1316,9 +1284,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies internal param
     /// helper accepts valid boundaries and rejects zero-address/out-of-range timelocks.
-    function test_validateParams_internalHelper()
-        public
-    {
+    function test_validateParams_internalHelper() public {
         // Setup
 
         // Call
@@ -1359,9 +1325,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies fuzz valid non-zero recovery addresses and in-range timelocks always initialize
     /// successfully.
-    function testFuzz_initialize_validInputs_alwaysSucceed(address randomRecovery, uint256 rawTimelock)
-        public
-    {
+    function testFuzz_initialize_validInputs_alwaysSucceed(address randomRecovery, uint256 rawTimelock) public {
         // Setup
         vm.assume(randomRecovery != address(0));
         uint256 timelock = bound(
@@ -1686,9 +1650,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
     /// @dev Verifies `LibOrganizationTxRecovery.isValidRecoverySignature` accepts both EOA and ERC-1271 recovery
     /// signers, rejects wrong signers for both paths, and does not depend on the enabled flag.
     /// @param startEnabled The initial enabled flag used for the first validation branch.
-    function testFuzz_isValidRecoverySignature_supportsEOAAndERC1271IndependentOfEnabledFlag(bool startEnabled)
-        public
-    {
+    function testFuzz_isValidRecoverySignature_supportsEOAAndERC1271IndependentOfEnabledFlag(bool startEnabled) public {
         // Setup: build valid EOA and ERC-1271 recovery signers plus wrong EOA and wrong contract signers for the
         // negative branches.
         bytes memory validEoaSignature = _signHash(RECOVERY_PK, MESSAGE_HASH);

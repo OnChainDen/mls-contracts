@@ -390,10 +390,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariants is Test {
      * @dev Verifies non-zero deferred-init timestamps imply non-zero pending addresses and in-range pending
      * timelocks for both guardian recovery and tx recovery.
      */
-    function invariant_nonZeroPendingTimestampImpliesWellFormedDeferredInitTupleForBothRecoveryModules()
-        public
-        view
-    {
+    function invariant_nonZeroPendingTimestampImpliesWellFormedDeferredInitTupleForBothRecoveryModules() public view {
         // Setup: read the current guardian-recovery and tx-recovery deferred-init snapshots.
         GuardianRecoveryState memory guardianRecoveryState = harness.getGuardianRecoveryStateViaStorage();
         TxRecoveryState memory txRecoveryState = harness.getTxRecoveryStateViaStorage();

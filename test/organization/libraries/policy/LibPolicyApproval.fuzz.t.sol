@@ -43,10 +43,9 @@ contract LibPolicyApprovalFuzzTest is PolicyLibrariesFuzzTestBase {
     /// configured member/group match.
     /// @param rawGroupId The group identifier used for the group-based authorization branch.
     /// @param outsider An address kept outside the organization for the negative branch.
-    function testFuzz_isSignerAuthorized_requiresMembershipAndConfiguredMatch(
-        uint256 rawGroupId,
-        address outsider
-    ) public {
+    function testFuzz_isSignerAuthorized_requiresMembershipAndConfiguredMatch(uint256 rawGroupId, address outsider)
+        public
+    {
         vm.assume(outsider != reviewer1);
         vm.assume(outsider != reviewer2);
 

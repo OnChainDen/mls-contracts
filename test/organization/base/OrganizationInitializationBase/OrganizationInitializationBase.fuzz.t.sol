@@ -19,9 +19,7 @@ contract OrganizationInitializationBaseFuzzTest is InitializationSuiteBase {
     /// once.
     /// @param directDeployer Fuzzed deployer used for the direct proxy deployment path.
     /// @param otherCaller Fuzzed non-deployer caller used for unauthorized initialization attempts.
-    function testFuzz_initialize_onlyDeployerAndSingleUse(address directDeployer, address otherCaller)
-        public
-    {
+    function testFuzz_initialize_onlyDeployerAndSingleUse(address directDeployer, address otherCaller) public {
         // Setup: deploy a proxy directly, choose a distinct unauthorized caller, and prepare valid init params.
         vm.assume(directDeployer != address(0));
         vm.assume(otherCaller != address(0));

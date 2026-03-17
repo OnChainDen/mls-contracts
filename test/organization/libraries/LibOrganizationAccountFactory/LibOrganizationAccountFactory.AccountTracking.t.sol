@@ -52,9 +52,7 @@ contract LibOrganizationAccountFactoryAccountTrackingTest is LibOrganizationAcco
     }
 
     /// @dev Verifies accounts deployed by another organization return false.
-    function test_isAccountDeployedByOrganization_accountDeployedByDifferentOrganization_returnsFalse()
-        public
-    {
+    function test_isAccountDeployedByOrganization_accountDeployedByDifferentOrganization_returnsFalse() public {
         bytes32 salt = bytes32(uint256(9138));
 
         // Setup: deploy account from another organization harness.
@@ -90,9 +88,7 @@ contract LibOrganizationAccountFactoryAccountTrackingTest is LibOrganizationAcco
     }
 
     /// @dev Verifies computed address transitions from false to true only after successful deployment.
-    function test_isAccountDeployedByOrganization_computedAddress_falseBeforeAndTrueAfterDeployment()
-        public
-    {
+    function test_isAccountDeployedByOrganization_computedAddress_falseBeforeAndTrueAfterDeployment() public {
         bytes32 salt = bytes32(uint256(9173));
 
         // Setup: compute deterministic destination before deployment.

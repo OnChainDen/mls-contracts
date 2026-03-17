@@ -129,10 +129,7 @@ contract LibPolicyParameterConstraintsAddressConstraintTest is LibPolicyParamete
     }
 
     /// @dev Verifies that Exact rejects oversized address comparison payloads.
-    function test_isAddressParameterAllowedByConstraint_exactOversizedComparisonData_returnsFalse()
-        public
-        view
-    {
+    function test_isAddressParameterAllowedByConstraint_exactOversizedComparisonData_returnsFalse() public view {
         // Setup: append a second word to an otherwise valid encoded address.
         bytes memory oversizedComparisonData = bytes.concat(abi.encode(reviewer1), bytes32(uint256(uint160(reviewer2))));
 
@@ -146,9 +143,7 @@ contract LibPolicyParameterConstraintsAddressConstraintTest is LibPolicyParamete
     }
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
-    function test_isAddressParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
-        public
-    {
+    function test_isAddressParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
         // closed with false. Call: run `isAddressParameterAllowedByConstraintViaPolicyLibrary` across the prepared
         // variants.

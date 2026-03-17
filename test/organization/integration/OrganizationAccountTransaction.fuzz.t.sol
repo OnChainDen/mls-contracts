@@ -68,10 +68,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies random expiration timestamps: future passes, past fails.
-    function testFuzz_validateApproval_expirationFuturePassPastFail(
-        uint64 offsetSeconds,
-        bool shouldBeFuture
-    ) public {
+    function testFuzz_validateApproval_expirationFuturePassPastFail(uint64 offsetSeconds, bool shouldBeFuture) public {
         // Setup: build payload with fuzzed relative expiration.
         bytes memory data = abi.encodeWithSelector(bytes4(0x71717171), uint256(1));
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
@@ -114,10 +111,9 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies replaying a nonce across execute and reject entry points always reverts once either path succeeds.
-    function testFuzz_NMFZ_3_executeRejectReplayAcrossMixedEntryPointsAlwaysReverts(
-        uint256 saltRaw,
-        bool rejectFirst
-    ) public {
+    function testFuzz_NMFZ_3_executeRejectReplayAcrossMixedEntryPointsAlwaysReverts(uint256 saltRaw, bool rejectFirst)
+        public
+    {
         // Setup: deploy a fresh organization/account pair, configure one auto-approve policy, and bind both execute
         // and reject signatures to the same account-transaction tuple under one salt.
         uint256 salt = bound(saltRaw, 1, type(uint256).max);
@@ -230,10 +226,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies random calldata produces deterministic initiator hash values.
-    function testFuzz_computeInitiatorHash_randomDataDeterministic(
-        bytes calldata data,
-        uint256 salt
-    ) public view {
+    function testFuzz_computeInitiatorHash_randomDataDeterministic(bytes calldata data, uint256 salt) public view {
         // Call: compute initiator hash twice with identical inputs.
         bytes32 hashA = harness.computeInitiatorHashFromParamsViaLibrary(
             ACCOUNT, DESTINATION, 0, salt, block.timestamp + 1 days, DEFAULT_POLICY_ID, data, true

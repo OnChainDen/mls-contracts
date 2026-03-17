@@ -612,9 +612,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that hash builders are deterministic and field bound.
-    function test_hashBuildersAreDeterministicAndFieldBound()
-        public
-    {
+    function test_hashBuildersAreDeterministicAndFieldBound() public {
         // Setup: configure a valid fixture for hash builders are deterministic and field bound.
         uint256 expiration = block.timestamp + 1 days;
         bytes memory data = abi.encodeWithSelector(bytes4(0xCAFED00D), uint256(14));

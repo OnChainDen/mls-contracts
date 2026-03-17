@@ -157,10 +157,7 @@ contract LibPolicyParameterConstraintsAreParametersAllowedByConstraintsTest is L
     }
 
     /// @dev Verifies non-empty `parameterConstraints` payloads shorter than the ABI empty-array header fail closed.
-    function test_areParametersAllowedByConstraints_nonEmptyPayloadShorterThanAbiEmptyArray_returnsFalse()
-        public
-        view
-    {
+    function test_areParametersAllowedByConstraints_nonEmptyPayloadShorterThanAbiEmptyArray_returnsFalse() public view {
         // Setup: use representative short non-empty payloads that cannot decode as a canonical constraints array.
         bytes memory data = abi.encodeWithSelector(BASE_SELECTOR, uint256(5));
         bytes memory shortPayloadA = hex"01";

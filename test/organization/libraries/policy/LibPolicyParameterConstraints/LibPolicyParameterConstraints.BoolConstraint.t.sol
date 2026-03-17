@@ -114,9 +114,7 @@ contract LibPolicyParameterConstraintsBoolConstraintTest is LibPolicyParameterCo
     }
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
-    function test_isBoolParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
-        public
-    {
+    function test_isBoolParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
         // closed with false. Call: run `isBoolParameterAllowedByConstraintViaPolicyLibrary` across the prepared
         // variants.

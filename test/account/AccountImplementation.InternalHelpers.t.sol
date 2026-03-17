@@ -44,9 +44,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
 
     /// @dev Verifies `_execute` fails closed and preserves balances when the downstream call reverts.
     /// @param rawValue The native-token value attempted on the reverting call.
-    function testFuzz_executeInternal_failurePathReturnsFalseWithoutTransferringValue(uint256 rawValue)
-        public
-    {
+    function testFuzz_executeInternal_failurePathReturnsFalseWithoutTransferringValue(uint256 rawValue) public {
         uint256 value = bound(rawValue, 0, 1 ether);
         uint256 txGas = 300_000;
 
@@ -250,9 +248,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_onlyOrganization` reverts for non-organization caller.
      */
-    function test_onlyOrganizationInternal_nonOrganizationCaller_revertsOnlyOrganization_minimalPath()
-        public
-    {
+    function test_onlyOrganizationInternal_nonOrganizationCaller_revertsOnlyOrganization_minimalPath() public {
         // Setup
 
         // Call

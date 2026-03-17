@@ -524,9 +524,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
 
     /// @dev Verifies `OrganizationGroupsBase.modifyGroups` rolls back an entire failing batch and allows the same
     /// signed batch to be retried once the downstream condition is fixed.
-    function test_modifyGroups_libraryRevert_doesNotConsumeNonceAndCanRetrySameSaltAndOperation()
-        public
-    {
+    function test_modifyGroups_libraryRevert_doesNotConsumeNonceAndCanRetrySameSaltAndOperation() public {
         uint256 groupId = 7910;
 
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});

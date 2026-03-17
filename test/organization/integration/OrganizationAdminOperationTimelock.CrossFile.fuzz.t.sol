@@ -74,9 +74,7 @@ contract OrganizationAdminOperationTimelockCrossFileFuzzTest is InitializationSu
      * and `t+1`.
      * @param durationSeconds Fuzzed in-range admin-operation timelock duration shared across the finalize paths.
      */
-    function testFuzz_finalizeTimingUsesSharedTimelockBoundaryAcrossAllCallSites(uint256 durationSeconds)
-        public
-    {
+    function testFuzz_finalizeTimingUsesSharedTimelockBoundaryAcrossAllCallSites(uint256 durationSeconds) public {
         // Setup: bound the shared admin-operation timelock used by every timing assertion below.
         uint256 boundedDuration = bound(
             durationSeconds, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
@@ -92,9 +90,7 @@ contract OrganizationAdminOperationTimelockCrossFileFuzzTest is InitializationSu
      * @dev Verifies out-of-range admin-operation timelock durations always revert organization initialization.
      * @param durationSeconds Fuzzed candidate admin-operation timelock duration.
      */
-    function testFuzz_outOfRangeAdminTimelockDurationsAlwaysRevertInitialization(uint256 durationSeconds)
-        public
-    {
+    function testFuzz_outOfRangeAdminTimelockDurationsAlwaysRevertInitialization(uint256 durationSeconds) public {
         // Setup: deploy a fresh initialization harness and skip in-range durations that belong to the success path.
         vm.assume(
             durationSeconds < TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS

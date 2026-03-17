@@ -124,9 +124,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
      *      `0x00` type prefix.
      * @param recoveryPkRaw Raw private key used to derive the configured recovery signer
      */
-    function testFuzz_isValidSignature_validRecoveryPrefix00ReturnsMagic(uint256 recoveryPkRaw)
-        public
-    {
+    function testFuzz_isValidSignature_validRecoveryPrefix00ReturnsMagic(uint256 recoveryPkRaw) public {
         // Setup: derive a bounded recovery signer, enable tx recovery, and build a valid type-prefixed recovery
         // signature.
         uint256 recoveryPk = bound(recoveryPkRaw, 1, SECP256K1_CURVE_ORDER - 1);
@@ -190,9 +188,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that random policy IDs validate when matched with corresponding valid roots/proofs.
-    function testFuzz_isValidSignature_randomPolicyIdsWithValidProofs_returnsMagic(uint256 policyIdRaw)
-        public
-    {
+    function testFuzz_isValidSignature_randomPolicyIdsWithValidProofs_returnsMagic(uint256 policyIdRaw) public {
         // Setup: bound policy id to a non-zero range and build valid fixture around it.
         uint256 policyId = bound(policyIdRaw, 1, type(uint96).max);
         policyStateHarness.setGuardian(guardianSigner);
@@ -554,10 +550,10 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that changing message hash changes both initiator and review hashes.
-    function testFuzz_hashBuilders_messageHashMutation_changesInitiatorAndReviewHashes(
-        bytes32 hashA,
-        bytes32 hashB
-    ) public view {
+    function testFuzz_hashBuilders_messageHashMutation_changesInitiatorAndReviewHashes(bytes32 hashA, bytes32 hashB)
+        public
+        view
+    {
         // Setup: ensure fuzzed message hashes are distinct.
         vm.assume(hashA != hashB);
         uint256 expiration = block.timestamp + 1 days;

@@ -539,11 +539,10 @@ contract BytesUtilsTest is Test {
         assertEq(uint256(lastWord) & trailingMask, 0, "Trailing bytes in the last word should be zero-padded");
     }
 
-    function testFuzz_sliceRange_arbitraryInputs(
-        uint16 bufferLength,
-        uint16 startIndex,
-        uint16 sliceLength
-    ) public view {
+    function testFuzz_sliceRange_arbitraryInputs(uint16 bufferLength, uint16 startIndex, uint16 sliceLength)
+        public
+        view
+    {
         bufferLength = uint16(bound(bufferLength, 0, 500));
         startIndex = uint16(bound(startIndex, 0, 600));
         sliceLength = uint16(bound(sliceLength, 0, 600));

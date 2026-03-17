@@ -12,9 +12,7 @@ import {
 contract OrganizationGuardianRecoveryBaseAcceptGuardianRecoveryTest is OrganizationGuardianRecoveryBaseSuiteBase {
     /// @dev Verifies recovery-only guardian entrypoints reject unauthorized callers before a staged recovery guardian
     /// can be accepted.
-    function test_nonPendingGuardianCaller_revertsOnlyRecoveryPendingGuardian()
-        public
-    {
+    function test_nonPendingGuardianCaller_revertsOnlyRecoveryPendingGuardian() public {
         // Setup: seed pending recovery-guardian update.
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp, true);
 

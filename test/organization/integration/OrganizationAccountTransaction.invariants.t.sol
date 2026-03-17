@@ -147,9 +147,7 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     }
 
     /// @dev Verifies invariant: consumed nonce cannot be reused for execution or rejection.
-    function invariant_NMINV_2_nonceConsumption_preventsExecuteAndRejectReplay()
-        public
-    {
+    function invariant_NMINV_2_nonceConsumption_preventsExecuteAndRejectReplay() public {
         // Verify: execute replay fails on consumed nonce.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, executedNonce));
         vm.prank(GUARDIAN);

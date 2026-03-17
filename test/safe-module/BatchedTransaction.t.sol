@@ -629,10 +629,7 @@ contract BatchedTransactionTest is Test {
 
     /// @dev Verifies bounded packed batches with fuzzed calldata lengths terminate while preserving exact field
     ///  decoding under delegatecall execution.
-    function testFuzz_executeBatchFieldDecodingForwardsExactToAndData(
-        uint8 rawCount,
-        bytes32 seed
-    ) public {
+    function testFuzz_executeBatchFieldDecodingForwardsExactToAndData(uint8 rawCount, bytes32 seed) public {
         uint8 count = uint8(bound(rawCount, 1, 6));
         CalldataRecorderTarget[] memory targets = new CalldataRecorderTarget[](count);
         bytes[] memory txs = new bytes[](count);
@@ -715,10 +712,7 @@ contract BatchedTransactionTest is Test {
     /// @dev Verifies every fallback-shaped sub-call executes with `msg.value == 0` regardless of payload bytes.
     /// @param rawCount The bounded number of fallback targets in the fuzzed batch.
     /// @param seed Entropy used to derive distinct fallback calldata payloads.
-    function testFuzz_executeSubcallsAlwaysUseZeroValueRegardlessOfPayloadShape(
-        uint8 rawCount,
-        bytes32 seed
-    ) public {
+    function testFuzz_executeSubcallsAlwaysUseZeroValueRegardlessOfPayloadShape(uint8 rawCount, bytes32 seed) public {
         uint8 count = uint8(bound(rawCount, 1, 6));
         CalldataValueRecorderTarget[] memory targets = new CalldataValueRecorderTarget[](count);
         bytes[] memory txs = new bytes[](count);

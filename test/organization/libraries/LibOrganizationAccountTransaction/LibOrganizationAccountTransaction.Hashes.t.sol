@@ -179,10 +179,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies repeated initiator/review hash computations stay deterministic for identical inputs.
-    function test_computeInitiatorAndReviewHashes_repeatedCallsRemainDeterministic()
-        public
-        view
-    {
+    function test_computeInitiatorAndReviewHashes_repeatedCallsRemainDeterministic() public view {
         // Setup: pin one transaction tuple and one initiator signature payload.
         bytes memory data = abi.encodeWithSelector(bytes4(0x64640001), uint256(41));
         bytes memory initiatorSignature = hex"ABCD1234";
@@ -208,9 +205,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies initiator hash stays distinct whenever any bound field is mutated.
-    function test_computeInitiatorHash_boundFieldMutationsRemainDistinct()
-        public
-    {
+    function test_computeInitiatorHash_boundFieldMutationsRemainDistinct() public {
         // Setup: compute a baseline initiator hash and deploy a second harness for organization binding checks.
         bytes memory data = abi.encodeWithSelector(bytes4(0x64640002), uint256(42));
         uint256 expiration = block.timestamp + 1 days;
@@ -301,9 +296,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies review hash binds every transaction field and chain id.
-    function test_computeReviewHash_fieldBinding_changesHashWhenAnyFieldChanges()
-        public
-    {
+    function test_computeReviewHash_fieldBinding_changesHashWhenAnyFieldChanges() public {
         // Setup: compute baseline review hash and deploy a second harness for organization binding checks.
         bytes memory data = abi.encodeWithSelector(bytes4(0x64646464), uint256(4));
         bytes memory initiatorSignature = hex"1122";
@@ -419,10 +412,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies review hash includes `keccak256(initiatorSignature)` binding.
-    function test_computeReviewHash_initiatorSignatureBinding_changesHash()
-        public
-        view
-    {
+    function test_computeReviewHash_initiatorSignatureBinding_changesHash() public view {
         // Setup: two different initiator-signature byte payloads.
         bytes memory data = abi.encodeWithSelector(bytes4(0x65656565), uint256(5));
         uint256 expiration = block.timestamp + 1 days;

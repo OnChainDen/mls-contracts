@@ -119,9 +119,7 @@ contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
     }
 
     /// @dev Verifies duplicate helper additions are idempotent for arbitrary non-zero members.
-    function testFuzz_addGroupMembers_duplicateAdditionsRemainConsistent(address member, uint256 rawGroupId)
-        public
-    {
+    function testFuzz_addGroupMembers_duplicateAdditionsRemainConsistent(address member, uint256 rawGroupId) public {
         vm.assume(member != address(0));
         uint256 groupId = bound(rawGroupId, 1, 50_000);
 
@@ -209,11 +207,9 @@ contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
 
     /// @dev Verifies any member-add batch containing zero address reverts with `InvalidMemberAddress`
     ///      when the paired non-zero address is otherwise valid.
-    function testFuzz_addGroupMembers_zeroAddressAlwaysReverts(
-        uint256 rawGroupId,
-        address otherMember,
-        bool zeroFirst
-    ) public {
+    function testFuzz_addGroupMembers_zeroAddressAlwaysReverts(uint256 rawGroupId, address otherMember, bool zeroFirst)
+        public
+    {
         uint256 groupId = bound(rawGroupId, 1, 50_000);
         vm.assume(otherMember != address(0));
         groupsStateHarness.setGroupStatus(groupId, true);
@@ -235,10 +231,9 @@ contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
 
     /// @dev Verifies the desired behavior that arbitrary non-member addresses always revert with
     ///      `MemberDoesNotExist`.
-    function testFuzz_addGroupMembers_nonMembersAlwaysRevertMemberDoesNotExist(
-        uint256 rawGroupId,
-        address nonMember
-    ) public {
+    function testFuzz_addGroupMembers_nonMembersAlwaysRevertMemberDoesNotExist(uint256 rawGroupId, address nonMember)
+        public
+    {
         uint256 groupId = bound(rawGroupId, 1, 50_000);
         vm.assume(nonMember != address(0));
 
@@ -251,11 +246,9 @@ contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
     }
 
     /// @dev Verifies remove/delete helper wrappers keep group state consistent across successful cleanup flows.
-    function testFuzz_removeAndDeleteHelpersKeepStateConsistent(
-        uint256 rawGroupId,
-        address memberA,
-        address memberB
-    ) public {
+    function testFuzz_removeAndDeleteHelpersKeepStateConsistent(uint256 rawGroupId, address memberA, address memberB)
+        public
+    {
         uint256 groupId = bound(rawGroupId, 1, 50_000);
         vm.assume(memberA != address(0) && memberB != address(0));
         vm.assume(memberA != memberB);

@@ -14,9 +14,7 @@ import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 contract LibOrganizationGuardianRecoveryCancelRecoveryGuardianUpdateTest is LibOrganizationGuardianRecoverySuiteBase {
     /// @dev Verifies `LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate` cancel clears pending fields, emits
     /// event, and preserves config/pending-init.
-    function test_cancelClearsPendingAndPreservesOtherState()
-        public
-    {
+    function test_cancelClearsPendingAndPreservesOtherState() public {
         // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending
         // recovery-guardian update.
         _resetAndConfigureRecovery();

@@ -14,9 +14,7 @@ import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
  */
 contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is LibOrganizationGuardianRecoverySuiteBase {
     /// @dev Verifies that enforce-only-recovery-address pass/fail behavior and revert payload fields.
-    function test_enforceOnlyGuardianRecoveryAddress_behavesAsExpected()
-        public
-    {
+    function test_enforceOnlyGuardianRecoveryAddress_behavesAsExpected() public {
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
@@ -53,9 +51,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     }
 
     /// @dev Verifies that enforce-only-pending-guardian pass/fail behavior including cancel/accept transitions.
-    function test_enforceOnlyRecoveryPendingGuardian_behavesAsExpected()
-        public
-    {
+    function test_enforceOnlyRecoveryPendingGuardian_behavesAsExpected() public {
         // Setup: reconfigure baseline recovery address and timelock and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
@@ -109,9 +105,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     }
 
     /// @dev Verifies that internal clear helper resets pending-init and leaves other fields untouched.
-    function test_clearPendingInit_helperBehavior()
-        public
-    {
+    function test_clearPendingInit_helperBehavior() public {
         // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending
         // recovery-guardian update.
         _resetAndConfigureRecovery();
@@ -150,9 +144,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     }
 
     /// @dev Verifies that not-configured validation helper accepts all-zero and reverts on any configured field.
-    function test_validateNotConfigured_helperBehavior()
-        public
-    {
+    function test_validateNotConfigured_helperBehavior() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
@@ -180,9 +172,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     }
 
     /// @dev Verifies that params validation helper enforces address checks, range checks, and boundaries.
-    function test_validateParams_helperBehavior()
-        public
-    {
+    function test_validateParams_helperBehavior() public {
         // Setup: reuse suite baseline where recovery is preconfigured.
 
         // Call: validate boundary and non-boundary in-range recovery params, then assert invalid branches revert.

@@ -18,9 +18,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
 {
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery` valid initiate-init writes
     /// pending tuple, computes timestamp, and emits event.
-    function test_validInitiateInit_writesPendingTupleAndEmits()
-        public
-    {
+    function test_validInitiateInit_writesPendingTupleAndEmits() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
         uint256 expectedCanFinalizeAt = block.timestamp + ADMIN_OPERATION_TIMELOCK;

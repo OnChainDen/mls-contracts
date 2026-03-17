@@ -17,9 +17,7 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
 {
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` finalize after timelock
     /// configures state, clears pending-init, and emits event.
-    function test_finalizeAfterTimelock_configuresAndClearsPendingInit()
-        public
-    {
+    function test_finalizeAfterTimelock_configuresAndClearsPendingInit() public {
         // Setup: start from clean recovery state and seed pending deferred-init tuple.
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
@@ -44,9 +42,7 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` no-pending and
     /// timelock-not-expired paths revert without mutating pending/config state.
-    function test_revertPaths_preservePendingAndConfigState()
-        public
-    {
+    function test_revertPaths_preservePendingAndConfigState() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
@@ -186,9 +182,7 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` reverts with
     /// `NoGuardianRecoveryInitializationPending` after cancellation even once the cancelled timestamp has passed.
-    function test_finalizeInitializeGuardianRecovery_afterCancellationAndExpiryRevertsNoPending()
-        public
-    {
+    function test_finalizeInitializeGuardianRecovery_afterCancellationAndExpiryRevertsNoPending() public {
         // Setup: stage and cancel a deferred initialization, then advance past the cancelled pending timestamp.
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);

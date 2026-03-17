@@ -127,9 +127,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     }
 
     /// @dev Verifies finalize access and timelock guards.
-    function test_finalizeEnable_accessAndTimelockGuards_revert()
-        public
-    {
+    function test_finalizeEnable_accessAndTimelockGuards_revert() public {
         // Setup
         _expectOnlyTxRecoveryRevert(NON_GUARDIAN);
         vm.prank(NON_GUARDIAN);
@@ -158,9 +156,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies finalize succeeds at boundary, clears pending, and
     /// cannot be replayed.
-    function test_finalizeEnable_boundarySuccessAndReplayGuard()
-        public
-    {
+    function test_finalizeEnable_boundarySuccessAndReplayGuard() public {
         // Setup
         vm.prank(TX_RECOVERY);
         harness.initiateEnableTransactionAndERC1271Recovery();
@@ -234,9 +230,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies disable clears enabled/pending state, is
     /// idempotent, and blocks recovery execution.
-    function test_disable_clearsStateAndBlocksExecution()
-        public
-    {
+    function test_disable_clearsStateAndBlocksExecution() public {
         // Setup
         _enableTxRecovery();
         _setTxRecoveryState(TX_RECOVERY, false, TX_RECOVERY_TIMELOCK, block.timestamp + 1, address(0), 0, 0);
@@ -263,9 +257,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     }
 
     /// @dev Verifies execute-recovery access/config/enabled guards.
-    function test_executeRecovery_accessAndEnableGuards_revert()
-        public
-    {
+    function test_executeRecovery_accessAndEnableGuards_revert() public {
         // Setup
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
@@ -290,9 +282,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     }
 
     /// @dev Verifies pending enable (pre/post-expiry) is not sufficient before finalize.
-    function test_executeRecovery_pendingEnableNotFinalized_revertsTxRecoveryNotEnabled()
-        public
-    {
+    function test_executeRecovery_pendingEnableNotFinalized_revertsTxRecoveryNotEnabled() public {
         // Setup
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
@@ -338,9 +328,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies successful execution emits event and forwards exact
     /// tuple with nonce/policy fixed to zero.
-    function test_executeRecovery_success_emitsAndForwardsExpectedTuple()
-        public
-    {
+    function test_executeRecovery_success_emitsAndForwardsExpectedTuple() public {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
@@ -365,9 +353,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies the real `AccountImplementation` emits `IAccount.TransactionExecuted` with nonce=0 and policyId=0
     /// when invoked through the recovery execution path.
-    function test_executeRecovery_realAccount_emitsAccountTransactionExecuted()
-        public
-    {
+    function test_executeRecovery_realAccount_emitsAccountTransactionExecuted() public {
         // Setup: deploy real AccountImplementation behind a BeaconProxy pointing to the harness as beacon.
         _enableTxRecovery();
         harness.setAccountImplementation(address(new AccountImplementation()));
@@ -422,9 +408,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     }
 
     /// @dev Verifies downstream account revert bubbles and no recovery event persists.
-    function test_executeRecovery_downstreamRevert_bubblesAndNoRecoveryEventPersists()
-        public
-    {
+    function test_executeRecovery_downstreamRevert_bubblesAndNoRecoveryEventPersists() public {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
@@ -593,9 +577,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     /// arguments (to external, to organization, to self) and also attempts every Organization state-changing selector
     /// on the
     ///      account address to confirm the account rejects unknown selectors.
-    function test_executeRecovery_targetingAccount_revertsTransactionExecutionFailedForSelectorSweep()
-        public
-    {
+    function test_executeRecovery_targetingAccount_revertsTransactionExecutionFailedForSelectorSweep() public {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
@@ -692,9 +674,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies, and
     /// across auth binding/replay and successful initiation.
-    function test_initiateInitialize_authBindingReplayAndSuccess()
-        public
-    {
+    function test_initiateInitialize_authBindingReplayAndSuccess() public {
         // Setup
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
 
@@ -766,9 +746,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies initiate-initialize bubbles downstream
     /// already-configured/pending/invalid-param errors.
-    function test_initiateInitialize_downstreamErrorsBubble()
-        public
-    {
+    function test_initiateInitialize_downstreamErrorsBubble() public {
         // Setup
         (AdminAuthParams memory configuredAuth, bytes memory configuredOperationData) = _buildTxRecoveryAuth({
             operationType: OperationType.InitiateInitializeTransactionRecovery,
@@ -1085,9 +1063,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     ///   - FITR-11: `isEnabled` remains false after finalize (enable flow still required).
     ///   - FITR-12: Second finalize reverts `NoTxRecoveryInitializationPending` (pending already cleared).
     ///   - FITR-2:  Insufficient admin threshold variant tested in dedicated `test_OTRB_FITR_2_*`.
-    function test_finalizeInitialize_authAndStateSemantics()
-        public
-    {
+    function test_finalizeInitialize_authAndStateSemantics() public {
         // Setup: start from a fully zeroed recovery state (no config, no pending init).
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
 
@@ -1542,9 +1518,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` can cancel the same
     /// pending deferred-init tuple twice when fresh auth salts are used and the tuple is re-initiated in between.
-    function test_cancelInitialize_samePendingTupleDifferentSalts_canCancelTwiceAcrossReinitiation()
-        public
-    {
+    function test_cancelInitialize_samePendingTupleDifferentSalts_canCancelTwiceAcrossReinitiation() public {
         // Setup: build two initiate auth payloads and two cancel auth payloads around the same deferred-init tuple.
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
         (AdminAuthParams memory firstInitiateAuth,) = _buildTxRecoveryAuth({
@@ -1613,9 +1587,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies,
     /// , and across cancel auth/state semantics.
-    function test_cancelInitialize_authAndStateSemantics()
-        public
-    {
+    function test_cancelInitialize_authAndStateSemantics() public {
         // Setup
         _setTxRecoveryState(
             address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
@@ -1668,9 +1640,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies
     /// `getTxRecoveryState` returns full snapshots across lifecycle transitions and is callable by anyone.
-    function test_getTxRecoveryState_reflectsLifecycleAndIsPermissionless()
-        public
-    {
+    function test_getTxRecoveryState_reflectsLifecycleAndIsPermissionless() public {
         // Setup
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
 

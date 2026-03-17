@@ -58,9 +58,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies that an account not deployed by this organization reverts.
      */
-    function test_rejectAccountTransaction_accountNotDeployed_revertsAccountNotDeployedByOrganization()
-        public
-    {
+    function test_rejectAccountTransaction_accountNotDeployed_revertsAccountNotDeployedByOrganization() public {
         // Setup: use a random non-deployed account address.
         address undeployedAccount = address(0xAC002);
         bytes memory data = abi.encodeWithSelector(bytes4(0x02030405), uint256(2));
@@ -93,9 +91,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
      * @dev Verifies reject nonce matches execute nonce for the same operation tuple by going
      *      through the actual execute and reject paths.
      */
-    function test_rejectAccountTransaction_nonceMatchesExecuteForSameTuple()
-        public
-    {
+    function test_rejectAccountTransaction_nonceMatchesExecuteForSameTuple() public {
         // Setup: deploy account and build shared payload with both approval and rejection signatures.
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
@@ -401,9 +397,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies execute then reject with identical tuple reverts due to shared nonce space.
      */
-    function test_rejectAccountTransaction_executeThenRejectSameTuple_revertsNonceAlreadyUsed()
-        public
-    {
+    function test_rejectAccountTransaction_executeThenRejectSameTuple_revertsNonceAlreadyUsed() public {
         // Setup: deploy account and build one shared payload tuple.
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
@@ -452,9 +446,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies reject then execute with identical tuple reverts due to shared nonce space.
      */
-    function test_rejectAccountTransaction_rejectThenExecuteSameTuple_revertsNonceAlreadyUsed()
-        public
-    {
+    function test_rejectAccountTransaction_rejectThenExecuteSameTuple_revertsNonceAlreadyUsed() public {
         // Setup: deploy account and build one shared payload tuple.
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
@@ -503,9 +495,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies failed rejection validation does not burn nonce; fixed retry can succeed.
      */
-    function test_rejectAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed()
-        public
-    {
+    function test_rejectAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed() public {
         // Setup: configure auto-approve rejection where first review signature is unauthorized.
         address account = address(0xAC008);
         harness.setDeployedAccount(account, true);

@@ -55,9 +55,7 @@ contract OrganizationModifiersFuzzTest is Test {
     }
 
     /// @dev Verifies only the stored tx-recovery address can pass the tx-recovery-only modifier.
-    function testFuzz_randomCaller_onlyTxRecoveryExactMatchPasses(address txRecovery, address caller)
-        public
-    {
+    function testFuzz_randomCaller_onlyTxRecoveryExactMatchPasses(address txRecovery, address caller) public {
         vm.assume(txRecovery != address(0));
 
         // Setup: configure the tx-recovery slot with the fuzzed address and seed fallback values elsewhere.
@@ -69,10 +67,9 @@ contract OrganizationModifiersFuzzTest is Test {
     }
 
     /// @dev Verifies only the stored guardian-recovery address can pass the guardian-recovery-only modifier.
-    function testFuzz_randomCaller_onlyGuardianRecoveryExactMatchPasses(
-        address guardianRecovery,
-        address caller
-    ) public {
+    function testFuzz_randomCaller_onlyGuardianRecoveryExactMatchPasses(address guardianRecovery, address caller)
+        public
+    {
         vm.assume(guardianRecovery != address(0));
 
         // Setup: configure the guardian-recovery slot with the fuzzed address and seed fallback values elsewhere.
@@ -84,10 +81,7 @@ contract OrganizationModifiersFuzzTest is Test {
     }
 
     /// @dev Verifies only the stored pending guardian can pass the pending-guardian-only modifier.
-    function testFuzz_randomCaller_onlyPendingGuardianExactMatchPasses(
-        address pendingGuardian,
-        address caller
-    ) public {
+    function testFuzz_randomCaller_onlyPendingGuardianExactMatchPasses(address pendingGuardian, address caller) public {
         vm.assume(pendingGuardian != address(0));
 
         // Setup: configure the pending-guardian slot with the fuzzed address and seed fallback values elsewhere.

@@ -93,9 +93,7 @@ contract OrganizationGuardianBaseAcceptGuardianTest is OrganizationGuardianBaseS
 
     /// @dev Verifies the normal guardian-update lifecycle succeeds end to end with guardian execution, admin auth,
     /// timelock expiry, and pending-guardian acceptance.
-    function test_normalGuardianUpdateFlow_initiateTimelockFinalizeAccept_succeedsWithGuardianAndAdminAuth()
-        public
-    {
+    function test_normalGuardianUpdateFlow_initiateTimelockFinalizeAccept_succeedsWithGuardianAndAdminAuth() public {
         // Setup: configure one-admin authorization and stage a fresh normal guardian update toward
         // `NEW_GUARDIAN_A`.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});

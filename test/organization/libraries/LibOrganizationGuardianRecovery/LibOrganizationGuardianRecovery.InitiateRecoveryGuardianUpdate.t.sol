@@ -54,9 +54,7 @@ contract LibOrganizationGuardianRecoveryInitiateRecoveryGuardianUpdateTest is Li
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate` event emits guardian from normal
     /// storage and initiate does not change current guardian.
-    function test_eventUsesNormalGuardianStorageAndGuardianRemainsUnchanged()
-        public
-    {
+    function test_eventUsesNormalGuardianStorageAndGuardianRemainsUnchanged() public {
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
         recoveryStateHarness.setGuardian(NEW_GUARDIAN_C);

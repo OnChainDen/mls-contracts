@@ -226,7 +226,9 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         address accountA,
         address accountB,
         bool useFirst
-    ) public {
+    )
+        public
+    {
         vm.assume(accountA != address(0));
         vm.assume(accountB != address(0));
         vm.assume(accountA != accountB);

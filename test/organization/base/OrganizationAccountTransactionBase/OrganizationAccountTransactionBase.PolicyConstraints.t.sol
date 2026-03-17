@@ -66,9 +66,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies `executeAccountTransaction` rejects disallowed source accounts and allows any-source policies
      *  across different deployed accounts.
      */
-    function test_executeAccountTransaction_sourceAccountPolicies_requireProofOrAllowAnySource()
-        public
-    {
+    function test_executeAccountTransaction_sourceAccountPolicies_requireProofOrAllowAnySource() public {
         // Setup: deploy two organization accounts plus one interaction target, then bind a specific-source policy to
         // only the first account.
         MockAccountForOrganizationTransaction accountA = _deployMockAccount();
@@ -170,9 +168,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies native-transfer destination custom lists check the `to` address, native-token filters reject
      *  policies that do not allow ETH, and amount thresholds apply as an inclusive `<=` boundary.
      */
-    function test_executeAccountTransaction_nativeTransferPolicies_checkDestinationTokenAndThreshold()
-        public
-    {
+    function test_executeAccountTransaction_nativeTransferPolicies_checkDestinationTokenAndThreshold() public {
         // Setup: fund one deployed account and build a native-transfer policy that only allows ETH to one receiver.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         MockNativeReceiver allowedReceiver = new MockNativeReceiver();
@@ -300,9 +296,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies ERC-20 transfers use the recipient argument for destination checks and bind the allowed token
      *  contract.
      */
-    function test_executeAccountTransaction_erc20TransferPolicies_checkRecipientAndToken()
-        public
-    {
+    function test_executeAccountTransaction_erc20TransferPolicies_checkRecipientAndToken() public {
         // Setup: deploy one account plus two token contracts, then fund the account with both token balances.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         MockERC20ForAccountTransaction allowedToken = new MockERC20ForAccountTransaction();
@@ -479,9 +473,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies function allowlists bind selector plus constraint hash, reject calldata shorter than 4 bytes,
      * enforce exact static-parameter matches.
      */
-    function test_executeAccountTransaction_staticFunctionPolicies_failClosed()
-        public
-    {
+    function test_executeAccountTransaction_staticFunctionPolicies_failClosed() public {
         // Setup: deploy one account plus one interaction target, then allow only `ping(uint256)` with an exact
         // `uint256(7)` constraint.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
@@ -585,9 +577,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies dynamic bytes exact constraints accept matching payloads and reject mismatched, head-overlap, or
      *  truncated calldata.
      */
-    function test_executeAccountTransaction_dynamicBytesConstraints_failClosed()
-        public
-    {
+    function test_executeAccountTransaction_dynamicBytesConstraints_failClosed() public {
         // Setup: deploy one account plus one interaction target, then allow only `storePayload(bytes)` with one exact
         // bytes payload hash.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
@@ -731,9 +721,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies per-entity rate-limit scopes separate initiator/account/destination budgets, while an all-shared
      *  scope collapses them into one budget.
      */
-    function test_executeAccountTransaction_rateLimitScopes_chargeExpectedKeys()
-        public
-    {
+    function test_executeAccountTransaction_rateLimitScopes_chargeExpectedKeys() public {
         // Setup: deploy two accounts and two interaction targets for four scoped-rate-limit subcases.
         MockAccountForOrganizationTransaction accountA = _deployMockAccount();
         MockAccountForOrganizationTransaction accountB = _deployMockAccount();
@@ -957,9 +945,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies rate-limit usage resets after a time window passes and that the exact boundary already belongs to
      *  the new window.
      */
-    function test_executeAccountTransaction_rateLimitWindows_resetAfterBoundary()
-        public
-    {
+    function test_executeAccountTransaction_rateLimitWindows_resetAfterBoundary() public {
         // Setup: deploy one account plus one interaction target, then use a one-call-per-hour policy for two
         // time-window subcases.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
@@ -1059,9 +1045,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies rejection does not mutate rate-limit usage and rate-limit overflows fail closed with
      *  `RateLimitExceeded`.
      */
-    function test_executeAccountTransaction_rejectionAndOverflow_leaveUsageSafe()
-        public
-    {
+    function test_executeAccountTransaction_rejectionAndOverflow_leaveUsageSafe() public {
         // Setup: deploy one account plus one interaction target, then prepare one rate-limited auto-approve policy.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         MockInteractionTarget target = new MockInteractionTarget();
@@ -1136,9 +1120,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies zero-threshold manual group approvals are rejected and `anyInitiator=true` still requires
      *  organization membership.
      */
-    function test_executeAccountTransaction_manualZeroThresholdAndNonMemberInitiator_failClosed()
-        public
-    {
+    function test_executeAccountTransaction_manualZeroThresholdAndNonMemberInitiator_failClosed() public {
         // Setup: deploy one account plus one interaction target, then prepare one zero-threshold manual policy and one
         // any-initiator policy signed by a non-member.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
@@ -1459,9 +1441,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies policy-root updates invalidate previously collected signatures and group membership drops can make
      *  pre-collected manual approvals fall below threshold.
      */
-    function test_executeAccountTransaction_policyAndGroupMutations_invalidateCollectedSignatures()
-        public
-    {
+    function test_executeAccountTransaction_policyAndGroupMutations_invalidateCollectedSignatures() public {
         // Setup: deploy one account plus one interaction target, then collect signatures under one auto-approve policy
         // and one manual group-approval policy.
         MockAccountForOrganizationTransaction account = _deployMockAccount();

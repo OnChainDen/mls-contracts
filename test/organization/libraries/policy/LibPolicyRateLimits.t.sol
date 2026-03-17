@@ -10,9 +10,7 @@ import {Policy, RateLimitScope, RateLimitType} from "types/PolicyTypes.sol";
  */
 contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     /// @dev Verifies disabled `limitType == None` succeeds without writing usage.
-    function test_checkAndUpdateRateLimit_limitTypeNone_returnsTrueAndDoesNotWriteUsage()
-        public
-    {
+    function test_checkAndUpdateRateLimit_limitTypeNone_returnsTrueAndDoesNotWriteUsage() public {
         // Setup: configure a valid fixture for `limitType == None` returns true and does not write usage.
         uint256 policyId = 9001;
         Policy memory policy = _buildBasePolicy();
@@ -118,9 +116,7 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that usage above limit returns false and does not update usage.
-    function test_checkAndUpdateRateLimit_usageAboveLimit_returnsFalseAndDoesNotWriteUsage()
-        public
-    {
+    function test_checkAndUpdateRateLimit_usageAboveLimit_returnsFalseAndDoesNotWriteUsage() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for usage above limit returns false
         // and does not update usage.
         uint256 policyId = 9005;

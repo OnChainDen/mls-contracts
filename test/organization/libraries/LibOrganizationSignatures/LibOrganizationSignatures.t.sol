@@ -38,9 +38,7 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     /// @dev Verifies `LibOrganizationSignatures.computeNonce` changes when any bound field changes.
-    function test_computeNonce_changesWhenBoundFieldChanges()
-        public
-    {
+    function test_computeNonce_changesWhenBoundFieldChanges() public {
         // Setup: define a baseline tuple and deploy a second harness to vary the organization address binding.
         bytes memory operationData = abi.encode(address(0xBEEF), uint256(11));
         LibOrganizationSignaturesHarness secondHarness = new LibOrganizationSignaturesHarness();
@@ -106,9 +104,7 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     /// @dev Verifies `LibOrganizationSignatures.validateAndConsumeNonceOrRevert` reverts with the exact reused nonce.
-    function test_validateAndConsumeNonce_reusedNonceRevertsWithExactValue()
-        public
-    {
+    function test_validateAndConsumeNonce_reusedNonceRevertsWithExactValue() public {
         // Setup: consume one nonce once so the next attempt hits the replay path.
         uint256 nonce = harness.computeNonceViaLibrary(OperationType.ModifyMembers, abi.encode(uint256(24)), 24);
         harness.validateAndConsumeNonceOrRevertViaLibrary(nonce);
@@ -135,9 +131,7 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     /// @dev Verifies once a nonce is consumed it stays used across later successful nonce consumptions.
-    function test_validateAndConsumeNonce_consumedNonceRemainsMonotonicAcrossLaterOperations()
-        public
-    {
+    function test_validateAndConsumeNonce_consumedNonceRemainsMonotonicAcrossLaterOperations() public {
         // Setup: derive two distinct nonces in the same harness storage.
         uint256 nonceA = harness.computeNonceViaLibrary(OperationType.ModifyPolicies, abi.encode(uint256(26)), 27);
         uint256 nonceB = harness.computeNonceViaLibrary(OperationType.ModifyPolicies, abi.encode(uint256(27)), 28);

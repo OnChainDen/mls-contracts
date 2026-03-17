@@ -102,9 +102,7 @@ contract LibOrganizationGuardianFinalizeGuardianUpdateTest is LibOrganizationGua
 
     /// @dev Verifies `LibOrganizationGuardian.finalizeGuardianUpdate` reverts with `NoPendingGuardianUpdate` after the
     /// pending update was cancelled, even once the cancelled timestamp has passed.
-    function test_finalizeGuardianUpdate_afterCancellationAndExpiryRevertsNoPendingGuardianUpdate()
-        public
-    {
+    function test_finalizeGuardianUpdate_afterCancellationAndExpiryRevertsNoPendingGuardianUpdate() public {
         // Setup: stage and cancel a pending guardian update, then advance past the original finalize timestamp.
         _initiateGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         uint256 cancelledCanFinalizeAt = harness.getPendingGuardianUpdateTimestampViaLibrary();
@@ -121,9 +119,7 @@ contract LibOrganizationGuardianFinalizeGuardianUpdateTest is LibOrganizationGua
 
     /// @dev Verifies `LibOrganizationGuardian.finalizeGuardianUpdate` reverts with `NoPendingGuardianUpdate` after the
     /// pending guardian already accepted the finalized update.
-    function test_finalizeGuardianUpdate_afterAcceptanceAndOldExpiryRevertsNoPendingGuardianUpdate()
-        public
-    {
+    function test_finalizeGuardianUpdate_afterAcceptanceAndOldExpiryRevertsNoPendingGuardianUpdate() public {
         // Setup: complete a full initiate-finalize-accept flow and then advance past the old finalize timestamp.
         _initiateGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         uint256 originalCanFinalizeAt = harness.getPendingGuardianUpdateTimestampViaLibrary();

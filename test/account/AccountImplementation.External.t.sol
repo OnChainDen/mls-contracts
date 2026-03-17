@@ -74,9 +74,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies non-organization caller reverts with `OnlyOrganization`.
      */
-    function testFuzz_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization(address caller)
-        public
-    {
+    function testFuzz_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization(address caller) public {
         vm.assume(caller != address(beacon));
 
         // Setup: deploy target call receiver and choose a non-organization caller.
@@ -113,9 +111,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies failed downstream call reverts with `TransactionExecutionFailed`.
      */
-    function test_executeTransaction_failedCall_revertsTransactionExecutionFailed()
-        public
-    {
+    function test_executeTransaction_failedCall_revertsTransactionExecutionFailed() public {
         // Setup: deploy target and build reverting calldata.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.fail.selector);
@@ -319,9 +315,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature is callable by arbitrary callers (fuzz).
      */
-    function testFuzz_isValidSignature_callableByAnyone(address caller, bytes32 hash, bytes memory signature)
-        public
-    {
+    function testFuzz_isValidSignature_callableByAnyone(address caller, bytes32 hash, bytes memory signature) public {
         // Setup: configure deterministic organization response.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(IERC1271.isValidSignature.selector);

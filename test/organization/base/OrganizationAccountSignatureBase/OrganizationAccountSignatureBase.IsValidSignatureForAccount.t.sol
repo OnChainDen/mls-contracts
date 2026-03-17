@@ -44,9 +44,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies that calls where `msg.sender != account` revert with `SenderIsNotAccount`.
-    function test_isValidSignatureForAccount_senderNotAccount_revertsSenderIsNotAccount()
-        public
-    {
+    function test_isValidSignatureForAccount_senderNotAccount_revertsSenderIsNotAccount() public {
         // Setup: mark the account as deployed to isolate the sender gate.
         harness.setDeployedAccount(ACCOUNT, true);
 
@@ -58,9 +56,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies that undeployed accounts revert even when `msg.sender == account`.
-    function test_isValidSignatureForAccount_accountNotDeployed_revertsAccountNotDeployedByOrganization()
-        public
-    {
+    function test_isValidSignatureForAccount_accountNotDeployed_revertsAccountNotDeployedByOrganization() public {
         // Setup: leave deployed-account mapping unset for the target account.
 
         // Verify: expect undeployed-account validation to revert.
@@ -73,9 +69,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies that policy `anySourceAccount=true` does not bypass org-account deployment gating.
-    function test_isValidSignatureForAccount_anySourceAccountPolicyStillRequiresOrgDeployedAccount()
-        public
-    {
+    function test_isValidSignatureForAccount_anySourceAccountPolicyStillRequiresOrgDeployedAccount() public {
         // Setup: build a policy payload with `anySourceAccount=true` but do not mark the account as deployed.
         bytes memory policySignature = _buildAnySourcePolicySignature();
 
@@ -89,9 +83,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies that valid account callers receive the same result as direct library validation.
-    function test_isValidSignatureForAccount_deployedAccountDelegatesToLibraryResult()
-        public
-    {
+    function test_isValidSignatureForAccount_deployedAccountDelegatesToLibraryResult() public {
         // Setup: align storage fixtures for both harnesses and build a valid recovery payload.
         harness.setDeployedAccount(ACCOUNT, true);
         _setRecoveryState(harness, guardianSigner, true);
@@ -305,9 +297,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
 
     /// @dev Verifies disabling tx/ERC-1271 recovery immediately invalidates recovery signatures on the external
     ///  account-signature path.
-    function test_isValidSignatureForAccount_disabledRecoveryImmediatelyRejectsOldRecoverySignature()
-        public
-    {
+    function test_isValidSignatureForAccount_disabledRecoveryImmediatelyRejectsOldRecoverySignature() public {
         // Setup: deploy the account, enable EOA recovery, and confirm the current recovery signature is valid.
         harness.setDeployedAccount(ACCOUNT, true);
         _setRecoveryState(harness, guardianSigner, true);

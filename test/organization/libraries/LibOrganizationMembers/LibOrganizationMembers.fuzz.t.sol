@@ -126,9 +126,7 @@ contract LibOrganizationMembersFuzzTest is LibOrganizationMembersSuiteBase {
     /**
      * @dev Verifies that attempting to remove a member who is an admin always reverts with `MemberIsAdmin`.
      */
-    function testFuzz_modifyMembers_removingAdminMemberAlwaysRevertsMemberIsAdmin(address adminMember)
-        public
-    {
+    function testFuzz_modifyMembers_removingAdminMemberAlwaysRevertsMemberIsAdmin(address adminMember) public {
         // Setup: constrain fuzz inputs for valid preconditions.
         vm.assume(adminMember != address(0) && adminMember != admin1);
         // Setup: configure members/admins for a valid baseline state.

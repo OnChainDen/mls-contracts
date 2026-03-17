@@ -43,9 +43,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies token-transfer rate usage uses extracted transfer amount and recipient destination.
-    function test_validateAndUpdateRateLimit_tokenTransfer_usesTransferAmountAndRecipientDestination()
-        public
-    {
+    function test_validateAndUpdateRateLimit_tokenTransfer_usesTransferAmountAndRecipientDestination() public {
         // Setup: token-transfer policy with enabled rate-limit and scoped usage key.
         Policy memory policy = _buildApprovalPolicy(TransactionType.TokenTransfers, PolicyType.AutoApprove);
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
@@ -70,9 +68,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies contract-interaction usage is count-based (`usageAmount = 1`).
-    function test_validateAndUpdateRateLimit_nonTokenTransfer_usesCountBasedUsage()
-        public
-    {
+    function test_validateAndUpdateRateLimit_nonTokenTransfer_usesCountBasedUsage() public {
         // Setup: contract-interaction policy with enabled rate-limit.
         Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
@@ -95,9 +91,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies native transfer usage amount is derived from `value` when calldata is empty.
-    function test_validateAndUpdateRateLimit_nativeTransfer_usesValueAsUsageAmount()
-        public
-    {
+    function test_validateAndUpdateRateLimit_nativeTransfer_usesValueAsUsageAmount() public {
         // Setup: token-transfer policy with enabled rate-limit.
         Policy memory policy = _buildApprovalPolicy(TransactionType.TokenTransfers, PolicyType.AutoApprove);
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
@@ -196,9 +190,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies auto-approve rejection requires non-empty review signature.
-    function test_validateAutoApproveRejection_emptyReviewSignature_revertsTransactionRejectionNotAllowed()
-        public
-    {
+    function test_validateAutoApproveRejection_emptyReviewSignature_revertsTransactionRejectionNotAllowed() public {
         // Setup: valid auto-approve rejection context with empty review signatures.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -220,9 +212,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies auto-approve rejection succeeds for authorized initiator signatures.
-    function test_validateAutoApproveRejection_authorizedInitiatorSigner_succeeds()
-        public
-    {
+    function test_validateAutoApproveRejection_authorizedInitiatorSigner_succeeds() public {
         // Setup: auto-approve policy and rejection signature from authorized initiator.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -261,9 +251,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies manual-confirmation helper uses policy threshold and rejects below-threshold approvals.
-    function test_validateManualConfirmation_belowThreshold_revertsInsufficientApprovals()
-        public
-    {
+    function test_validateManualConfirmation_belowThreshold_revertsInsufficientApprovals() public {
         // Setup: group approver threshold=2 with one valid review signature.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
         policy.config.approval.approverType = ApproverType.Group;
@@ -364,9 +352,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies review-hash binding changes when initiator signature bytes change.
-    function test_validateManualConfirmation_reviewHashBindsInitiatorSignature()
-        public
-    {
+    function test_validateManualConfirmation_reviewHashBindsInitiatorSignature() public {
         // Setup: derive two initiator signatures for the same transaction hash from different keys.
         bytes memory data = abi.encodeWithSelector(bytes4(0x49494949), uint256(9));
         uint256 expiration = block.timestamp + 1 days;
@@ -432,9 +418,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies unauthorized reviewer fails closed by reverting `InsufficientApprovals`.
-    function test_validateManualConfirmation_unauthorizedReviewer_failClosedWithInsufficientApprovals()
-        public
-    {
+    function test_validateManualConfirmation_unauthorizedReviewer_failClosedWithInsufficientApprovals() public {
         // Setup: member-approver policy where reviewer2 is unauthorized signer.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
         policy.config.approval.approverType = ApproverType.Member;
@@ -479,9 +463,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies non-existent approver group fails closed by reverting `InsufficientApprovals`.
-    function test_validateManualConfirmation_nonExistentApproverGroup_failClosedWithInsufficientApprovals()
-        public
-    {
+    function test_validateManualConfirmation_nonExistentApproverGroup_failClosedWithInsufficientApprovals() public {
         // Setup: group-approver policy references a missing group ID.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
         policy.config.approval.approverType = ApproverType.Group;

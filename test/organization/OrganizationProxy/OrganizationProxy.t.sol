@@ -21,9 +21,7 @@ import {InitializationParams} from "types/CommonTypes.sol";
 contract OrganizationProxyTest is InitializationSuiteBase {
     /// @dev Verifies `OrganizationProxy.constructor` stores deployer, whitelist, and implementation values in their
     /// expected storage slots.
-    function test_constructor_setsDeployerWhitelistAndImplementationSlots()
-        public
-    {
+    function test_constructor_setsDeployerWhitelistAndImplementationSlots() public {
         // Setup: Select a direct deployer account for deploying the proxy outside the factory flow.
         address directDeployer = address(0xFA01);
 

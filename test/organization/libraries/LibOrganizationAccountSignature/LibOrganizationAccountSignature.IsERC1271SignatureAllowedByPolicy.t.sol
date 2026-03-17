@@ -93,9 +93,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that `anySourceAccount=true` bypasses source-account proof checks.
-    function test_isERC1271SignatureAllowedByPolicy_anySourceAccountBypassesSourceProof_returnsTrue()
-        public
-    {
+    function test_isERC1271SignatureAllowedByPolicy_anySourceAccountBypassesSourceProof_returnsTrue() public {
         // Setup: build valid fixture with permissive `anySourceAccount=true` and empty source proof.
         (, ValidationProofs memory proofs) = _buildAllowedFixture();
         proofs.sourceAccountProof = new bytes32[](0);
@@ -122,9 +120,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that all policy checks passing returns true.
-    function test_isERC1271SignatureAllowedByPolicy_allChecksPass_returnsTrue()
-        public
-    {
+    function test_isERC1271SignatureAllowedByPolicy_allChecksPass_returnsTrue() public {
         // Setup: build fully valid baseline fixture.
         (, ValidationProofs memory proofs) = _buildAllowedFixture();
 
@@ -137,9 +133,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that policy-proof failure short-circuits composite failing inputs.
-    function test_isERC1271SignatureAllowedByPolicy_firstCheckPolicyProofFailure_failsClosed()
-        public
-    {
+    function test_isERC1271SignatureAllowedByPolicy_firstCheckPolicyProofFailure_failsClosed() public {
         // Setup: build fixture with multiple failing conditions, including invalid policy proof.
         (Policy memory policy, ValidationProofs memory proofs) = _buildAllowedFixture();
         policy.config.transactionType = TransactionType.TokenTransfers;
@@ -156,9 +150,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that empty source proofs fail when policy requires specific source accounts.
-    function test_isERC1271SignatureAllowedByPolicy_emptySourceProofWithSpecificSource_returnsFalse()
-        public
-    {
+    function test_isERC1271SignatureAllowedByPolicy_emptySourceProofWithSpecificSource_returnsFalse() public {
         // Setup: build source-restricted policy but provide empty source proof.
         (Policy memory policy,) = _buildAllowedFixture();
         policy.config.anySourceAccount = false;
@@ -196,9 +188,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that group-based initiator authorization returns true for existing groups and members.
-    function test_isERC1271SignatureAllowedByPolicy_groupInitiatorExistingGroupMember_returnsTrue()
-        public
-    {
+    function test_isERC1271SignatureAllowedByPolicy_groupInitiatorExistingGroupMember_returnsTrue() public {
         // Setup: build valid fixture and switch initiator auth to group membership.
         (Policy memory policy,) = _buildAllowedFixture();
         policy.config.initiator.anyInitiator = false;

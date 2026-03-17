@@ -30,9 +30,7 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
     }
 
     /// @dev Verifies `_isValidGuardianSignature` returns true for a direct guardian EOA signature.
-    function test_isValidGuardianSignature_directGuardianSignature_returnsTrue()
-        public
-    {
+    function test_isValidGuardianSignature_directGuardianSignature_returnsTrue() public {
         // Setup: configure the guardian as a deterministic EOA and sign the tracked message hash.
         policyStateHarness.setGuardian(guardianSigner);
         bytes memory guardianSignature = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -45,9 +43,7 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
     }
 
     /// @dev Verifies `_isValidGuardianSignature` accepts an enabled `SafeExecutorModule` contract signature.
-    function test_isValidGuardianSignature_enabledModuleContractSignature_returnsTrue()
-        public
-    {
+    function test_isValidGuardianSignature_enabledModuleContractSignature_returnsTrue() public {
         // Setup: configure a guardian Safe with an enabled executor module and sign through the authorized executor.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule module = _deployModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
@@ -64,9 +60,7 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
     }
 
     /// @dev Verifies `_isValidGuardianSignature` rejects valid module signatures from non-enabled modules.
-    function test_isValidGuardianSignature_disabledModuleContractSignature_returnsFalse()
-        public
-    {
+    function test_isValidGuardianSignature_disabledModuleContractSignature_returnsFalse() public {
         // Setup: configure a guardian Safe without enabling the module that produced the contract signature.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule module = _deployModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
@@ -82,9 +76,7 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
     }
 
     /// @dev Verifies a previously valid enabled-module guardian signature becomes invalid immediately after disable.
-    function test_isValidGuardianSignature_enabledThenDisabledModuleSignature_returnsFalse()
-        public
-    {
+    function test_isValidGuardianSignature_enabledThenDisabledModuleSignature_returnsFalse() public {
         // Setup: configure a guardian Safe, validate one enabled-module signature, then disable that same module.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule module = _deployModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
@@ -170,9 +162,7 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
     }
 
     /// @dev Verifies `_isValidGuardianSignature` fails closed when guardian module checks revert.
-    function test_isValidGuardianSignature_revertingGuardianModuleCheck_returnsFalse()
-        public
-    {
+    function test_isValidGuardianSignature_revertingGuardianModuleCheck_returnsFalse() public {
         // Setup: configure a reverting guardian contract and sign through a module that points at it.
         MockGuardianModuleReverter guardian = new MockGuardianModuleReverter();
         SafeExecutorModule module = _deployModule(address(guardian), AUTHORIZED_EXECUTOR_PK);
@@ -233,9 +223,7 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
     }
 
     /// @dev Verifies `_isValidGuardianSignature` reflects module rotation immediately.
-    function test_isValidGuardianSignature_moduleRotation_oldFalseNewTrueImmediately()
-        public
-    {
+    function test_isValidGuardianSignature_moduleRotation_oldFalseNewTrueImmediately() public {
         // Setup: configure old and new modules on the same guardian Safe and rotate enablement between them.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule oldModule = _deployModule(address(guardianSafe), OLD_EXECUTOR_PK);

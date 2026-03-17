@@ -15,9 +15,7 @@ contract OrganizationGuardianRecoveryBaseInitiateRecoveryGuardianUpdateTest is
 {
     /// @dev Verifies recovery-only guardian entrypoints reject unauthorized callers before any pending recovery state
     /// is written.
-    function test_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress()
-        public
-    {
+    function test_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress() public {
         // Setup: reuse suite baseline where guardian-recovery is configured.
         address caller = address(0xCA11);
 

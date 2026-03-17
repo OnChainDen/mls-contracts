@@ -356,9 +356,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
     /**
      * @dev Verifies that including a signer who is neither admin nor member causes `SignerIsNotAdmin`.
      */
-    function testFuzz_validateAdminAuth_nonAdminNonMemberSignerRevertsSignerIsNotAdmin(uint256 nonAdminPk)
-        public
-    {
+    function testFuzz_validateAdminAuth_nonAdminNonMemberSignerRevertsSignerIsNotAdmin(uint256 nonAdminPk) public {
         // Arrange: threshold=2 ensures both signatures are evaluated.
         // Setup: configure the initial organization state for this scenario.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
@@ -400,9 +398,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
     /**
      * @dev Verifies that including a signer who is a member but not an admin causes `SignerIsNotAdmin`.
      */
-    function testFuzz_validateAdminAuth_nonAdminMemberSignerRevertsSignerIsNotAdmin(uint256 memberNonAdminPk)
-        public
-    {
+    function testFuzz_validateAdminAuth_nonAdminMemberSignerRevertsSignerIsNotAdmin(uint256 memberNonAdminPk) public {
         memberNonAdminPk = bound(memberNonAdminPk, 1, SECP256K1_CURVE_ORDER - 1);
         address memberNonAdmin = vm.addr(memberNonAdminPk);
         // Setup: constrain fuzz inputs to valid preconditions for this scenario.

@@ -14,9 +14,7 @@ import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 contract LibOrganizationGuardianRecoveryAcceptGuardianRecoveryTest is LibOrganizationGuardianRecoverySuiteBase {
     /// @dev Verifies `LibOrganizationGuardianRecovery.acceptGuardianRecovery` accept writes guardian in normal storage,
     /// clears pending, emits event, and preserves config/pending-init.
-    function test_acceptUpdatesGuardianAndClearsPending()
-        public
-    {
+    function test_acceptUpdatesGuardianAndClearsPending() public {
         // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending
         // recovery-guardian update.
         _resetAndConfigureRecovery();

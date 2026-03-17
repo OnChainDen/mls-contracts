@@ -65,9 +65,7 @@ contract OrganizationModifiersTest is Test {
     /**
      * @dev Verifies `onlyTxRecoveryAddress` admits the configured holder and rejects exact outsiders.
      */
-    function test_onlyTxRecovery_authorizesExactHolderAndExactError()
-        public
-    {
+    function test_onlyTxRecovery_authorizesExactHolderAndExactError() public {
         vm.prank(TX_RECOVERY);
         // Call: invoke the tx-recovery-only action from the configured recovery address.
         harness.txRecoveryOnlyAction();
@@ -83,9 +81,7 @@ contract OrganizationModifiersTest is Test {
     /**
      * @dev Verifies `onlyGuardianRecoveryAddress` admits the configured holder and rejects exact outsiders.
      */
-    function test_onlyGuardianRecovery_authorizesExactHolderAndExactError()
-        public
-    {
+    function test_onlyGuardianRecovery_authorizesExactHolderAndExactError() public {
         vm.prank(GUARDIAN_RECOVERY);
         // Call: invoke the guardian-recovery-only action from the configured recovery address.
         harness.guardianRecoveryOnlyAction();
@@ -103,9 +99,7 @@ contract OrganizationModifiersTest is Test {
     /**
      * @dev Verifies `onlyPendingGuardian` admits the pending guardian and clears access after acceptance.
      */
-    function test_pendingGuardian_lifecycleEnforcesExactHolder()
-        public
-    {
+    function test_pendingGuardian_lifecycleEnforcesExactHolder() public {
         // Setup: configure a pending guardian ready for acceptance.
         harness.setGuardianState(GUARDIAN, PENDING_GUARDIAN, true);
 
@@ -133,9 +127,7 @@ contract OrganizationModifiersTest is Test {
     /**
      * @dev Verifies `onlyRecoveryPendingGuardian` admits the pending guardian and rejects outsiders beforehand.
      */
-    function test_onlyRecoveryPendingGuardian_authorizesExactHolderAndRejectsOutsiders()
-        public
-    {
+    function test_onlyRecoveryPendingGuardian_authorizesExactHolderAndRejectsOutsiders() public {
         harness.setGuardianRecoveryState(GUARDIAN_RECOVERY, RECOVERY_PENDING_GUARDIAN, true);
 
         vm.prank(RECOVERY_PENDING_GUARDIAN);

@@ -35,10 +35,9 @@ contract LibOrganizationEIP712FuzzTest is LibOrganizationEIP712TestBase {
     /// @dev Verifies mutating exactly one bound EIP-712 input changes the final typed-data hash.
     /// @param structHash Fuzzed baseline struct hash.
     /// @param mutatedStructHash Fuzzed alternate struct hash constrained away from the baseline.
-    function testFuzz_singleBoundInputMutation_changesTypedDataHash(
-        bytes32 structHash,
-        bytes32 mutatedStructHash
-    ) public {
+    function testFuzz_singleBoundInputMutation_changesTypedDataHash(bytes32 structHash, bytes32 mutatedStructHash)
+        public
+    {
         // Setup: derive a distinct struct hash and a second harness for verifier mutation checks.
         vm.assume(structHash != mutatedStructHash);
         LibOrganizationEIP712Harness otherHarness = new LibOrganizationEIP712Harness();
@@ -97,10 +96,7 @@ contract LibOrganizationEIP712FuzzTest is LibOrganizationEIP712TestBase {
     /// @dev Verifies `LibOrganizationEIP712.computeTypedDataHash` matches the independent EIP-712 reference formula.
     /// @param structHash Fuzzed struct hash wrapped by the Organization typed-data helper.
     /// @param rawChainId Fuzzed chain id constrained to a non-zero value.
-    function testFuzz_randomVectors_matchIndependentReference(
-        bytes32 structHash,
-        uint64 rawChainId
-    ) public {
+    function testFuzz_randomVectors_matchIndependentReference(bytes32 structHash, uint64 rawChainId) public {
         // Setup: bind a non-zero chain id and preserve the original chain id for cleanup.
         uint256 chainId = bound(uint256(rawChainId), 1, type(uint64).max);
         uint256 originalChainId = block.chainid;

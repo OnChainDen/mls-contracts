@@ -25,9 +25,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies expired approval transactions revert `TransactionExpired`.
-    function test_validateApproval_expired_revertsTransactionExpired()
-        public
-    {
+    function test_validateApproval_expired_revertsTransactionExpired() public {
         // Setup: build approval payload with expiration in the past.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -50,9 +48,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies approval expiration equal to block timestamp succeeds (strict `>` check).
-    function test_validateApproval_expirationEqualsTimestamp_succeeds()
-        public
-    {
+    function test_validateApproval_expirationEqualsTimestamp_succeeds() public {
         // Setup: build approval payload with expiration equal to current block timestamp.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -69,9 +65,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies empty initiator signature reverts `InsufficientSignaturesLength`.
-    function test_validateApproval_emptyInitiatorSignature_revertsInsufficientSignaturesLength()
-        public
-    {
+    function test_validateApproval_emptyInitiatorSignature_revertsInsufficientSignaturesLength() public {
         // Setup: valid proof payload with empty initiator signature.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -115,9 +109,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies EOA initiator signature is recovered and accepted in approval flow.
-    function test_validateApproval_eoaInitiatorSignature_succeeds()
-        public
-    {
+    function test_validateApproval_eoaInitiatorSignature_succeeds() public {
         // Setup: valid auto-approve policy and EOA initiator signature.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -225,9 +217,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies manual-approval validation uses `isApproval=true` review hash.
-    function test_validateApproval_manualReviewUsesApprovalFlagTrue()
-        public
-    {
+    function test_validateApproval_manualReviewUsesApprovalFlagTrue() public {
         // Setup: manual policy and initiator signature for approval flow.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -268,9 +258,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies auto-approve rejection validation rejects approval-domain signatures.
-    function test_validateAutoApproveRejection_rejectsApprovalDomainSignatureReplay()
-        public
-    {
+    function test_validateAutoApproveRejection_rejectsApprovalDomainSignatureReplay() public {
         // Setup: configure an auto-approve policy and sign the transaction with `isApproval=true`.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -289,9 +277,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies manual confirmation binds reviewer signatures to the exact initiator signature bytes.
-    function test_validateManualConfirmation_reviewerSignaturesBindInitiatorSignature()
-        public
-    {
+    function test_validateManualConfirmation_reviewerSignaturesBindInitiatorSignature() public {
         // Setup: configure a manual-approval policy and build two distinct initiator signatures for one tuple.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -444,9 +430,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies expired rejection transactions revert `TransactionExpired`.
-    function test_validateRejection_expired_revertsTransactionExpired()
-        public
-    {
+    function test_validateRejection_expired_revertsTransactionExpired() public {
         // Setup: build rejection payload with expiration in the past.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -629,9 +613,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies manual rejection uses `isApproval=false` review hash.
-    function test_validateRejection_manualReviewUsesRejectionFlagFalse()
-        public
-    {
+    function test_validateRejection_manualReviewUsesRejectionFlagFalse() public {
         // Setup: manual policy and initiator signature.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);

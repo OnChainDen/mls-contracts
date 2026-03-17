@@ -106,9 +106,7 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
     }
 
     /// @dev Verifies tx recovery timelock min boundary is accepted at initialization and remains disabled.
-    function test_initialize_nonZeroRecoveryAndMinBoundaryTimelock_configuresTxRecovery()
-        public
-    {
+    function test_initialize_nonZeroRecoveryAndMinBoundaryTimelock_configuresTxRecovery() public {
         // Setup
         InitializationParams memory params =
             _buildParams(TX_RECOVERY, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, 3 days);
@@ -127,9 +125,7 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
     }
 
     /// @dev Verifies tx recovery timelock max boundary is accepted at initialization and remains disabled.
-    function test_initialize_nonZeroRecoveryAndMaxBoundaryTimelock_configuresTxRecovery()
-        public
-    {
+    function test_initialize_nonZeroRecoveryAndMaxBoundaryTimelock_configuresTxRecovery() public {
         // Setup
         InitializationParams memory params =
             _buildParams(TX_RECOVERY, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS, 3 days);
@@ -185,9 +181,7 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
 
     /// @dev Verifies invalid admin-op timelock always reverts init, preventing a
     /// same-window deferred tx-recovery finalize path.
-    function test_initialize_invalidAdminOperationTimelock_revertsAndPreventsDeferredFinalizeWindow()
-        public
-    {
+    function test_initialize_invalidAdminOperationTimelock_revertsAndPreventsDeferredFinalizeWindow() public {
         // Setup
         LibOrganizationInitializationTxRecoveryHarness harnessZero = _deployHarness();
         LibOrganizationInitializationTxRecoveryHarness harnessBelowMin = _deployHarness();

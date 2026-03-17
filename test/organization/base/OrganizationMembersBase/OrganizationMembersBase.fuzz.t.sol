@@ -54,10 +54,7 @@ contract OrganizationMembersBaseFuzzTest is OrganizationMembersBaseSuiteBase {
      * @param mutationSelector Chooses which member batch component to mutate after signing
      * @param saltRaw Raw salt used to derive a bounded nonce salt
      */
-    function testFuzz_modifyMembersBindsSignaturesToExactMemberBatches(
-        uint8 mutationSelector,
-        uint256 saltRaw
-    ) public {
+    function testFuzz_modifyMembersBindsSignaturesToExactMemberBatches(uint8 mutationSelector, uint256 saltRaw) public {
         address signedAddA = address(0x5202);
         address signedAddB = address(0x5203);
         address removeA = address(0x5204);

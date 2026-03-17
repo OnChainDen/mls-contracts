@@ -44,9 +44,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
     }
 
     /// @dev Verifies invariant that Organization upgrades only target whitelisted Organization implementations.
-    function test_organizationUpgrades_onlyTargetWhitelistedOrganizationImplementations()
-        public
-    {
+    function test_organizationUpgrades_onlyTargetWhitelistedOrganizationImplementations() public {
         // Setup: valid admin auth for unwhitelisted Organization target.
         _setSingleAdminThresholdOne();
         (AdminAuthParams memory auth,) = _buildUpgradeAuth({
@@ -68,9 +66,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
     }
 
     /// @dev Verifies invariant that Account upgrades only target whitelisted Account implementations.
-    function test_accountUpgrades_onlyTargetWhitelistedAccountImplementations()
-        public
-    {
+    function test_accountUpgrades_onlyTargetWhitelistedAccountImplementations() public {
         // Setup: whitelist target under Organization type only.
         _setSingleAdminThresholdOne();
         address target = address(new AccountImplementationVersion1());
@@ -203,9 +199,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
     }
 
     /// @dev Verifies direct UUPS upgrade selectors never mutate implementation without authorized wrapper flow.
-    function test_directUUPSSelectorsCannotChangeImplementationWithoutWrapperAuthorization()
-        public
-    {
+    function test_directUUPSSelectorsCannotChangeImplementationWithoutWrapperAuthorization() public {
         // Setup: whitelist target for isolation and capture baseline implementation pointer.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);

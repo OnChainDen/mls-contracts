@@ -119,9 +119,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
     /// @dev Verifies deferred guardian-recovery finalization commits the staged tuple after the admin timelock and
     /// preserves helper-enforced storage integrity.
-    function test_finalizeApprovalPathBindsPendingTupleAndDelegates()
-        public
-    {
+    function test_finalizeApprovalPathBindsPendingTupleAndDelegates() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -174,9 +172,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
     /// @dev Verifies deferred guardian-recovery finalize and cancel signatures are bound to the current pending tuple
     /// values, so stale signatures fail after any pending-value mutation.
-    function test_stalePendingTupleSignatures_revertAfterPendingValuesChange()
-        public
-    {
+    function test_stalePendingTupleSignatures_revertAfterPendingValuesChange() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -390,9 +386,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` can finalize the same
     /// pending tuple on fresh organization instances with different salts.
-    function test_finalizeInitializeGuardianRecovery_samePendingTupleDifferentSalts_succeedsPerFreshOrg()
-        public
-    {
+    function test_finalizeInitializeGuardianRecovery_samePendingTupleDifferentSalts_succeedsPerFreshOrg() public {
         // Setup: deploy two fresh harnesses with the same pending deferred-init tuple and build finalize auth with
         // different salts for each organization address.
         OrganizationGuardianRecoveryBaseHarness secondHarness = new OrganizationGuardianRecoveryBaseHarness();

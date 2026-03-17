@@ -131,9 +131,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies defensive mismatch branch reverts `AccountDeploymentAddressMismatch` under fault injection.
-    function test_deployAccount_faultInjectedAddressMismatch_revertsAccountDeploymentAddressMismatch()
-        public
-    {
+    function test_deployAccount_faultInjectedAddressMismatch_revertsAccountDeploymentAddressMismatch() public {
         bytes32 create2Salt = bytes32(uint256(8029));
 
         // Setup: set a valid beacon implementation with runtime code.
@@ -146,9 +144,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies no-code implementation reverts and leaves mapping/events unchanged on failed deployment.
-    function test_deployAccount_noCodeImplementation_revertsAndDoesNotSetMappingOrEmitEvent()
-        public
-    {
+    function test_deployAccount_noCodeImplementation_revertsAndDoesNotSetMappingOrEmitEvent() public {
         bytes32 create2Salt = bytes32(uint256(8068));
         address noCodeImplementation = address(0xBEEF);
 
@@ -172,9 +168,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies zero implementation reverts and leaves mapping/events unchanged on failed deployment.
-    function test_deployAccount_zeroImplementation_revertsAndDoesNotSetMappingOrEmitEvent()
-        public
-    {
+    function test_deployAccount_zeroImplementation_revertsAndDoesNotSetMappingOrEmitEvent() public {
         bytes32 create2Salt = bytes32(uint256(8081));
         address zeroImplementation = address(0);
 

@@ -64,11 +64,9 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
     /// @param addr The shared implementation address mutated under both buckets.
     /// @param addToOrg Whether the Organization bucket receives the address.
     /// @param addToAccount Whether the Account bucket receives the address.
-    function testFuzz_fuzz_mixedTypeOperations_mappingsRemainIndependent(
-        address addr,
-        bool addToOrg,
-        bool addToAccount
-    ) public {
+    function testFuzz_fuzz_mixedTypeOperations_mappingsRemainIndependent(address addr, bool addToOrg, bool addToAccount)
+        public
+    {
         // Setup: start from a clean initialized proxy with both buckets unset for the fuzzed address.
 
         // Call: apply owner-authorized mutations to each bucket independently.
@@ -276,9 +274,7 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
 
     /// @dev : Fuzz proxy initialization inputs — malformed init data never leaves partially initialized
     /// proxy.
-    function test_fuzz_malformedInitData_neverLeavesPartiallyInitializedProxy(bytes calldata randomInitData)
-        public
-    {
+    function test_fuzz_malformedInitData_neverLeavesPartiallyInitializedProxy(bytes calldata randomInitData) public {
         // Setup: filter out valid initialize selector to ensure data is malformed.
         vm.assume(randomInitData.length > 0);
         // casting to 'bytes4' is safe because the short-circuit guard ensures length >= 4 before the cast

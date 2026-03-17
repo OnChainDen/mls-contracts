@@ -105,9 +105,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
 
     /// @dev Verifies deferred guardian-recovery initialization consumes the correct initiate nonce and stages the
     /// pending tuple that later finalization will commit.
-    function test_approvalFlowBindsOpDataAndDelegates()
-        public
-    {
+    function test_approvalFlowBindsOpDataAndDelegates() public {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -385,9 +383,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
 
     /// @dev Verifies cancelled deferred guardian-recovery initialization leaves the mechanism re-initiable with a new
     /// auth salt for the same tuple.
-    function test_initiateInitializeGuardianRecovery_sameParamsDifferentSalts_canSucceedAcrossReinitiation()
-        public
-    {
+    function test_initiateInitializeGuardianRecovery_sameParamsDifferentSalts_canSucceedAcrossReinitiation() public {
         // Setup: reset storage, configure one-admin auth, and prepare two initiate salts around an intermediate
         // cancel.
         recoveryStateHarness.resetGuardianRecoveryStorage();

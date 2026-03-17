@@ -15,9 +15,7 @@ import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is LibOrganizationGuardianRecoverySuiteBase {
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` finalize emits event, sets ready
     /// flag only, and preserves other fields.
-    function test_finalizeSetsReadyAndPreservesOtherFields()
-        public
-    {
+    function test_finalizeSetsReadyAndPreservesOtherFields() public {
         // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending
         // recovery-guardian update.
         _resetAndConfigureRecovery();
@@ -70,9 +68,7 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` finalize reverts before expiry
     /// and succeeds exactly at expiry.
-    function test_beforeExpiryReverts_exactlyAtExpirySucceeds()
-        public
-    {
+    function test_beforeExpiryReverts_exactlyAtExpirySucceeds() public {
         // Setup: reconfigure baseline recovery address and timelock and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);

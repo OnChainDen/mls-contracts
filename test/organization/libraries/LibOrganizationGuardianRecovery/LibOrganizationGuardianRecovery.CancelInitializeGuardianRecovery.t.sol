@@ -16,9 +16,7 @@ contract LibOrganizationGuardianRecoveryCancelInitializeGuardianRecoveryTest is
 {
     /// @dev Verifies `LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery` no pending initialization
     /// reverts.
-    function test_noPendingInitialization_revertsNoGuardianRecoveryInitializationPending()
-        public
-    {
+    function test_noPendingInitialization_revertsNoGuardianRecoveryInitializationPending() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
@@ -36,9 +34,7 @@ contract LibOrganizationGuardianRecoveryCancelInitializeGuardianRecoveryTest is
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery` cancel clears pending-init,
     /// emits event, and preserves config/recovery-update fields.
-    function test_cancelClearsPendingInitAndPreservesOtherState()
-        public
-    {
+    function test_cancelClearsPendingInitAndPreservesOtherState() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and seed pending recovery-guardian
         // update.
         harness.resetGuardianRecoveryStorageViaHarness();

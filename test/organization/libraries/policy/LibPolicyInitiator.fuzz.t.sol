@@ -14,10 +14,9 @@ contract LibPolicyInitiatorFuzzTest is PolicyLibrariesFuzzTestBase {
     /// non-members unauthorized.
     /// @param rawGroupId The group identifier used for the group-based initiator branch.
     /// @param outsider An address kept outside the organization for the negative branch.
-    function testFuzz_isInitiatorAuthorized_enforcesAnyMemberAndGroupModes(
-        uint256 rawGroupId,
-        address outsider
-    ) public {
+    function testFuzz_isInitiatorAuthorized_enforcesAnyMemberAndGroupModes(uint256 rawGroupId, address outsider)
+        public
+    {
         vm.assume(outsider != initiator1);
         vm.assume(outsider != initiator2);
 

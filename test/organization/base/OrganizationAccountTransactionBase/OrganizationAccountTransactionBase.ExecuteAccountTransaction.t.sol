@@ -63,9 +63,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies that an account not deployed by this organization reverts.
      */
-    function test_executeAccountTransaction_accountNotDeployed_revertsAccountNotDeployedByOrganization()
-        public
-    {
+    function test_executeAccountTransaction_accountNotDeployed_revertsAccountNotDeployedByOrganization() public {
         // Setup: use a random non-deployed account address.
         address undeployedAccount = address(0xA11CE001);
         bytes memory data = abi.encodeWithSelector(bytes4(0x01020304), uint256(2));
@@ -161,10 +159,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies nonce computation is deterministic for `(account,to,value,keccak256(data),policyId,salt)`.
      */
-    function test_executeAccountTransaction_nonceComputedDeterministicallyFromParams()
-        public
-        view
-    {
+    function test_executeAccountTransaction_nonceComputedDeterministicallyFromParams() public view {
         // Setup: define a deterministic operation tuple.
         address account = address(0xAAAA01);
         address to = address(0xBBBB02);
@@ -188,9 +183,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
      * @dev Verifies execute-path nonce derivation depends only on the tuple fields and ignores
      * expiration/signatures/proofs.
      */
-    function test_executeAccountTransaction_nonceDependsOnlyOnTupleFields()
-        public
-    {
+    function test_executeAccountTransaction_nonceDependsOnlyOnTupleFields() public {
         // Setup: build one baseline tuple plus field mutations, and prepare two distinct auth/proof payloads.
         address account = address(0xAAAA11);
         address alternateAccount = address(0xAAAA12);
@@ -431,9 +424,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
      * @dev Verifies `OrganizationAccountTransactionBase.executeAccountTransaction` cannot re-enter privileged
      * organization entrypoints from the account context.
      */
-    function test_executeAccountTransaction_accountReentryCannotCallPrivilegedOrganizationFunctions()
-        public
-    {
+    function test_executeAccountTransaction_accountReentryCannotCallPrivilegedOrganizationFunctions() public {
         // Setup: deploy an account plus downstream target, configure one valid auto-approve transaction, and stage a
         // guardian-only `rejectAccountTransaction` reentry from the account context.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
@@ -663,9 +654,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies account execution revert bubbles and nonce usage is rolled back.
      */
-    function test_executeAccountTransaction_accountExecutionReverts_rollsBackNonceUsage()
-        public
-    {
+    function test_executeAccountTransaction_accountExecutionReverts_rollsBackNonceUsage() public {
         // Setup: deploy account configured to revert on execute.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         account.setShouldRevertExecution(true);
@@ -833,9 +822,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
      *      policy. A transaction with both calldata and `value > 0` is NOT a token transfer, so the
      *      `ContractInteractions` policy type should match it.
      */
-    function test_executeAccountTransaction_contractInteractionWithValue_contractInteractionsPolicy_endToEnd()
-        public
-    {
+    function test_executeAccountTransaction_contractInteractionWithValue_contractInteractionsPolicy_endToEnd() public {
         // Setup: deploy account + interaction target and fund account balance.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         MockInteractionTarget target = new MockInteractionTarget();
@@ -883,9 +870,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies expired transactions revert in the base execution path.
      */
-    function test_executeAccountTransaction_expiredTransaction_revertsTransactionExpired()
-        public
-    {
+    function test_executeAccountTransaction_expiredTransaction_revertsTransactionExpired() public {
         // Setup: deploy account and sign payload with past expiration.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0x14141414), uint256(14));
@@ -934,9 +919,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies manual-approval policy with insufficient reviewers reverts.
      */
-    function test_executeAccountTransaction_manualApprovalInsufficientReviewers_revertsInsufficientApprovals()
-        public
-    {
+    function test_executeAccountTransaction_manualApprovalInsufficientReviewers_revertsInsufficientApprovals() public {
         // Setup: deploy account and manual-approval policy payload with no review signatures.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0x15151515), uint256(15));
@@ -1068,9 +1051,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies failed pre-validation does not permanently burn nonce; fixed retry can succeed.
      */
-    function test_executeAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed()
-        public
-    {
+    function test_executeAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed() public {
         // Setup: deploy account and build payload with first attempt signed by unauthorized initiator.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0x16161616), uint256(16));
@@ -1200,9 +1181,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies external-call failure rolls back prior rate-limit usage updates.
      */
-    function test_executeAccountTransaction_executionFailure_rollsBackRateLimitUsage()
-        public
-    {
+    function test_executeAccountTransaction_executionFailure_rollsBackRateLimitUsage() public {
         // Setup: deploy account configured to revert after validation and use rate-limited policy.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         account.setShouldRevertExecution(true);

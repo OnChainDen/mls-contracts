@@ -143,9 +143,7 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
     }
 
     /// @dev Verifies Account and Organization whitelist namespaces stay isolated across all system entrypoints.
-    function test_accountAndOrganizationNamespaces_remainSeparatedAcrossDeployUpgradeAndAccountFlows()
-        public
-    {
+    function test_accountAndOrganizationNamespaces_remainSeparatedAcrossDeployUpgradeAndAccountFlows() public {
         // Setup: whitelist the organization candidate under Account only, and the account candidate under
         // Organization only, then deploy a baseline organization.
         _setWhitelistStatus(ContractType.Account, address(upgradeOrganizationImplementation), true);

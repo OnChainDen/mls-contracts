@@ -136,9 +136,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that same selector with different constraints hash must not validate with old proof.
-    function test_isContractInteractionAllowed_sameSelectorDifferentConstraintsHash_invalidatesProof()
-        public
-    {
+    function test_isContractInteractionAllowed_sameSelectorDifferentConstraintsHash_invalidatesProof() public {
         // Setup: build fixture inputs where same selector with different constraints hash must not validate with old
         // proof should be denied.
         address target = address(0xC707);

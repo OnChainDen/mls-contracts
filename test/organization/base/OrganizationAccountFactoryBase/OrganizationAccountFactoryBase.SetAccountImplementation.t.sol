@@ -96,9 +96,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
     }
 
     /// @dev Verifies desired behavior that whitelist addresses without runtime code are rejected.
-    function test_setAccountImplementation_whitelistAddressWithoutRuntimeCode_reverts()
-        public
-    {
+    function test_setAccountImplementation_whitelistAddressWithoutRuntimeCode_reverts() public {
         // Setup: configure one-admin auth and point upgrade whitelist to an EOA/no-code address.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV1, true);
@@ -291,9 +289,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
     }
 
     /// @dev Verifies whitelist validation uses `ContractType.Account` (not `ContractType.Organization`).
-    function test_setAccountImplementation_validatesAgainstWhitelistWithContractTypeAccount()
-        public
-    {
+    function test_setAccountImplementation_validatesAgainstWhitelistWithContractTypeAccount() public {
         // Setup: whitelist target under Organization type only and configure one-admin auth.
         _setSingleAdminThresholdOne();
         whitelist.setImplementationWhitelisted(ContractType.Organization, accountImplementationV1, true);
@@ -330,9 +326,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
     }
 
     /// @dev Verifies replaying the same nonce after success reverts with `NonceAlreadyUsed`.
-    function test_setAccountImplementation_replaySameNonce_revertsAfterSuccessfulExecution()
-        public
-    {
+    function test_setAccountImplementation_replaySameNonce_revertsAfterSuccessfulExecution() public {
         // Setup: configure one-admin auth and whitelist target implementation.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV1, true);
@@ -403,9 +397,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
     }
 
     /// @dev Verifies failed whitelist validation does not consume nonce and same signed request can later succeed.
-    function test_setAccountImplementation_failedWhitelistValidation_doesNotConsumeNonceAndCanRetry()
-        public
-    {
+    function test_setAccountImplementation_failedWhitelistValidation_doesNotConsumeNonceAndCanRetry() public {
         // Setup: seed an active implementation, then leave the retry target un-whitelisted for the first attempt.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV1, true);
@@ -460,9 +452,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
     }
 
     /// @dev Verifies desired behavior that no-code implementation addresses are rejected even if whitelisted.
-    function test_setAccountImplementation_noCodeImplementationEvenIfWhitelisted_reverts()
-        public
-    {
+    function test_setAccountImplementation_noCodeImplementationEvenIfWhitelisted_reverts() public {
         address noCodeImplementation = address(0xCA11);
 
         // Setup: whitelist an EOA/no-code target and configure one-admin auth.
@@ -514,9 +504,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
     }
 
     /// @dev Verifies signatures for a different implementation cannot authorize current update call.
-    function test_setAccountImplementation_signaturesForDifferentImplementation_reverts()
-        public
-    {
+    function test_setAccountImplementation_signaturesForDifferentImplementation_reverts() public {
         // Setup: whitelist both implementations and sign auth for V1 only.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV1, true);
@@ -589,9 +577,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
 
     /// @dev [DESIRED] Verifies `setAccountImplementation` explicitly rejects `newImplementation == address(0)` before
     ///      reaching whitelist or code-length checks.
-    function test_setAccountImplementation_zeroImplementation_revertsExplicitly()
-        public
-    {
+    function test_setAccountImplementation_zeroImplementation_revertsExplicitly() public {
         // Setup: whitelist address(0) under Account type so whitelist check would pass, and configure one-admin auth.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(address(0), true);
@@ -614,9 +600,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
 
     /// @dev Verifies reverting whitelist contracts fail closed and preserve nonce/state for account implementation
     /// updates.
-    function test_setAccountImplementation_revertingWhitelistContract_revertsAndPreservesState()
-        public
-    {
+    function test_setAccountImplementation_revertingWhitelistContract_revertsAndPreservesState() public {
         // Setup: seed an active account implementation pointer, swap in a whitelist that always reverts, and prepare
         // an otherwise-valid implementation update payload.
         _setSingleAdminThresholdOne();
@@ -704,9 +688,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
 
     /// @dev Verifies transferring whitelist ownership immediately changes who can unlock account implementation
     /// updates.
-    function test_setAccountImplementation_whitelistOwnershipTransfer_changesMutationRights()
-        public
-    {
+    function test_setAccountImplementation_whitelistOwnershipTransfer_changesMutationRights() public {
         // Setup: route account implementation checks through a real whitelist proxy that starts without V1 approved,
         // then prepare a reusable account implementation update payload.
         address whitelistOwner = address(0xD552);

@@ -24,9 +24,7 @@ contract LibOrganizationAccountSignatureIsValidSignatureRoutingTest is LibOrgani
     }
 
     /// @dev Verifies that recovery-prefixed signatures route to recovery validation.
-    function test_isValidSignature_recoveryTypePrefix_routesToRecoveryValidation()
-        public
-    {
+    function test_isValidSignature_recoveryTypePrefix_routesToRecoveryValidation() public {
         // Setup: configure enabled recovery and build a valid recovery payload.
         _setTxRecoveryState(guardianSigner, true);
         bytes memory recoverySignature = _buildRecoverySignature(_signHash(GUARDIAN_PK, MESSAGE_HASH));
@@ -69,9 +67,7 @@ contract LibOrganizationAccountSignatureIsValidSignatureRoutingTest is LibOrgani
     }
 
     /// @dev Verifies that unknown type prefix `0x02` returns ERC-1271 invalid value.
-    function test_isValidSignature_unknownType02_returnsInvalidValue()
-        public
-    {
+    function test_isValidSignature_unknownType02_returnsInvalidValue() public {
         // Setup: create a payload with unsupported type prefix `0x02`.
         bytes memory signature = abi.encodePacked(uint8(0x02), hex"AABBCC");
 
@@ -83,9 +79,7 @@ contract LibOrganizationAccountSignatureIsValidSignatureRoutingTest is LibOrgani
     }
 
     /// @dev Verifies that unknown type prefix `0xFF` returns ERC-1271 invalid value.
-    function test_isValidSignature_unknownTypeFF_returnsInvalidValue()
-        public
-    {
+    function test_isValidSignature_unknownTypeFF_returnsInvalidValue() public {
         // Setup: create a payload with unsupported type prefix `0xFF`.
         bytes memory signature = abi.encodePacked(uint8(0xFF), hex"11223344");
 

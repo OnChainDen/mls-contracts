@@ -15,10 +15,9 @@ import {GuardianRecoveryState, PendingRecoveryInitTimelock, TxRecoveryState} fro
  */
 contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecoverySuiteBase {
     /// @dev Verifies that random non-zero recovery addresses with valid timelocks configure successfully.
-    function testFuzz_randomNonZeroRecoveryAddress_validTimelock_configures(
-        address recoveryAddress,
-        uint256 timelock
-    ) public {
+    function testFuzz_randomNonZeroRecoveryAddress_validTimelock_configures(address recoveryAddress, uint256 timelock)
+        public
+    {
         // Setup: start from clean recovery state.
         vm.assume(recoveryAddress != address(0));
         uint256 boundedTimelock =
@@ -76,10 +75,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
     }
 
     /// @dev Verifies that validation helper accepts in-range timelocks and rejects out-of-range values.
-    function testFuzz_validateParams_acceptsInRangeRejectsOutOfRange(
-        address recoveryAddress,
-        uint256 timelock
-    ) public {
+    function testFuzz_validateParams_acceptsInRangeRejectsOutOfRange(address recoveryAddress, uint256 timelock) public {
         // Setup: reuse suite baseline where recovery is preconfigured.
         vm.assume(recoveryAddress != address(0));
 
@@ -107,10 +103,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
 
     /// @dev Verifies recovery-guardian updates use the configured guardian-recovery timelock and enforce the
     /// finalize timestamp relation.
-    function testFuzz_finalizeBeforeAfterTimelock_behavesByTimestamp(
-        uint256 timelock,
-        uint256 delta
-    ) public {
+    function testFuzz_finalizeBeforeAfterTimelock_behavesByTimestamp(uint256 timelock, uint256 delta) public {
         // Setup: start from clean recovery state.
         uint256 boundedTimelock =
             bound(timelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS);
@@ -244,9 +237,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
     }
 
     /// @dev Verifies that random non-recovery addresses revert enforceOnlyGuardianRecoveryAddress.
-    function testFuzz_randomNonRecoveryAddresses_revertOnEnforceOnlyGuardianRecoveryAddress(address caller)
-        public
-    {
+    function testFuzz_randomNonRecoveryAddresses_revertOnEnforceOnlyGuardianRecoveryAddress(address caller) public {
         // Setup: reconfigure baseline recovery address and timelock.
         vm.assume(caller != GUARDIAN_RECOVERY_ADDRESS);
         _resetAndConfigureRecovery();
@@ -299,9 +290,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
     }
 
     /// @dev Verifies that random state transitions never change guardian except via successful accept.
-    function testFuzz_statefulSequence_guardianChangesOnlyOnSuccessfulAccept(uint256 seed, uint8 steps)
-        public
-    {
+    function testFuzz_statefulSequence_guardianChangesOnlyOnSuccessfulAccept(uint256 seed, uint8 steps) public {
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
         uint256 count = bound(steps, 1, 20);

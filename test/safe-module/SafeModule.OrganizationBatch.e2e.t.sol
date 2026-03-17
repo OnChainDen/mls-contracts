@@ -123,9 +123,7 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
     }
 
     /// @dev Verifies non-authorized callers cannot execute guardian-only organization functions through the module.
-    function test_unauthorizedCallerCannotExecuteGuardianOnlyOrganizationFunctionViaModule()
-        public
-    {
+    function test_unauthorizedCallerCannotExecuteGuardianOnlyOrganizationFunctionViaModule() public {
         // Setup: build a signed `modifyMembers` call that would add one new member.
         bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA), 102);
 

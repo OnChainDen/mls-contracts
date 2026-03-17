@@ -19,9 +19,7 @@ import {InitializationParams} from "types/CommonTypes.sol";
 contract OrganizationInitializationBaseTest is InitializationSuiteBase {
     /// @dev Verifies `OrganizationInitializationBase.initialize` rejects non-deployer callers on an uninitialized
     /// proxy.
-    function test_uninitializedProxy_nonDeployerRevertsUnauthorizedDeployer()
-        public
-    {
+    function test_uninitializedProxy_nonDeployerRevertsUnauthorizedDeployer() public {
         // Setup: Deploy an uninitialized proxy and prepare valid initialization params.
         vm.prank(AUTHORIZED_DEPLOYER);
         address proxy = address(new OrganizationProxy(address(implementation), address(whitelist)));
@@ -40,9 +38,7 @@ contract OrganizationInitializationBaseTest is InitializationSuiteBase {
 
     /// @dev Verifies `OrganizationInitializationBase.initialize` succeeds for the deployer, preserves deployer
     /// storage, transitions initialized state, and emits one initialization event.
-    function test_validInitialize_setsStateAndEmitsOneInitializedEvent()
-        public
-    {
+    function test_validInitialize_setsStateAndEmitsOneInitializedEvent() public {
         // Setup: Deploy a proxy, prepare valid params, assert pre-init views, and begin log recording.
         vm.prank(AUTHORIZED_DEPLOYER);
         address proxy = address(new OrganizationProxy(address(implementation), address(whitelist)));
@@ -70,9 +66,7 @@ contract OrganizationInitializationBaseTest is InitializationSuiteBase {
 
     /// @dev Verifies initialize guards for direct implementation calls, failed-init retry behavior, and post-success
     /// reinitialization attempts.
-    function test_reinitAndDirectImplementationPathsRevertAsExpected()
-        public
-    {
+    function test_reinitAndDirectImplementationPathsRevertAsExpected() public {
         // Setup: Build one valid and one invalid initialization payload.
         InitializationParams memory params = _defaultInitializationParams();
         InitializationParams memory invalidParams = _defaultInitializationParams();

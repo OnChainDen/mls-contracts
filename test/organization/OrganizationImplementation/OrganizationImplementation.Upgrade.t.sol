@@ -46,9 +46,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     event Upgraded(address indexed implementation);
 
     /// @dev Verifies valid guardian + admin auth + whitelisted implementation + empty data upgrades successfully.
-    function test_upgradesSuccessfullyWithValidGuardianAuthAndWhitelistedImplementation()
-        public
-    {
+    function test_upgradesSuccessfullyWithValidGuardianAuthAndWhitelistedImplementation() public {
         // Setup: configure valid admin auth and whitelist a UUPS-compatible Organization target.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -352,9 +350,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies implementations whitelisted only for `ContractType.Account` cannot upgrade Organization proxy.
-    function test_accountTypeOnlyWhitelistedImplementation_revertsForOrganizationUpgrade()
-        public
-    {
+    function test_accountTypeOnlyWhitelistedImplementation_revertsForOrganizationUpgrade() public {
         // Setup: whitelist the target under Account type only.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(address(implementationV2), true);
@@ -622,9 +618,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies reverting migration calldata reverts the full transaction and keeps implementation unchanged.
-    function test_revertingMigrationCall_revertsAtomicallyAndKeepsImplementation()
-        public
-    {
+    function test_revertingMigrationCall_revertsAtomicallyAndKeepsImplementation() public {
         // Setup: whitelist target and build migration payload that intentionally reverts.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -772,9 +766,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies authorized-upgrade target is non-zero only during upgrade execution and zero before/after.
-    function test_upgradeAuthorizationFlag_scopedToExecutionWindow()
-        public
-    {
+    function test_upgradeAuthorizationFlag_scopedToExecutionWindow() public {
         // Setup: whitelist target and use migration helper that requires in-flight upgrade authorization.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -803,9 +795,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies failed upgrade paths never leave authorized-upgrade target stuck set.
-    function test_failedUpgrade_neverLeavesAuthorizationFlagTrue()
-        public
-    {
+    function test_failedUpgrade_neverLeavesAuthorizationFlagTrue() public {
         // Setup: use reverting migration payload to force rollback path.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -830,9 +820,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies direct calls to inherited `upgradeToAndCall` always revert `UnauthorizedUpgrade`.
-    function test_directUpgradeToAndCall_revertsUnauthorizedUpgrade()
-        public
-    {
+    function test_directUpgradeToAndCall_revertsUnauthorizedUpgrade() public {
         // Setup: ensure target is UUPS-compatible and whitelisted to isolate bypass check.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -858,9 +846,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies `upgradeToAndCallWithAuthorization` binds signatures to both `newImplementation` and migration
     /// `data`.
-    function test_adminAuthMustBindMigrationData()
-        public
-    {
+    function test_adminAuthMustBindMigrationData() public {
         // Setup: build auth for target implementation and then mutate only migration calldata at execution time.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -989,9 +975,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies whitelist validation runs before the authorization target is exposed in upgrade storage.
-    function test_whitelistValidation_runsBeforeAuthorizationFlagIsSet()
-        public
-    {
+    function test_whitelistValidation_runsBeforeAuthorizationFlagIsSet() public {
         // Setup: route validation through a mock that inspects upgrade storage during the whitelist call.
         _setSingleAdminThresholdOne();
         ValidationOrderWhitelistMock validatingWhitelist = new ValidationOrderWhitelistMock(organizationProxy);
@@ -1019,9 +1003,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies `upgradeToAndCallWithAuthorization` rejects zero and no-code targets even when whitelisted.
-    function test_zeroImplementationEvenIfWhitelisted_reverts()
-        public
-    {
+    function test_zeroImplementationEvenIfWhitelisted_reverts() public {
         // Setup: whitelist zero and no-code targets under Organization type and build matching auth payloads.
         _setSingleAdminThresholdOne();
         address noCodeImplementation = address(0xCA11);

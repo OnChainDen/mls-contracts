@@ -204,10 +204,7 @@ contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
     /// retry with the same tuple.
     /// @param salt Fuzzed CREATE2 salt reused across the failing and successful deployment attempts.
     /// @param thresholdDeltaRaw Fuzzed delta used to push the invalid voting threshold above the admin count.
-    function testFuzz_fuzzFailedThenRetry_sameTupleCanSucceed(
-        bytes32 salt,
-        uint8 thresholdDeltaRaw
-    ) public {
+    function testFuzz_fuzzFailedThenRetry_sameTupleCanSucceed(bytes32 salt, uint8 thresholdDeltaRaw) public {
         // Setup: Build an invalid-threshold params set and a valid params set for the same deployment tuple.
         InitializationParams memory invalidParams = _defaultInitializationParams();
         invalidParams.votingThreshold = invalidParams.admins.length + 1 + bound(uint256(thresholdDeltaRaw), 0, 8);
@@ -309,9 +306,7 @@ contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
     /// @dev Verifies only the configured deployer can successfully deploy organizations.
     /// @param caller Fuzzed caller constrained away from the authorized deployer.
     /// @param salt Fuzzed CREATE2 salt used in the failed deployment attempt.
-    function testFuzz_deployOrganization_onlyAuthorizedDeployerCanDeploy(address caller, bytes32 salt)
-        public
-    {
+    function testFuzz_deployOrganization_onlyAuthorizedDeployerCanDeploy(address caller, bytes32 salt) public {
         // Setup: constrain the caller away from the configured authorized deployer.
         vm.assume(caller != AUTHORIZED_DEPLOYER);
         InitializationParams memory params = _defaultInitializationParams();

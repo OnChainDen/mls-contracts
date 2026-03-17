@@ -129,9 +129,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
 
     /// @dev Verifies tx/ERC1271 recovery disable is immediate, clears any pending enable state, and prevents the
     /// stale enable-finalize from succeeding later.
-    function test_emergencyDisableLifecycle_pendingEnableThenDisable_finalizeFails()
-        public
-    {
+    function test_emergencyDisableLifecycle_pendingEnableThenDisable_finalizeFails() public {
         // Setup
         vm.prank(TX_RECOVERY);
         harness.initiateEnableTransactionAndERC1271Recovery();
@@ -285,9 +283,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
 
     /// @dev Verifies recovery execution bypasses guardian and policy checks but still requires the target account to
     /// be deployed by this organization.
-    function test_recoveryExecution_bypassesGuardianPolicyButEnforcesAccountDeployment()
-        public
-    {
+    function test_recoveryExecution_bypassesGuardianPolicyButEnforcesAccountDeployment() public {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction deployedAccount =
@@ -312,9 +308,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
 
     /// @dev Verifies recovery account call-chains to
     /// organization operations fail closed and leave state unchanged.
-    function test_recoveryCallChainsToOrganizationOps_revertAndLeaveStateUnchanged()
-        public
-    {
+    function test_recoveryCallChainsToOrganizationOps_revertAndLeaveStateUnchanged() public {
         // Setup
         _enableTxRecovery();
 
@@ -437,9 +431,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
     }
 
     /// @dev Verifies fuzz non-recovery callers are unauthorized across tx-recovery-protected entrypoints.
-    function testFuzz_nonRecoveryCallers_entrypointsAlwaysRevertUnauthorized(address caller)
-        public
-    {
+    function testFuzz_nonRecoveryCallers_entrypointsAlwaysRevertUnauthorized(address caller) public {
         // Setup
         vm.assume(caller != TX_RECOVERY);
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
@@ -470,10 +462,9 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
     }
 
     /// @dev Verifies fuzzed recovery-execution tuples forward exact `to/value/data` on successful targets.
-    function testFuzz_recoveryExecution_successfulTargets_forwardExactTuple(
-        bytes calldata data,
-        uint128 rawValue
-    ) public {
+    function testFuzz_recoveryExecution_successfulTargets_forwardExactTuple(bytes calldata data, uint128 rawValue)
+        public
+    {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
@@ -585,10 +576,9 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
     }
 
     /// @dev Verifies mixed enable/finalize/disable sequences maintain enabled-state invariants.
-    function testFuzz_mixedEnableFinalizeDisable_sequencesMaintainEnabledInvariants(
-        bytes32 seed,
-        uint8 rawSteps
-    ) public {
+    function testFuzz_mixedEnableFinalizeDisable_sequencesMaintainEnabledInvariants(bytes32 seed, uint8 rawSteps)
+        public
+    {
         // Setup
         uint8 steps = uint8(bound(rawSteps, 1, 64));
 

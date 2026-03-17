@@ -12,10 +12,7 @@ import {ConstraintType} from "types/PolicyTypes.sol";
  */
 contract LibPolicyParameterConstraintsBytesStringConstraintTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that dynamic bytes exact hash matching works.
-    function test_isBytesOrStringParameterAllowedByConstraint_dynamicBytesHashMatchAndMismatch()
-        public
-        view
-    {
+    function test_isBytesOrStringParameterAllowedByConstraint_dynamicBytesHashMatchAndMismatch() public view {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for dynamic bytes exact hash
         // matching works.
         bytes memory expectedBytes = hex"CAFEBABE";
@@ -160,10 +157,7 @@ contract LibPolicyParameterConstraintsBytesStringConstraintTest is LibPolicyPara
     }
 
     /// @dev Verifies that declared lengths extending beyond calldata return false.
-    function test_isBytesOrStringParameterAllowedByConstraint_declaredLengthBeyondCalldata_returnsFalse()
-        public
-        view
-    {
+    function test_isBytesOrStringParameterAllowedByConstraint_declaredLengthBeyondCalldata_returnsFalse() public view {
         // Selector + head(offset=32) + length(100), but no payload bytes for the declared length.
         // Setup: build fixture inputs where declared lengths extending beyond calldata return false should be denied.
         bytes memory malformedData = bytes.concat(BASE_SELECTOR, abi.encode(uint256(32), uint256(100)));
@@ -217,9 +211,7 @@ contract LibPolicyParameterConstraintsBytesStringConstraintTest is LibPolicyPara
     }
 
     /// @dev Verifies that offset/length arithmetic overflow fails closed.
-    function test_isBytesOrStringParameterAllowedByConstraint_overflowingOffset_failClosedDesiredBehavior()
-        public
-    {
+    function test_isBytesOrStringParameterAllowedByConstraint_overflowingOffset_failClosedDesiredBehavior() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for offset/length arithmetic
         // overflow fails closed.
         bytes memory data = _encodeSingleBytesArg(bytes("abc"));

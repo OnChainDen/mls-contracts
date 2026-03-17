@@ -48,9 +48,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that expired policy-signature requests return ERC-1271 invalid value.
-    function test_validatePolicyBasedSignature_expiredRequest_returnsInvalidValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_expiredRequest_returnsInvalidValue() public {
         // Setup: build a fixture with expiration strictly before current block timestamp.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp - 1
@@ -64,9 +62,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that expiration exactly at `block.timestamp` is accepted.
-    function test_validatePolicyBasedSignature_expirationAtCurrentTimestamp_succeeds()
-        public
-    {
+    function test_validatePolicyBasedSignature_expirationAtCurrentTimestamp_succeeds() public {
         // Setup: build a fixture where expiration equals `block.timestamp`.
         PolicyValidationFixture memory fixture =
             _buildPolicyValidationFixture({approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp});
@@ -93,9 +89,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that empty initiator signatures return ERC-1271 invalid value.
-    function test_validatePolicyBasedSignature_emptyInitiatorSignature_returnsInvalidValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_emptyInitiatorSignature_returnsInvalidValue() public {
         // Setup: build a valid fixture and clear initiator signature bytes.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days
@@ -117,9 +111,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that malformed initiator signatures fail closed.
-    function test_validatePolicyBasedSignature_malformedInitiatorSignature_returnsInvalidValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_malformedInitiatorSignature_returnsInvalidValue() public {
         // Setup: build a valid fixture and replace initiator signature with malformed bytes.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days
@@ -153,9 +145,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that invalid guardian signatures return ERC-1271 invalid value.
-    function test_validatePolicyBasedSignature_invalidGuardianSignature_returnsInvalidValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_invalidGuardianSignature_returnsInvalidValue() public {
         // Setup: build a valid fixture and replace guardian signature with wrong signer.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days
@@ -188,9 +178,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies missing or malformed guardian signature bytes return ERC-1271 invalid value.
-    function test_validatePolicyBasedSignature_missingOrMalformedGuardianSignature_returnsInvalidValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_missingOrMalformedGuardianSignature_returnsInvalidValue() public {
         // Setup: build a valid auto-approve fixture, then replace guardian signatures with empty and malformed bytes.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days
@@ -226,9 +214,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies guardian signatures must be over the review hash, not the initiator hash.
-    function test_validatePolicyBasedSignature_guardianSignatureOverInitiatorHash_returnsInvalidValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_guardianSignatureOverInitiatorHash_returnsInvalidValue() public {
         // Setup: build a valid auto-approve fixture, then replace the guardian signature with one over the initiator
         // hash.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
@@ -255,9 +241,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies manual reviewer signatures must be over the review hash, not the initiator hash.
-    function test_validatePolicyBasedSignature_manualReviewerSignatureOverInitiatorHash_returnsInvalidValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_manualReviewerSignatureOverInitiatorHash_returnsInvalidValue() public {
         // Setup: build a valid manual-approval fixture, then replace the reviewer signature with one over the
         // initiator hash.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
@@ -285,9 +269,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
 
     /// @dev Verifies mutating the initiator signature invalidates both guardian and reviewer signatures via hash
     // binding.
-    function test_validatePolicyBasedSignature_mutatedInitiatorSignature_invalidatesHashBoundSignatures()
-        public
-    {
+    function test_validatePolicyBasedSignature_mutatedInitiatorSignature_invalidatesHashBoundSignatures() public {
         uint256 policyId = DEFAULT_POLICY_ID;
         uint256 expirationTimestamp = block.timestamp + 1 days;
 
@@ -627,9 +609,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that valid auto-approve policy signatures return ERC-1271 magic value.
-    function test_validatePolicyBasedSignature_autoApproveValidSignatures_returnsMagicValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_autoApproveValidSignatures_returnsMagicValue() public {
         // Setup: build a valid auto-approve fixture.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days
@@ -644,9 +624,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
 
     /// @dev Verifies auto-approve policies ignore reviewer signature bytes when initiator and guardian signatures are
     /// valid.
-    function test_validatePolicyBasedSignature_autoApproveIgnoresReviewSignatureBytes_returnsMagicValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_autoApproveIgnoresReviewSignatureBytes_returnsMagicValue() public {
         // Setup: build a valid auto-approve fixture, then inject arbitrary reviewer bytes.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days
@@ -705,9 +683,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that valid manual-approval signatures with threshold approvals return ERC-1271 magic value.
-    function test_validatePolicyBasedSignature_manualApprovalWithSufficientReviews_returnsMagicValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_manualApprovalWithSufficientReviews_returnsMagicValue() public {
         // Setup: build a valid manual-approval fixture with one valid reviewer signature.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.RequireManualApproval, expirationTimestamp: block.timestamp + 1 days
@@ -721,9 +697,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that manual-approval payloads with insufficient reviewer signatures return invalid value.
-    function test_validatePolicyBasedSignature_manualApprovalInsufficientReviews_returnsInvalidValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_manualApprovalInsufficientReviews_returnsInvalidValue() public {
         // Setup: build a valid manual fixture and clear review signatures.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.RequireManualApproval, expirationTimestamp: block.timestamp + 1 days
@@ -779,9 +753,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that review hash derivation is bound to the initiator signature bytes.
-    function test_validatePolicyBasedSignature_reviewHashBindsInitiatorSignatureBytes()
-        public
-    {
+    function test_validatePolicyBasedSignature_reviewHashBindsInitiatorSignatureBytes() public {
         // Setup: compute review hashes for two different initiator signature byte arrays.
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorA = _signInitiatorSignature({
@@ -822,9 +794,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that representative failure paths return invalid without reverting.
-    function test_validatePolicyBasedSignature_failurePaths_failClosedWithoutRevert()
-        public
-    {
+    function test_validatePolicyBasedSignature_failurePaths_failClosedWithoutRevert() public {
         // Setup: build three failing fixtures (expired, empty initiator, unauthorized initiator) for graceful handling.
         PolicyValidationFixture memory expiredFixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp - 1
@@ -911,9 +881,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that authorized ERC-1271 initiator contracts are accepted.
-    function test_validatePolicyBasedSignature_authorizedERC1271Initiator_returnsMagicValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_authorizedERC1271Initiator_returnsMagicValue() public {
         // Setup: configure policy with ERC-1271 initiator member and valid guardian approval.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -954,9 +922,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that manual approvals accept authorized ERC-1271 reviewer signatures when threshold is met.
-    function test_validatePolicyBasedSignature_manualApprovalWithERC1271Reviewers_returnsMagicValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_manualApprovalWithERC1271Reviewers_returnsMagicValue() public {
         // Setup: configure manual group-approver policy with one EOA and one ERC-1271 reviewer.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -1031,9 +997,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that manual member-approver policies accept the designated reviewer signature.
-    function test_validatePolicyBasedSignature_manualMemberApproverValidReviewer_returnsMagicValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_manualMemberApproverValidReviewer_returnsMagicValue() public {
         // Setup: build manual fixture with member approver set to `reviewer1`.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.RequireManualApproval, expirationTimestamp: block.timestamp + 1 days
@@ -1059,9 +1023,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that malformed packed reviewer signature bytes fail closed with invalid value.
-    function test_validatePolicyBasedSignature_malformedReviewSignatureBytes_returnsInvalidValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_malformedReviewSignatureBytes_returnsInvalidValue() public {
         // Setup: build manual fixture and replace packed reviewer signatures with malformed bytes.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.RequireManualApproval, expirationTimestamp: block.timestamp + 1 days
@@ -1094,9 +1056,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that duplicate or out-of-order reviewer signatures fail closed with invalid value.
-    function test_validatePolicyBasedSignature_duplicateOrOutOfOrderReviewers_returnsInvalidValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_duplicateOrOutOfOrderReviewers_returnsInvalidValue() public {
         // Setup: configure manual group approvals and build duplicate reviewer signature bundle.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -1250,9 +1210,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that unauthorized reviewer signers fail closed with invalid value.
-    function test_validatePolicyBasedSignature_unauthorizedReviewerSigner_returnsInvalidValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_unauthorizedReviewerSigner_returnsInvalidValue() public {
         // Setup: configure manual member-approver policy and sign review by a different reviewer.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -1379,9 +1337,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that valid policy signatures are stateless and repeatable before expiration.
-    function test_validatePolicyBasedSignature_repeatedPreExpirationValidation_returnsStableMagic()
-        public
-    {
+    function test_validatePolicyBasedSignature_repeatedPreExpirationValidation_returnsStableMagic() public {
         // Setup: build a valid auto-approve fixture.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days
@@ -1397,9 +1353,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies `_validatePolicyBasedSignature` accepts enabled module guardian signatures for auto-approve.
-    function test_validatePolicyBasedSignature_enabledModuleGuardianAutoApprove_returnsMagicValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_enabledModuleGuardianAutoApprove_returnsMagicValue() public {
         // Setup: build an auto-approve fixture and replace the guardian with an enabled SafeExecutorModule.
         (PolicyValidationFixture memory fixture,) = _buildModuleGuardianFixture({
             approvalType: PolicyType.AutoApprove,
@@ -1464,9 +1418,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies invalid review signatures are rejected even when guardian approval comes from a module.
-    function test_validatePolicyBasedSignature_manualApprovalModuleGuardianInvalidReviews_returnsInvalidValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_manualApprovalModuleGuardianInvalidReviews_returnsInvalidValue() public {
         // Setup: build a manual-approval fixture with an enabled module guardian and swap in a wrong review hash.
         (PolicyValidationFixture memory fixture,) = _buildModuleGuardianFixture({
             approvalType: PolicyType.RequireManualApproval,
@@ -1576,9 +1528,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies unauthorized initiators still fail on the module guardian path.
-    function test_validatePolicyBasedSignature_unauthorizedInitiatorWithModuleGuardian_returnsInvalidValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_unauthorizedInitiatorWithModuleGuardian_returnsInvalidValue() public {
         // Setup: build an enabled-module fixture, then replace the initiator with an unauthorized signer and re-sign.
         (PolicyValidationFixture memory fixture, SafeExecutorModule module) = _buildModuleGuardianFixture({
             approvalType: PolicyType.AutoApprove,
@@ -1623,9 +1573,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies the exact-expiration boundary is accepted on the module guardian path.
-    function test_validatePolicyBasedSignature_expirationAtTimestampWithModuleGuardian_returnsMagicValue()
-        public
-    {
+    function test_validatePolicyBasedSignature_expirationAtTimestampWithModuleGuardian_returnsMagicValue() public {
         // Setup: build an enabled-module auto-approve fixture with `expirationTimestamp == block.timestamp`.
         (PolicyValidationFixture memory fixture,) = _buildModuleGuardianFixture({
             approvalType: PolicyType.AutoApprove,

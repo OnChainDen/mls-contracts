@@ -80,9 +80,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies replaying the same nonce after success reverts with `NonceAlreadyUsed`.
-    function test_deployAccount_replaySameNonce_revertsAfterSuccessfulExecution()
-        public
-    {
+    function test_deployAccount_replaySameNonce_revertsAfterSuccessfulExecution() public {
         bytes32 create2Salt = bytes32(uint256(4103));
 
         // Setup: configure one-admin auth and a valid implementation for beacon deployment.
@@ -112,9 +110,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
 
     /// @dev Verifies `OrganizationAccountFactoryBase.deployAccount` isolates admin-auth salts and allows one
     /// successful deployment per fresh organization for identical `create2Salt` values.
-    function test_deployAccount_sameCreate2Salt_usesIndependentNoncesAndSucceedsAcrossFreshOrganizations()
-        public
-    {
+    function test_deployAccount_sameCreate2Salt_usesIndependentNoncesAndSucceedsAcrossFreshOrganizations() public {
         bytes32 create2Salt = bytes32(uint256(41_031));
         uint256 firstAdminSalt = 51_031;
         uint256 secondAdminSalt = 51_032;
@@ -179,9 +175,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
 
     /// @dev Verifies `OrganizationAccountFactoryBase.deployAccount` reverts on the second deployment when using the
     /// same `create2Salt` with a different admin-auth salt on the same organization due to CREATE2 collision.
-    function test_deployAccount_sameCreate2Salt_differentAdminSalt_sameOrg_revertsCreate2Collision()
-        public
-    {
+    function test_deployAccount_sameCreate2Salt_differentAdminSalt_sameOrg_revertsCreate2Collision() public {
         bytes32 create2Salt = bytes32(uint256(41_032));
 
         // Setup: configure a valid implementation and deploy once to occupy the CREATE2 slot.
@@ -539,9 +533,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies previously deployed accounts execute new implementation code immediately after upgrade.
-    function test_setAccountImplementation_previouslyDeployedAccountsImmediatelyUseNewImplementation()
-        public
-    {
+    function test_setAccountImplementation_previouslyDeployedAccountsImmediatelyUseNewImplementation() public {
         // Setup: configure versioned implementations, set V1, and deploy two accounts.
         _setSingleAdminThresholdOne();
         address implV1 = address(new OAFBAccountImplementationVersion1());
@@ -600,9 +592,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies accounts deployed after implementation upgrade use the latest implementation.
-    function test_setAccountImplementation_newlyDeployedAccountsAfterUpgradeUseNewImplementation()
-        public
-    {
+    function test_setAccountImplementation_newlyDeployedAccountsAfterUpgradeUseNewImplementation() public {
         // Setup: set V1, then upgrade to V2 before deploying.
         _setSingleAdminThresholdOne();
         address implV1 = address(new OAFBAccountImplementationVersion1());

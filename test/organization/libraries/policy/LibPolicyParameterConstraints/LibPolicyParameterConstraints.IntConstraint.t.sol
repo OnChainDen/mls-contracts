@@ -12,10 +12,7 @@ import {ConstraintType} from "types/PolicyTypes.sol";
  */
 contract LibPolicyParameterConstraintsIntConstraintTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that exact matches for positive and negative values pass.
-    function test_isIntParameterAllowedByConstraint_exactPositiveAndNegativeMatch_returnsTrue()
-        public
-        view
-    {
+    function test_isIntParameterAllowedByConstraint_exactPositiveAndNegativeMatch_returnsTrue() public view {
         // Setup: configure a valid fixture for exact matches for positive and negative values pass.
         // Call: execute `isIntParameterAllowedByConstraintViaPolicyLibrary` with the happy-path payload.
         bool positiveAllowed = harness.isIntParameterAllowedByConstraintViaPolicyLibrary(
@@ -163,9 +160,7 @@ contract LibPolicyParameterConstraintsIntConstraintTest is LibPolicyParameterCon
     }
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
-    function test_isIntParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
-        public
-    {
+    function test_isIntParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
         // closed with false. Call: run `isIntParameterAllowedByConstraintViaPolicyLibrary` across the prepared
         // variants.

@@ -53,10 +53,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that a different operation type produces a different hash.
-    function test_getAdminOperationHash_differentOperationType_producesDifferentHash()
-        public
-        view
-    {
+    function test_getAdminOperationHash_differentOperationType_producesDifferentHash() public view {
         // Setup: define one payload used across both operation types.
         bytes memory operationData = abi.encode("op69");
 
@@ -82,10 +79,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that different operation data produces a different hash.
-    function test_getAdminOperationHash_differentOperationData_producesDifferentHash()
-        public
-        view
-    {
+    function test_getAdminOperationHash_differentOperationData_producesDifferentHash() public view {
         // Setup: define two distinct operation payloads.
 
         // Call: compute hashes for both payload variants.
@@ -136,10 +130,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that a different expiration timestamp produces a different hash.
-    function test_getAdminOperationHash_differentExpiration_producesDifferentHash()
-        public
-        view
-    {
+    function test_getAdminOperationHash_differentExpiration_producesDifferentHash() public view {
         // Setup: define one payload and two expiration variants.
         bytes memory operationData = abi.encode("op72");
 
@@ -165,10 +156,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that toggling `isApproval` produces a different hash.
-    function test_getAdminOperationHash_differentIsApproval_producesDifferentHash()
-        public
-        view
-    {
+    function test_getAdminOperationHash_differentIsApproval_producesDifferentHash() public view {
         // Setup: define one payload with approval and rejection variants.
         bytes memory operationData = abi.encode("op73");
 
@@ -194,9 +182,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that a different chain ID produces a different hash.
-    function test_getAdminOperationHash_differentChainId_producesDifferentHash()
-        public
-    {
+    function test_getAdminOperationHash_differentChainId_producesDifferentHash() public {
         // Setup: define one payload and keep all signed fields constant.
         bytes memory operationData = abi.encode("op74");
 
@@ -225,9 +211,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that a different contract address produces a different hash.
-    function test_getAdminOperationHash_differentContractAddress_producesDifferentHash()
-        public
-    {
+    function test_getAdminOperationHash_differentContractAddress_producesDifferentHash() public {
         // Setup: define one payload and deploy a second harness address.
         bytes memory operationData = abi.encode("op75");
         LibOrganizationAdminHarness secondHarness = new LibOrganizationAdminHarness();

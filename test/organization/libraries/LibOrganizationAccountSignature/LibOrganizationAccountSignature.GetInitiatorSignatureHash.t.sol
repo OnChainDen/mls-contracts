@@ -22,9 +22,7 @@ contract LibOrganizationAccountSignatureGetInitiatorSignatureHashTest is LibOrga
     bytes32 internal constant GOLDEN_MESSAGE_HASH = keccak256("golden-initiator-hash");
 
     /// @dev Verifies that different organization addresses produce different initiator hashes.
-    function test_getInitiatorSignatureHash_differentOrganizations_returnsDifferentHashes()
-        public
-    {
+    function test_getInitiatorSignatureHash_differentOrganizations_returnsDifferentHashes() public {
         // Setup: deploy an additional harness with a different verifying-contract address.
         LibOrganizationAccountSignatureHarness otherHarness = new LibOrganizationAccountSignatureHarness();
 
@@ -55,9 +53,7 @@ contract LibOrganizationAccountSignatureGetInitiatorSignatureHashTest is LibOrga
     }
 
     /// @dev Verifies that changing message hash changes the initiator signature hash.
-    function test_getInitiatorSignatureHash_differentMessageHash_returnsDifferentHash()
-        public
-    {
+    function test_getInitiatorSignatureHash_differentMessageHash_returnsDifferentHash() public {
         // Setup: select baseline account/policy/expiration inputs.
         uint256 expiration = block.timestamp + 1 days;
 
@@ -103,9 +99,7 @@ contract LibOrganizationAccountSignatureGetInitiatorSignatureHashTest is LibOrga
     }
 
     /// @dev Verifies that changing chain id changes the initiator signature hash.
-    function test_getInitiatorSignatureHash_differentChainId_returnsDifferentHash()
-        public
-    {
+    function test_getInitiatorSignatureHash_differentChainId_returnsDifferentHash() public {
         // Setup: snapshot baseline hash inputs.
         uint256 expiration = block.timestamp + 1 days;
         bytes32 baseline =
@@ -165,10 +159,7 @@ contract LibOrganizationAccountSignatureGetInitiatorSignatureHashTest is LibOrga
     }
 
     /// @dev Verifies that initiator hash uses EIP-712 typed-data hashing with domain separator.
-    function test_getInitiatorSignatureHash_usesTypedDataHashWithDomainSeparator()
-        public
-        view
-    {
+    function test_getInitiatorSignatureHash_usesTypedDataHashWithDomainSeparator() public view {
         // Setup: select deterministic baseline inputs.
         uint256 expiration = block.timestamp + 1 days;
         bytes32 structHash = keccak256(

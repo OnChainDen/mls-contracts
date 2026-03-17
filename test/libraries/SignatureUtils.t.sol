@@ -859,10 +859,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Extracting an inner signature of any random length in [1, 2000] should always produce
     ///      extracted bytes that match the source exactly.
-    function testFuzz_extractContractInnerSignature_randomLength_matchesSource(uint16 sigLength)
-        public
-        view
-    {
+    function testFuzz_extractContractInnerSignature_randomLength_matchesSource(uint16 sigLength) public view {
         sigLength = uint16(bound(sigLength, 1, 2000));
 
         _assertExtractContractInnerSignatureRandomLengthMatchesSource(sigLength);
@@ -1187,10 +1184,10 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Recovering an EOA signer with any random valid private key at any random offset should
     ///      always recover the correct signer.
-    function testFuzz_tryRecoverEoaSigner_randomKeyAndOffset_recoversCorrectly(
-        uint256 privateKey,
-        uint8 prefixLength
-    ) public view {
+    function testFuzz_tryRecoverEoaSigner_randomKeyAndOffset_recoversCorrectly(uint256 privateKey, uint8 prefixLength)
+        public
+        view
+    {
         // Bound private key to valid secp256k1 range
         privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
         // Bound prefix length to something reasonable
@@ -1469,9 +1466,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Only the exact ERC-1271 magic value (0x1626ba7e) should produce a true result; any other
     ///      random bytes4 return value should produce false.
-    function testFuzz_isValidERC1271SignatureNow_randomMagicValue_onlyCorrectMagicIsValid(bytes4 randomMagic)
-        public
-    {
+    function testFuzz_isValidERC1271SignatureNow_randomMagicValue_onlyCorrectMagicIsValid(bytes4 randomMagic) public {
         // Deploy a mock that returns the random magic value
         MockERC1271CustomReturn mock = new MockERC1271CustomReturn(randomMagic);
 
@@ -1524,10 +1519,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Random ERC-1271 inner signature lengths should always produce the correct nextOffset
     ///  calculation (23 + innerLength).
-    function testFuzz_tryRecoverSignerAtOffset_randomERC1271InnerLength_offsetCorrect(uint16 innerLength)
-        public
-        view
-    {
+    function testFuzz_tryRecoverSignerAtOffset_randomERC1271InnerLength_offsetCorrect(uint16 innerLength) public view {
         innerLength = uint16(bound(innerLength, 0, 1000));
 
         _assertTryRecoverSignerAtOffsetRandomErc1271InnerLengthOffsetCorrect(innerLength);
@@ -1545,10 +1537,10 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Random multi-signature arrays (N EOA + M ERC-1271) should always have correct offset
     ///  chaining, with the final offset equaling the total combined length.
-    function testFuzz_tryRecoverSignerAtOffset_mixedMultiSig_offsetChainingWorks(
-        uint8 numEoa,
-        uint8 numContract
-    ) public view {
+    function testFuzz_tryRecoverSignerAtOffset_mixedMultiSig_offsetChainingWorks(uint8 numEoa, uint8 numContract)
+        public
+        view
+    {
         numEoa = uint8(bound(numEoa, 0, 5));
         numContract = uint8(bound(numContract, 0, 5));
 
@@ -1596,10 +1588,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Verifies a signature created for hash `A` never validates as the same signer for a distinct hash `B`
     /// through either top-level or offset-based recovery.
-    function testFuzz_tryRecoverSigner_differentHash_differentSigner(uint256 privateKey, bytes32 hashB)
-        public
-        view
-    {
+    function testFuzz_tryRecoverSigner_differentHash_differentSigner(uint256 privateKey, bytes32 hashB) public view {
         // Setup: sign the shared test hash and constrain the alternate hash to differ.
         privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
         vm.assume(hashB != TEST_HASH);
@@ -1656,10 +1645,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     /// @dev Verifies valid ERC-1271 signatures recover the configured contract signer through both top-level
     /// recovery wrappers.
     /// @param innerLength Fuzzed ERC-1271 inner-signature length.
-    function testFuzz_tryRecoverSigner_validERC1271Signature_recoversExpectedSigner(uint16 innerLength)
-        public
-        view
-    {
+    function testFuzz_tryRecoverSigner_validERC1271Signature_recoversExpectedSigner(uint16 innerLength) public view {
         // Setup: build a valid contract signature with a fuzzed inner-signature length.
         innerLength = uint16(bound(innerLength, 0, 512));
 
@@ -1684,10 +1670,10 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     /// validation.
     /// @param caseSelector Fuzzed selector choosing one failing ERC-1271 signer variant.
     /// @param innerLength Fuzzed inner-signature length.
-    function testFuzz_tryRecoverContractSigner_failureVariantsAlwaysReturnFalse(
-        uint8 caseSelector,
-        uint16 innerLength
-    ) public view {
+    function testFuzz_tryRecoverContractSigner_failureVariantsAlwaysReturnFalse(uint8 caseSelector, uint16 innerLength)
+        public
+        view
+    {
         // Setup: pick one failing ERC-1271 implementation and build a contract signature for it.
         innerLength = uint16(bound(innerLength, 0, 255));
 
@@ -1818,10 +1804,10 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     /// a random non-zero offset.
     /// @param privateKey Fuzzed private key used to construct the high-`s` signature.
     /// @param prefixLength Fuzzed noisy prefix length before the embedded signature bytes.
-    function testFuzz_tryRecoverEoaSigner_highSMalleableSignaturesAlwaysRejected(
-        uint256 privateKey,
-        uint8 prefixLength
-    ) public view {
+    function testFuzz_tryRecoverEoaSigner_highSMalleableSignaturesAlwaysRejected(uint256 privateKey, uint8 prefixLength)
+        public
+        view
+    {
         // Setup: embed one high-`s` signature behind a fuzzed offset.
         privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
         prefixLength = uint8(bound(prefixLength, 0, 128));

@@ -14,9 +14,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeRecoveryGuardianUpdateTest is
     OrganizationGuardianRecoveryBaseSuiteBase
 {
     /// @dev Verifies recovery-only guardian entrypoints reject unauthorized callers before readiness flags can change.
-    function test_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress()
-        public
-    {
+    function test_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress() public {
         // Setup: seed pending recovery-guardian update.
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(
             NEW_GUARDIAN_A, block.timestamp + GUARDIAN_RECOVERY_TIMELOCK, false

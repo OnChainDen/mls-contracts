@@ -13,9 +13,7 @@ import {
  */
 contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrganizationAccountSignatureTestBase {
     /// @dev Verifies unconfigured recovery returns invalid value instead of magic.
-    function test_validateRecoverySignature_recoveryAddressNotConfigured_returnsInvalidValue()
-        public
-    {
+    function test_validateRecoverySignature_recoveryAddressNotConfigured_returnsInvalidValue() public {
         // Setup: configure recovery as enabled but with zero recovery address.
         _setTxRecoveryState(address(0), true);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -28,9 +26,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies enabled recovery with the configured signer returns magic value.
-    function test_validateRecoverySignature_recoveryEnabledAndValidSignature_returnsMagicValue()
-        public
-    {
+    function test_validateRecoverySignature_recoveryEnabledAndValidSignature_returnsMagicValue() public {
         // Setup: configure enabled recovery state for the deterministic guardian signer.
         _setTxRecoveryState(guardianSigner, true);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -43,9 +39,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies configured but disabled recovery returns invalid value.
-    function test_validateRecoverySignature_recoveryDisabled_returnsInvalidValue()
-        public
-    {
+    function test_validateRecoverySignature_recoveryDisabled_returnsInvalidValue() public {
         // Setup: configure recovery address with `isEnabled=false`.
         _setTxRecoveryState(guardianSigner, false);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -74,9 +68,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that a signature from a different configured recovery address is rejected.
-    function test_validateRecoverySignature_wrongConfiguredRecoveryAddressSigner_returnsInvalidValue()
-        public
-    {
+    function test_validateRecoverySignature_wrongConfiguredRecoveryAddressSigner_returnsInvalidValue() public {
         // Setup: configure enabled recovery for `initiator2` and sign as guardian.
         _setTxRecoveryState(initiator2, true);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -117,9 +109,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that malformed recovery signature bytes fail closed with ERC-1271 invalid value.
-    function test_validateRecoverySignature_malformedSignatureBytes_returnsInvalidValue()
-        public
-    {
+    function test_validateRecoverySignature_malformedSignatureBytes_returnsInvalidValue() public {
         // Setup: configure enabled recovery and build malformed packed signature bytes.
         _setTxRecoveryState(guardianSigner, true);
         bytes memory malformed = hex"1b";
@@ -132,9 +122,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that malformed ERC-1271 signatures with truncated headers fail closed.
-    function test_validateRecoverySignature_malformedContractSignatureTruncatedHeader_returnsInvalidValue()
-        public
-    {
+    function test_validateRecoverySignature_malformedContractSignatureTruncatedHeader_returnsInvalidValue() public {
         // Setup: configure enabled recovery and build a truncated ERC-1271 payload (<23 bytes).
         _setTxRecoveryState(guardianSigner, true);
         bytes memory truncatedHeader = abi.encodePacked(uint8(0), bytes10(0));
@@ -147,9 +135,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that malformed ERC-1271 signatures with oversized declared inner length fail closed.
-    function test_validateRecoverySignature_malformedContractSignatureOversizedLength_returnsInvalidValue()
-        public
-    {
+    function test_validateRecoverySignature_malformedContractSignatureOversizedLength_returnsInvalidValue() public {
         // Setup: configure enabled recovery with a valid contract signer and craft invalid declared inner length.
         MockERC1271ValidSigner contractRecovery = new MockERC1271ValidSigner();
         _setTxRecoveryState(address(contractRecovery), true);

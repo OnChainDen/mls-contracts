@@ -18,10 +18,10 @@ import {ContractType} from "types/CommonTypes.sol";
  */
 contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactorySuiteBase {
     /// @dev Verifies random distinct salts compute to unique addresses.
-    function testFuzz_computeAccountAddress_randomDistinctSalts_produceUniqueAddresses(
-        bytes32 saltA,
-        bytes32 saltB
-    ) public view {
+    function testFuzz_computeAccountAddress_randomDistinctSalts_produceUniqueAddresses(bytes32 saltA, bytes32 saltB)
+        public
+        view
+    {
         // Setup: constrain fuzz inputs to distinct salts.
         vm.assume(saltA != saltB);
 
@@ -64,9 +64,7 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
     }
 
     /// @dev Verifies CREATE2 address computation is deterministic and matches the deployed address for valid salts.
-    function testFuzz_computeAndDeploy_randomSalt_deployedMatchesComputed(bytes32 salt)
-        public
-    {
+    function testFuzz_computeAndDeploy_randomSalt_deployedMatchesComputed(bytes32 salt) public {
         // Setup: seed valid implementation with runtime code.
         harness.setAccountImplementationStorage(accountImplementationV1);
 
@@ -82,9 +80,7 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
     }
 
     /// @dev Verifies known-deployed accounts are tracked and random non-deployed addresses are not.
-    function testFuzz_isAccountDeployedByOrganization_randomAddressNotDeployed_returnsFalse(address candidate)
-        public
-    {
+    function testFuzz_isAccountDeployedByOrganization_randomAddressNotDeployed_returnsFalse(address candidate) public {
         // Setup: seed implementation and deploy two accounts with fixed salts.
         harness.setAccountImplementationStorage(accountImplementationV1);
         address deployedA = harness.deployAccountViaLibrary(bytes32(uint256(1)));

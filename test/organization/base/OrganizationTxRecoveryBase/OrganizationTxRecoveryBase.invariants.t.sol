@@ -189,10 +189,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
     }
 
     /// @dev Verifies `OrganizationTxRecoveryBase` zero deferred-init timestamp implies zero deferred-init tuple.
-    function invariant_zeroPendingInitTimestampImpliesZeroDeferredInitTuple()
-        public
-        view
-    {
+    function invariant_zeroPendingInitTimestampImpliesZeroDeferredInitTuple() public view {
         // Setup
 
         // Call: read current tx-recovery state snapshot.

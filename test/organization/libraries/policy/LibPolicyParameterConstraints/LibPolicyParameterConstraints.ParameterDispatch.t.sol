@@ -183,9 +183,7 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
     }
 
     /// @dev Verifies malformed typed `comparisonData` decodes fail closed with `false` inside dispatcher routing.
-    function test_isParameterAllowedByConstraint_malformedTypedComparisonData_returnsFalse_desired()
-        public
-    {
+    function test_isParameterAllowedByConstraint_malformedTypedComparisonData_returnsFalse_desired() public {
         // Setup: route through the dispatcher into the bool exact-decoder using intentionally malformed comparison
         // bytes that cannot decode as a canonical bool.
         ParameterConstraint memory constraint = ParameterConstraint({
@@ -252,10 +250,7 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
     }
 
     /// @dev Verifies bytes/string parameter dispatch follows the dynamic offset and hashes the pointed-to payload.
-    function test_isParameterAllowedByConstraint_bytesAndString_dispatchPath_usesOffsetAndHash()
-        public
-        view
-    {
+    function test_isParameterAllowedByConstraint_bytesAndString_dispatchPath_usesOffsetAndHash() public view {
         // Setup: configure a valid fixture for bytes/string dispatch uses dynamic offset and content hash correctly.
         bytes memory expectedBytes = hex"AABBCCDD";
         bytes memory bytesData = _encodeSingleBytesArg(expectedBytes);

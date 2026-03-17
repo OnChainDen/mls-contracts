@@ -189,9 +189,7 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
 
     /// @dev Verifies `OrganizationGuardianBase.finalizeGuardianUpdate` rejects initiate-stage signatures reused
     /// during finalize-stage authorization.
-    function test_differentOperationTypeSignatures_cannotAuthorizeFinalization()
-        public
-    {
+    function test_differentOperationTypeSignatures_cannotAuthorizeFinalization() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2906);

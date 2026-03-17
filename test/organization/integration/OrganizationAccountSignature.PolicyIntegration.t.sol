@@ -59,9 +59,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that valid policy guardian initiator and approvals returns magic value.
-    function test_validPolicyGuardianInitiatorAndApprovals_returnsMagicValue()
-        public
-    {
+    function test_validPolicyGuardianInitiatorAndApprovals_returnsMagicValue() public {
         // Setup: configure a valid fixture for valid policy guardian initiator and approvals returns magic value.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -574,9 +572,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
 
     /// @dev Verifies `isValidSignature` returns magic for a proofed source account and invalid for an unproofed
     ///  account under the same `anySourceAccount=false` policy.
-    function test_isValidSignature_specificSourceAccountOnly_allowsProofedAccountAndRejectsOtherAccount()
-        public
-    {
+    function test_isValidSignature_specificSourceAccountOnly_allowsProofedAccountAndRejectsOtherAccount() public {
         // Setup: bind the policy to one account in the source-account tree, then build signatures for both the
         // allowed account and a different account using the same policy proof.
         policyStateHarness.setGuardian(guardianSigner);
@@ -1283,9 +1279,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that `isERC1271SignatureAllowedByPolicy` fails closed when any required sub-check fails.
-    function test_isERC1271SignatureAllowedByPolicy_failsClosedOnAnyFailedSubCheck()
-        public
-    {
+    function test_isERC1271SignatureAllowedByPolicy_failsClosedOnAnyFailedSubCheck() public {
         // Setup: prepare a baseline-valid proof set plus targeted variants that each break one policy sub-check.
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
         ValidationProofs memory validProofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -1790,9 +1784,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that cross organization replay initiator signature returns invalid value.
-    function test_crossOrganizationReplayInitiatorSignature_returnsInvalidValue()
-        public
-    {
+    function test_crossOrganizationReplayInitiatorSignature_returnsInvalidValue() public {
         // Setup: configure a valid fixture for cross organization replay initiator signature returns invalid value.
         LibOrganizationAccountSignatureHarness orgB = new LibOrganizationAccountSignatureHarness();
         _seedMembers(address(orgB));
@@ -1841,9 +1833,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that cross organization replay guardian and reviewer signatures returns invalid value.
-    function test_crossOrganizationReplayGuardianAndReviewerSignatures_returnsInvalidValue()
-        public
-    {
+    function test_crossOrganizationReplayGuardianAndReviewerSignatures_returnsInvalidValue() public {
         // Setup: configure a valid fixture for cross organization replay guardian and reviewer signatures returns
         // invalid value.
         LibOrganizationAccountSignatureHarness orgB = new LibOrganizationAccountSignatureHarness();

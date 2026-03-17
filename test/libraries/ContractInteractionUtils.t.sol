@@ -102,10 +102,7 @@ contract ContractInteractionUtilsTest is Test {
     }
 
     /// @dev Test case: Random calldata (>= 4 bytes) should always extract the correct first 4 bytes as the selector.
-    function testFuzz_extractFunctionSelector_randomCalldata_extractsFirst4Bytes(bytes calldata data)
-        public
-        view
-    {
+    function testFuzz_extractFunctionSelector_randomCalldata_extractsFirst4Bytes(bytes calldata data) public view {
         // Setup: constrain fuzz calldata to the minimum valid selector length.
         vm.assume(data.length >= 4);
 

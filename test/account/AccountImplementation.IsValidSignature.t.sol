@@ -11,9 +11,7 @@ import {AccountImplementationSuiteBase} from "test/account/AccountImplementation
  */
 contract AccountImplementationIsValidSignatureTest is AccountImplementationSuiteBase {
     /// @dev Verifies exact `(account, hash, signature)` delegation to organization signature validation.
-    function test_isValidSignature_delegatesExactArguments_returnsOrganizationResult()
-        public
-    {
+    function test_isValidSignature_delegatesExactArguments_returnsOrganizationResult() public {
         // Setup: configure expected delegated tuple and organization approval result.
         bytes32 hash = keccak256("account-signature-delegation-exact");
         bytes memory signature = hex"010203040506";

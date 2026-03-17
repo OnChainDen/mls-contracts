@@ -121,9 +121,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
     /// @dev Verifies only the configured authorized executor can make `executeOnBehalf` succeed.
     /// @param caller The fuzzed caller attempting to invoke the module.
     /// @param newValue The value written on the success branch.
-    function testFuzz_executeOnBehalf_onlyAuthorizedExecutorCanCall(address caller, uint256 newValue)
-        public
-    {
+    function testFuzz_executeOnBehalf_onlyAuthorizedExecutorCanCall(address caller, uint256 newValue) public {
         bytes memory data = abi.encodeWithSelector(FuzzTarget.setValue.selector, newValue);
 
         // Setup: build a deterministic successful downstream call against the fuzz target.
@@ -169,9 +167,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
     /// @dev Verifies `executeOnBehalf` chooses the Safe operation solely from the target kind.
     /// @param useBatchedTarget Whether to route through `BATCHED_TRANSACTION` instead of a direct call target.
     /// @param newValue Fuzzed value written through the selected execution path.
-    function testFuzz_executeOnBehalf_operationMatchesTargetKind(bool useBatchedTarget, uint256 newValue)
-        public
-    {
+    function testFuzz_executeOnBehalf_operationMatchesTargetKind(bool useBatchedTarget, uint256 newValue) public {
         // Setup: build a successful direct-call or batch-call payload against known contract targets.
         address target = useBatchedTarget ? address(batchedTx) : address(fuzzTarget);
         bytes memory data;
@@ -206,9 +202,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
 
     /// @dev Verifies `executeOnBehalf` forwards exact calldata while always instructing the Safe to send zero value.
     /// @param randomData The fuzzed calldata forwarded into the Safe.
-    function testFuzz_executeOnBehalf_forwardsZeroValueAndCalldataByteForByte(bytes calldata randomData)
-        public
-    {
+    function testFuzz_executeOnBehalf_forwardsZeroValueAndCalldataByteForByte(bytes calldata randomData) public {
         vm.assume(randomData.length <= 1024);
 
         // Call: execute with fuzzed calldata.
@@ -229,9 +223,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
     /// @dev Verifies every failed Safe execution path reverts `ExecutionFailed` instead of returning `false`.
     /// @param useBatchedFailure Whether to fail through the batched delegatecall path instead of a direct target
     /// revert.
-    function testFuzz_executeOnBehalf_failedExecutionAlwaysRevertsExecutionFailed(bool useBatchedFailure)
-        public
-    {
+    function testFuzz_executeOnBehalf_failedExecutionAlwaysRevertsExecutionFailed(bool useBatchedFailure) public {
         address target;
         bytes memory data;
 

@@ -121,9 +121,7 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.cancelInitializeGuardianRecovery` cancel approval path binds
     /// pending tuple and delegates to library cancellation.
-    function test_cancelApprovalPathBindsPendingTupleAndDelegates()
-        public
-    {
+    function test_cancelApprovalPathBindsPendingTupleAndDelegates() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -170,9 +168,7 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.cancelInitializeGuardianRecovery` cancel requires dedicated
     /// op-type and signatures are bound to current pending tuple.
-    function test_cancelAuthBoundToCurrentPendingTupleAndOpType()
-        public
-    {
+    function test_cancelAuthBoundToCurrentPendingTupleAndOpType() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(

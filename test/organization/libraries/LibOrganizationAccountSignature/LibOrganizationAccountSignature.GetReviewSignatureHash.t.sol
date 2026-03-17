@@ -22,9 +22,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     bytes32 internal constant GOLDEN_MESSAGE_HASH = keccak256("golden-review-hash");
 
     /// @dev Verifies that different organization addresses produce different review hashes.
-    function test_getReviewSignatureHash_differentOrganizations_returnsDifferentHashes()
-        public
-    {
+    function test_getReviewSignatureHash_differentOrganizations_returnsDifferentHashes() public {
         // Setup: deploy a second harness with a different organization address.
         LibOrganizationAccountSignatureHarness otherHarness = new LibOrganizationAccountSignatureHarness();
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
@@ -185,10 +183,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that review hash derivation includes `keccak256(initiatorSignature)`.
-    function test_getReviewSignatureHash_includesInitiatorSignatureHashField()
-        public
-        view
-    {
+    function test_getReviewSignatureHash_includesInitiatorSignatureHashField() public view {
         // Setup: choose deterministic review-hash inputs.
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
         uint256 expiration = block.timestamp + 1 days;
@@ -238,10 +233,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that different initiator signatures produce different review hashes.
-    function test_getReviewSignatureHash_differentInitiatorSignatures_returnsDifferentHash()
-        public
-        view
-    {
+    function test_getReviewSignatureHash_differentInitiatorSignatures_returnsDifferentHash() public view {
         // Setup: select deterministic baseline inputs and two different initiator signatures.
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignatureA = _signHash(INITIATOR_PK_1, MESSAGE_HASH);

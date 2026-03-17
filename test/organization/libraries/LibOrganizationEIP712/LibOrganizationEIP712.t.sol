@@ -129,10 +129,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
 
     /// @dev Verifies `LibOrganizationEIP712.getDomainSeparator` uses the documented name, version, chain id, verifier,
     /// and field order.
-    function test_getDomainSeparator_matchesDocumentedReference()
-        public
-        view
-    {
+    function test_getDomainSeparator_matchesDocumentedReference() public view {
         // Setup: independently reconstruct the documented domain separator for this harness and chain.
         bytes32 expected = _manualDomainSeparator(address(harness), block.chainid);
 
@@ -185,10 +182,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
 
     /// @dev Verifies `LibOrganizationEIP712.computeTypedDataHash` matches both the documented prefix composition and
     /// the OpenZeppelin reference helper.
-    function test_computeTypedDataHash_matchesPrefixAndOpenZeppelinReference()
-        public
-        view
-    {
+    function test_computeTypedDataHash_matchesPrefixAndOpenZeppelinReference() public view {
         // Setup: choose a deterministic struct hash and build independent manual references.
         bytes32 expectedManual = _manualTypedDataHash(address(harness), block.chainid, BASE_STRUCT_HASH);
         bytes32 expectedOz =

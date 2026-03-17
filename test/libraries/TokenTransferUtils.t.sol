@@ -611,10 +611,7 @@ contract TokenTransferUtilsTest is Test {
     /// @dev Verifies `TokenTransferUtils.extractERC20TransferRecipient` always returns the encoded recipient for valid
     /// transfer calldata.
     /// @param to Fuzzed recipient encoded into the transfer calldata.
-    function testFuzz_extractERC20TransferRecipient_validCalldata_correctRecipient(address to)
-        public
-        view
-    {
+    function testFuzz_extractERC20TransferRecipient_validCalldata_correctRecipient(address to) public view {
         // Setup: encode a valid ERC-20 transfer for the fuzzed recipient.
         bytes memory data = _encodeTransferCalldata(to, AMOUNT);
 
@@ -629,10 +626,10 @@ contract TokenTransferUtilsTest is Test {
     /// calldata.
     /// @param to Fuzzed recipient encoded into the transfer calldata.
     /// @param expectedAmount Fuzzed amount encoded into the transfer calldata.
-    function testFuzz_extractTransferAmount_validCalldata_correctAmount(
-        address to,
-        uint256 expectedAmount
-    ) public view {
+    function testFuzz_extractTransferAmount_validCalldata_correctAmount(address to, uint256 expectedAmount)
+        public
+        view
+    {
         // Setup: encode a valid ERC-20 transfer for the fuzzed amount.
         bytes memory data = _encodeTransferCalldata(to, expectedAmount);
 
@@ -647,10 +644,10 @@ contract TokenTransferUtilsTest is Test {
     /// and ERC-20.
     /// @param data Fuzzed calldata paired with the transaction.
     /// @param value Fuzzed native-token value paired with the transaction.
-    function testFuzz_isTransactionTokenTransfer_neverBothNativeAndERC20(
-        bytes calldata data,
-        uint256 value
-    ) public view {
+    function testFuzz_isTransactionTokenTransfer_neverBothNativeAndERC20(bytes calldata data, uint256 value)
+        public
+        view
+    {
         // Setup: evaluate both classification paths for the same fuzzed transaction shape.
         bool isNative = harness.isTransactionNativeTokenTransfer(data, value);
         bool isERC20 = harness.isTransactionERC20TokenTransfer(data, value);

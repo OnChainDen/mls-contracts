@@ -25,9 +25,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
     /// @dev Verifies `LibOrganizationInitialization.initialize` happy path configures
     /// members/admins/groups/guardian/recovery state, emits `OrganizationInitialized`, and accepts the min-boundary
     /// guardian recovery timelock.
-    function test_initializeLibrary_happyPathConfiguresState()
-        public
-    {
+    function test_initializeLibrary_happyPathConfiguresState() public {
         // Setup: Deploy a library harness, build valid params, and set the expected initialization event payload.
         LibOrganizationInitializationHarness harness = _newLibraryHarness();
         InitializationParams memory params = _defaultInitializationParams();
@@ -99,9 +97,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` handles max-boundary timelocks, duplicate members,
     /// empty groups, and deferred recovery configuration.
-    function test_initializeLibrary_boundaryAndDeferredRecoveryBehaviors()
-        public
-    {
+    function test_initializeLibrary_boundaryAndDeferredRecoveryBehaviors() public {
         // Setup: Build one params set with duplicate members/max timelocks/empty groups and one deferred-recovery
         // params set.
         LibOrganizationInitializationHarness harness = _newLibraryHarness();
@@ -165,9 +161,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` reverts for invalid
     /// member/admin/guardian/implementation/timelock inputs.
-    function test_initializeLibrary_validationReverts()
-        public
-    {
+    function test_initializeLibrary_validationReverts() public {
         // Setup: Prepare reusable params and instantiate a fresh harness per validation failure branch.
         InitializationParams memory params = _defaultInitializationParams();
 
@@ -292,9 +286,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` reverts for invalid group create/update/delete and
     /// membership operations.
-    function test_initializeLibrary_groupValidationReverts()
-        public
-    {
+    function test_initializeLibrary_groupValidationReverts() public {
         // Setup: Prepare reusable initialization params and group operation batches for each group-validation failure
         // mode.
         InitializationParams memory params;
@@ -471,9 +463,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
     /// @dev Verifies library deployer/view helpers plus guardian-revert atomicity, event suppression on revert, and
     /// one-way initialization transition.
-    function test_initializeLibrary_atomicityAndViewGuards()
-        public
-    {
+    function test_initializeLibrary_atomicityAndViewGuards() public {
         // Setup: Deploy a harness and seed deployer storage for enforce-only-deployer checks.
         LibOrganizationInitializationHarness harness = _newLibraryHarness();
         harness.setDeployerAddressStorage(AUTHORIZED_DEPLOYER);
@@ -597,9 +587,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` rolls back all prior writes (members, admins, groups,
     /// guardian, timelock) when recovery setup reverts.
-    function test_initializeLibrary_revertInRecoverySetup_rollsBackAllPriorWrites()
-        public
-    {
+    function test_initializeLibrary_revertInRecoverySetup_rollsBackAllPriorWrites() public {
         // Setup: Build params with valid members/admins/groups/guardian but an invalid guardian recovery timelock to
         // trigger `InvalidTimelockDuration` during recovery initialization (step 7 of initialize).
         LibOrganizationInitializationHarness harness = _newLibraryHarness();

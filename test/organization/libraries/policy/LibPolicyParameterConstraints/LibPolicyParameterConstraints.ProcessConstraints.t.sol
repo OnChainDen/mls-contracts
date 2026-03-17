@@ -172,10 +172,7 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
     }
 
     /// @dev Verifies later constraints fail closed once offset walking exhausts available calldata head bytes.
-    function test_processConstraints_secondConstraintHeadOutOfBoundsAfterOffsetAdvance_returnsFalse()
-        public
-        view
-    {
+    function test_processConstraints_secondConstraintHeadOutOfBoundsAfterOffsetAdvance_returnsFalse() public view {
         // Setup: first constraint consumes two head slots; second needs one more slot that is absent.
         ParameterConstraint memory firstArrayAny = ParameterConstraint({
             paramType: ParamType.Array,
