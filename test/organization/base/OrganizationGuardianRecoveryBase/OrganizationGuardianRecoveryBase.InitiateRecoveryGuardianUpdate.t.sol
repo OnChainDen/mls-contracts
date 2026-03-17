@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
 import {TimelockUtils} from "libraries/TimelockUtils.sol";
 import {
     OrganizationGuardianRecoveryBaseSuiteBase

@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
 import {
     LibOrganizationPolicySuiteBase
 } from "test/organization/libraries/LibOrganizationPolicy/LibOrganizationPolicySuiteBase.sol";

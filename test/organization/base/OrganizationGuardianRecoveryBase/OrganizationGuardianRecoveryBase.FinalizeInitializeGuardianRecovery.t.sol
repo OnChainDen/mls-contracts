@@ -4,7 +4,6 @@ pragma solidity 0.8.33;
 
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationAdminOperationTimelock} from "interfaces/organization/IOrganizationAdminOperationTimelock.sol";
-import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {
     OrganizationGuardianRecoveryBaseHarness

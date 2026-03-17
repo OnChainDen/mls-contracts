@@ -8,7 +8,6 @@ import {
     OrganizationPolicyBaseSuiteBase
 } from "test/organization/base/OrganizationPolicyBase/OrganizationPolicyBaseSuiteBase.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
-import {OperationType} from "types/CommonTypes.sol";
 import {Policy, RateLimitType} from "types/PolicyTypes.sol";
 
 /**

@@ -4,7 +4,6 @@ pragma solidity 0.8.33;
 
 import {Test} from "forge-std/Test.sol";
 
-import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {TimelockUtils} from "libraries/TimelockUtils.sol";
 import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
 import {

@@ -5,9 +5,6 @@ pragma solidity 0.8.33;
 import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {
-    LibOrganizationAccountSignatureHarness
-} from "test/organization/libraries/LibOrganizationAccountSignature/LibOrganizationAccountSignatureHarness.sol";
-import {
     LibOrganizationAccountSignatureTestBase
 } from "test/organization/libraries/LibOrganizationAccountSignature/LibOrganizationAccountSignatureTestBase.sol";
 import {

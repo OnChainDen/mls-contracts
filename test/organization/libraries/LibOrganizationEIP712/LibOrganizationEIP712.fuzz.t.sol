@@ -4,8 +4,6 @@ pragma solidity 0.8.33;
 
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
-import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
-
 import {
     LibOrganizationEIP712Harness
 } from "test/organization/libraries/LibOrganizationEIP712/LibOrganizationEIP712Harness.sol";

@@ -3,7 +3,6 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
-import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
 import {
     OrganizationGuardianRecoveryBaseSuiteBase
 } from "test/organization/base/OrganizationGuardianRecoveryBase/OrganizationGuardianRecoveryBaseSuiteBase.sol";

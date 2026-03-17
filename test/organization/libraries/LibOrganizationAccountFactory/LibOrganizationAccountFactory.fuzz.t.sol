@@ -4,7 +4,6 @@ pragma solidity 0.8.33;
 
 import {Errors} from "@openzeppelin/contracts/utils/Errors.sol";
 
-import {AccountProxy} from "account/AccountProxy.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {
     LibOrganizationAccountFactoryHarness

@@ -3,7 +3,7 @@
 pragma solidity 0.8.33;
 
 import {PolicyLibrariesFuzzTestBase} from "test/organization/libraries/policy/PolicyLibrariesFuzzTestBase.sol";
-import {Policy, RateLimitScope, RateLimitType} from "types/PolicyTypes.sol";
+import {Policy, RateLimitType} from "types/PolicyTypes.sol";
 
 /**
  * @dev Fuzz tests for `LibPolicyRateLimits`.

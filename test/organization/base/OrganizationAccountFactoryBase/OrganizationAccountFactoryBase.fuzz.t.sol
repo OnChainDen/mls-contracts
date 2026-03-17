@@ -3,7 +3,6 @@
 pragma solidity 0.8.33;
 
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
-import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {
     OrganizationAccountFactoryBaseSuiteBase

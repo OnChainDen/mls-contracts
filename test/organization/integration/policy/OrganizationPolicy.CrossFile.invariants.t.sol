@@ -20,7 +20,6 @@ import {
 import {
     ApproverType,
     ConstraintType,
-    DestinationType,
     ParamType,
     ParameterConstraint,
     Policy,

@@ -5,7 +5,6 @@ pragma solidity 0.8.33;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {AccountImplementation} from "account/AccountImplementation.sol";
-import {IOrganization} from "interfaces/IOrganization.sol";
 import {SignatureTestHelpers} from "test/helpers/SignatureTestHelpers.sol";
 import {
     InitializationSuiteBase

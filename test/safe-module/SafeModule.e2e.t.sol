@@ -4,7 +4,6 @@ pragma solidity 0.8.33;
 
 import {Test} from "forge-std/Test.sol";
 
-import {IBatchedTransaction} from "../../src/interfaces/IBatchedTransaction.sol";
 import {ISafeExecutorModule} from "../../src/interfaces/ISafeExecutorModule.sol";
 import {SignatureUtils} from "../../src/libraries/SignatureUtils.sol";
 import {BatchedTransaction} from "../../src/safe-module/BatchedTransaction.sol";
