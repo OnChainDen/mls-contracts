@@ -39,7 +39,7 @@ jobs:
 
       - name: Check Contract Sizes
         # Fails if contracts are too large (>24kb)
-        run: forge build --sizes
+        run: forge build --sizes src
 
       - name: Run Linter
         # Uses your Makefile to run Solhint
