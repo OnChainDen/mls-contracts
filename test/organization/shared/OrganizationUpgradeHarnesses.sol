@@ -226,6 +226,7 @@ contract OrganizationImplementationNonUUPS {}
  * @dev UUPS implementation returning an incompatible UUID.
  */
 contract OrganizationImplementationWrongUUID is UUPSUpgradeable {
+    // forge-lint: disable-next-line(mixed-case-function)
     function proxiableUUID() public pure override returns (bytes32) {
         return bytes32(uint256(123));
     }

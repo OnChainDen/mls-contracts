@@ -18,6 +18,7 @@ import {ContractType} from "types/CommonTypes.sol";
 
 interface IUUPSWhitelistEntrypoints {
     function upgradeToAndCall(address newImplementation, bytes calldata data) external payable;
+    // forge-lint: disable-next-line(mixed-case-function)
     function proxiableUUID() external view returns (bytes32);
 }
 

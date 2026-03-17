@@ -58,7 +58,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
         bytes32 hash = keccak256("op59");
-        bytes memory signatures = _buildSortedEOASignatures(hash, buildUint256Array(ADMIN_PK_1, ADMIN_PK_2));
+        bytes memory signatures = _buildSortedEoaSignatures(hash, buildUint256Array(ADMIN_PK_1, ADMIN_PK_2));
 
         // Call: invoke signature validation with exactly-threshold signatures.
         bool actualIsValid = harness.areAdminSignaturesValid(signatures, hash);
@@ -73,7 +73,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 1});
 
         bytes32 hash = keccak256("op60");
-        bytes memory signatures = _buildSortedEOASignatures(hash, buildUint256Array(ADMIN_PK_1, ADMIN_PK_2));
+        bytes memory signatures = _buildSortedEoaSignatures(hash, buildUint256Array(ADMIN_PK_1, ADMIN_PK_2));
 
         // Call: invoke signature validation with more-than-threshold signatures.
         bool actualIsValid = harness.areAdminSignaturesValid(signatures, hash);
@@ -89,7 +89,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
         bytes32 hash = keccak256("op61");
-        bytes memory signatures = _buildSortedEOASignatures(hash, buildUint256Array(ADMIN_PK_1));
+        bytes memory signatures = _buildSortedEoaSignatures(hash, buildUint256Array(ADMIN_PK_1));
 
         // Call: invoke signature validation with fewer-than-threshold signatures.
         bool actualIsValid = harness.areAdminSignaturesValid(signatures, hash);

@@ -31,6 +31,7 @@ import {GuardianRecoveryState, PendingRecoveryInitTimelock, TxRecoveryState} fro
 
 interface IUUPSUpgradeableEntrypoints {
     function upgradeToAndCall(address newImplementation, bytes calldata data) external payable;
+    // forge-lint: disable-next-line(mixed-case-function)
     function proxiableUUID() external view returns (bytes32);
 }
 
@@ -241,7 +242,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.Upgrade,
             operationData: operationData,
             isApproval: false,
@@ -290,7 +291,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
         bytes memory operationData = _encodeOperationDataForUpgrade(address(implementationV2));
-        AdminAuthParams memory wrongTypeAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory wrongTypeAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.UpgradeAccount,
             operationData: operationData,
             isApproval: true,

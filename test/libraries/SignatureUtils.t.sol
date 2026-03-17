@@ -102,7 +102,7 @@ contract SignatureUtilsHarness {
     /// @param v The recovery id byte (27 or 28)
     /// @return success True if EOA signer was recovered
     /// @return signer The recovered EOA address, or address(0) on failure
-    function tryRecoverEOASigner(bytes memory signatures, uint256 offset, bytes32 hash, uint8 v)
+    function tryRecoverEoaSigner(bytes memory signatures, uint256 offset, bytes32 hash, uint8 v)
         external
         pure
         returns (bool, address)
@@ -407,8 +407,8 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         _assertRecoverSignerPairFails(aboveHalfOrderSig, TEST_HASH, "s > HALF_CURVE_ORDER should fail");
 
         // Case 3: Recovering signatures with zero r/s values should fail.
-        bytes memory zeroRS = abi.encodePacked(uint8(27), bytes32(0), bytes32(0));
-        _assertRecoverSignerPairFails(zeroRS, TEST_HASH, "Zeroed r/s should fail");
+        bytes memory zeroRs = abi.encodePacked(uint8(27), bytes32(0), bytes32(0));
+        _assertRecoverSignerPairFails(zeroRs, TEST_HASH, "Zeroed r/s should fail");
 
         // Case 4: Recovering signatures with zero r value and non-zero s value should fail.
         bytes memory sig = _signHash(TEST_PK_1, TEST_HASH);
@@ -531,10 +531,10 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         bytes[] memory eoaPair = new bytes[](2);
         eoaPair[0] = sig1;
         eoaPair[1] = sig2;
-        bytes memory combinedEOA = _concatSignatures(eoaPair);
+        bytes memory combinedEoa = _concatSignatures(eoaPair);
         // Verify decoding at a non-zero starting offset.
         _assertRecoverSignerAtOffsetPairSucceeds(
-            combinedEOA, 65, TEST_HASH, vm.addr(TEST_PK_2), 130, "Second EOA at offset 65 should succeed"
+            combinedEoa, 65, TEST_HASH, vm.addr(TEST_PK_2), 130, "Second EOA at offset 65 should succeed"
         );
 
         bytes[] memory mixedPair = new bytes[](2);
@@ -555,21 +555,21 @@ contract SignatureUtilsTest is SignatureTestHelpers {
             "Second mixed signature should recover ERC-1271 signer"
         );
 
-        bytes[] memory threeEOAs = new bytes[](3);
-        threeEOAs[0] = sig1;
-        threeEOAs[1] = sig2;
-        threeEOAs[2] = sig3;
-        bytes memory combinedThreeEOAs = _concatSignatures(threeEOAs);
-        address[3] memory expectedEOASigners = [vm.addr(TEST_PK_1), vm.addr(TEST_PK_2), vm.addr(TEST_PK_3)];
+        bytes[] memory threeEoAs = new bytes[](3);
+        threeEoAs[0] = sig1;
+        threeEoAs[1] = sig2;
+        threeEoAs[2] = sig3;
+        bytes memory combinedThreeEoAs = _concatSignatures(threeEoAs);
+        address[3] memory expectedEoaSigners = [vm.addr(TEST_PK_1), vm.addr(TEST_PK_2), vm.addr(TEST_PK_3)];
         uint256 offset = 0;
         for (uint256 i = 0; i < 3; i++) {
             // For fixed-size EOA signatures, offset grows by +65 each step.
             uint256 nextOffset = (i + 1) * 65;
             _assertRecoverSignerAtOffsetPairSucceeds(
-                combinedThreeEOAs,
+                combinedThreeEoAs,
                 offset,
                 TEST_HASH,
-                expectedEOASigners[i],
+                expectedEoaSigners[i],
                 nextOffset,
                 string.concat("Three-EOA iteration should recover signer ", vm.toString(i))
             );
@@ -703,7 +703,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
         // Call: read the embedded v byte directly and recover the signer from the same embedded offset.
         uint8 actualV = harness.getVByte(embedded, offset);
-        (bool success, address signer) = harness.tryRecoverEOASigner(embedded, offset, TEST_HASH, actualV);
+        (bool success, address signer) = harness.tryRecoverEoaSigner(embedded, offset, TEST_HASH, actualV);
 
         // Verify: v, r, and s match the embedded signature fields and signer recovery succeeds from that offset.
         assertEq(actualV, expectedV, "v should match the byte at the embedded offset");
@@ -996,7 +996,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Recovering an EOA signer at a non-zero offset (second signature in a concatenated array)
     ///      should extract r and s correctly.
-    function test_SIGU_PARSE_1_C_tryRecoverEOASigner_nonZeroOffset_extractsCorrectly() public view {
+    function test_SIGU_PARSE_1_C_tryRecoverEoaSigner_nonZeroOffset_extractsCorrectly() public view {
         bytes memory sig1 = _signHash(TEST_PK_1, TEST_HASH);
         bytes memory sig2 = _signHash(TEST_PK_2, TEST_HASH);
         bytes[] memory sigs = new bytes[](2);
@@ -1006,7 +1006,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         address expectedSigner2 = vm.addr(TEST_PK_2);
         uint8 v2 = uint8(sig2[0]);
 
-        (bool success, address signer) = harness.tryRecoverEOASigner(combined, 65, TEST_HASH, v2);
+        (bool success, address signer) = harness.tryRecoverEoaSigner(combined, 65, TEST_HASH, v2);
 
         assertTrue(success, "Should recover second signer at offset 65");
         assertEq(signer, expectedSigner2, "Signer should match PK_2");
@@ -1014,7 +1014,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Recovering an EOA signer when preceding bytes are all non-zero (0xFF) should not bleed
     ///      into the r or s values.
-    function test_tryRecoverEOASigner_precedingNonZero_noBleed() public view {
+    function test_tryRecoverEoaSigner_precedingNonZero_noBleed() public view {
         // Fill prefix with 0xFF, then append a valid signature
         bytes memory prefix = new bytes(65);
         for (uint256 i = 0; i < 65; i++) {
@@ -1025,7 +1025,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         address expectedSigner = vm.addr(TEST_PK_1);
         uint8 v = uint8(sig[0]);
 
-        (bool success, address signer) = harness.tryRecoverEOASigner(combined, 65, TEST_HASH, v);
+        (bool success, address signer) = harness.tryRecoverEoaSigner(combined, 65, TEST_HASH, v);
 
         assertTrue(success, "Should recover signer despite 0xFF prefix");
         assertEq(signer, expectedSigner, "Non-zero preceding bytes should not bleed into r or s");
@@ -1033,13 +1033,13 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Recovering an EOA signer with s == HALF_CURVE_ORDER at a non-zero offset should be
     ///      accepted (boundary value).
-    function test_tryRecoverEOASigner_sAtHalfCurveOrderNonZeroOffset_accepted() public view {
+    function test_tryRecoverEoaSigner_sAtHalfCurveOrderNonZeroOffset_accepted() public view {
         bytes memory prefix = new bytes(10);
         bytes memory sig = _makeBoundarySSignature(TEST_PK_1, TEST_HASH);
         bytes memory combined = abi.encodePacked(prefix, sig);
         uint8 v = uint8(sig[0]);
 
-        (bool success, address signer) = harness.tryRecoverEOASigner(combined, 10, TEST_HASH, v);
+        (bool success, address signer) = harness.tryRecoverEoaSigner(combined, 10, TEST_HASH, v);
 
         assertTrue(success, "Should accept s == HALF_CURVE_ORDER");
         assertTrue(signer != address(0), "Recovered signer should be non-zero at HALF_CURVE_ORDER");
@@ -1047,13 +1047,13 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Recovering an EOA signer with s == HALF_CURVE_ORDER + 1 at a non-zero offset should be
     ///      rejected by the malleability check.
-    function test_tryRecoverEOASigner_sAboveHalfCurveOrderNonZeroOffset_rejected() public view {
+    function test_tryRecoverEoaSigner_sAboveHalfCurveOrderNonZeroOffset_rejected() public view {
         bytes memory prefix = new bytes(10);
         bytes memory sig = _makeBoundaryPlusOneSSignature(TEST_PK_1, TEST_HASH);
         bytes memory combined = abi.encodePacked(prefix, sig);
         uint8 v = uint8(sig[0]);
 
-        (bool success, address signer) = harness.tryRecoverEOASigner(combined, 10, TEST_HASH, v);
+        (bool success, address signer) = harness.tryRecoverEoaSigner(combined, 10, TEST_HASH, v);
 
         assertFalse(success, "Should reject s > HALF_CURVE_ORDER");
         assertEq(signer, address(0), "Signer should be address(0)");
@@ -1061,12 +1061,12 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Recovering an EOA signer at offset 0 with a valid signature should extract r and s
     ///      correctly from the start.
-    function test_tryRecoverEOASigner_offset0_extractsCorrectly() public view {
+    function test_tryRecoverEoaSigner_offset0_extractsCorrectly() public view {
         bytes memory sig = _signHash(TEST_PK_1, TEST_HASH);
         address expectedSigner = vm.addr(TEST_PK_1);
         uint8 v = uint8(sig[0]);
 
-        (bool success, address signer) = harness.tryRecoverEOASigner(sig, 0, TEST_HASH, v);
+        (bool success, address signer) = harness.tryRecoverEoaSigner(sig, 0, TEST_HASH, v);
 
         assertTrue(success, "Should recover signer at offset 0");
         assertEq(signer, expectedSigner, "Signer should match");
@@ -1074,11 +1074,11 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Recovering an EOA signer when offset + 65 > signatures.length should return
     ///      (false, address(0)).
-    function test_tryRecoverEOASigner_insufficientBytes_returnsFalse() public view {
+    function test_tryRecoverEoaSigner_insufficientBytes_returnsFalse() public view {
         bytes memory shortData = new bytes(60); // Less than 65 bytes
         shortData[0] = bytes1(uint8(27));
 
-        (bool success, address signer) = harness.tryRecoverEOASigner(shortData, 0, TEST_HASH, 27);
+        (bool success, address signer) = harness.tryRecoverEoaSigner(shortData, 0, TEST_HASH, 27);
 
         assertFalse(success, "Should fail when not enough bytes");
         assertEq(signer, address(0), "Signer should be address(0)");
@@ -1086,7 +1086,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Recovering an EOA signer when offset + 65 == signatures.length (exactly fits) should
     ///      succeed.
-    function test_tryRecoverEOASigner_exactFit_succeeds() public view {
+    function test_tryRecoverEoaSigner_exactFit_succeeds() public view {
         bytes memory sig = _signHash(TEST_PK_1, TEST_HASH);
         address expectedSigner = vm.addr(TEST_PK_1);
         uint8 v = uint8(sig[0]);
@@ -1094,7 +1094,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         // sig.length should be exactly 65, so offset=0 + 65 == length
         assertEq(sig.length, 65, "Signature should be exactly 65 bytes");
 
-        (bool success, address signer) = harness.tryRecoverEOASigner(sig, 0, TEST_HASH, v);
+        (bool success, address signer) = harness.tryRecoverEoaSigner(sig, 0, TEST_HASH, v);
 
         assertTrue(success, "Should succeed when signature exactly fits");
         assertEq(signer, expectedSigner, "Signer should match");
@@ -1102,10 +1102,10 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Recovering an EOA signer with r = bytes32(0) should return (false, address(0)) because
     ///      ecrecover returns address(0).
-    function test_tryRecoverEOASigner_zeroR_returnsFalse() public view {
+    function test_tryRecoverEoaSigner_zeroR_returnsFalse() public view {
         bytes memory sig = abi.encodePacked(uint8(27), bytes32(0), bytes32(uint256(1)));
 
-        (bool success, address signer) = harness.tryRecoverEOASigner(sig, 0, TEST_HASH, 27);
+        (bool success, address signer) = harness.tryRecoverEoaSigner(sig, 0, TEST_HASH, 27);
 
         assertFalse(success, "Should fail with zeroed r");
         assertEq(signer, address(0), "Signer should be address(0)");
@@ -1113,32 +1113,32 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Recovering an EOA signer with s = bytes32(0) should return (false, address(0)) because
     ///      ecrecover returns address(0).
-    function test_tryRecoverEOASigner_zeroS_returnsFalse() public view {
+    function test_tryRecoverEoaSigner_zeroS_returnsFalse() public view {
         bytes memory sig = abi.encodePacked(uint8(27), bytes32(uint256(1)), bytes32(0));
 
-        (bool success, address signer) = harness.tryRecoverEOASigner(sig, 0, TEST_HASH, 27);
+        (bool success, address signer) = harness.tryRecoverEoaSigner(sig, 0, TEST_HASH, 27);
 
         assertFalse(success, "Should fail with zeroed s");
         assertEq(signer, address(0), "Signer should be address(0)");
     }
 
     /// @dev Test case: Recovering an EOA signer with v = 27 should recover the expected signer.
-    function test_tryRecoverEOASigner_v27_recoversCorrectly() public view {
+    function test_tryRecoverEoaSigner_v27_recoversCorrectly() public view {
         (bytes memory sig, bytes32 hash) = _findValidSignatureForV(TEST_PK_1, 27, TEST_HASH);
         address expectedSigner = vm.addr(TEST_PK_1);
 
-        (bool success, address signer) = harness.tryRecoverEOASigner(sig, 0, hash, 27);
+        (bool success, address signer) = harness.tryRecoverEoaSigner(sig, 0, hash, 27);
 
         assertTrue(success, "Should recover with v=27");
         assertEq(signer, expectedSigner, "Signer should match");
     }
 
     /// @dev Test case: Recovering an EOA signer with v = 28 should recover the expected signer.
-    function test_tryRecoverEOASigner_v28_recoversCorrectly() public view {
+    function test_tryRecoverEoaSigner_v28_recoversCorrectly() public view {
         (bytes memory sig, bytes32 hash) = _findValidSignatureForV(TEST_PK_1, 28, TEST_HASH);
         address expectedSigner = vm.addr(TEST_PK_1);
 
-        (bool success, address signer) = harness.tryRecoverEOASigner(sig, 0, hash, 28);
+        (bool success, address signer) = harness.tryRecoverEoaSigner(sig, 0, hash, 28);
 
         assertTrue(success, "Should recover with v=28");
         assertEq(signer, expectedSigner, "Signer should match");
@@ -1146,7 +1146,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Recovering three consecutive EOA signatures should extract each correctly at offsets
     ///      0, 65, and 130.
-    function test_tryRecoverEOASigner_threeConsecutive_allExtractedCorrectly() public view {
+    function test_tryRecoverEoaSigner_threeConsecutive_allExtractedCorrectly() public view {
         bytes memory sig1 = _signHash(TEST_PK_1, TEST_HASH);
         bytes memory sig2 = _signHash(TEST_PK_2, TEST_HASH);
         bytes memory sig3 = _signHash(TEST_PK_3, TEST_HASH);
@@ -1161,14 +1161,14 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
         for (uint256 i = 0; i < 3; i++) {
             uint8 v = uint8(rawSigs[i][0]);
-            (bool success, address signer) = harness.tryRecoverEOASigner(combined, i * 65, TEST_HASH, v);
+            (bool success, address signer) = harness.tryRecoverEoaSigner(combined, i * 65, TEST_HASH, v);
             assertTrue(success, string.concat("Should recover signer at offset ", vm.toString(i * 65)));
             assertEq(signer, expected[i], string.concat("Signer mismatch at index ", vm.toString(i)));
         }
     }
 
     /// @dev Test case: Trailing garbage bytes after a valid 65-byte signature should not affect recovery.
-    function test_tryRecoverEOASigner_trailingGarbage_doesNotAffectRecovery() public view {
+    function test_tryRecoverEoaSigner_trailingGarbage_doesNotAffectRecovery() public view {
         bytes memory sig = _signHash(TEST_PK_1, TEST_HASH);
         address expectedSigner = vm.addr(TEST_PK_1);
         uint8 v = uint8(sig[0]);
@@ -1180,7 +1180,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         }
         bytes memory combined = abi.encodePacked(sig, garbage);
 
-        (bool success, address signer) = harness.tryRecoverEOASigner(combined, 0, TEST_HASH, v);
+        (bool success, address signer) = harness.tryRecoverEoaSigner(combined, 0, TEST_HASH, v);
 
         assertTrue(success, "Trailing garbage should not affect recovery");
         assertEq(signer, expectedSigner, "Signer should match despite trailing garbage");
@@ -1188,7 +1188,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Recovering an EOA signer with any random valid private key at any random offset should
     ///      always recover the correct signer.
-    function testFuzz_SIGU_PARSE_1_D_tryRecoverEOASigner_randomKeyAndOffset_recoversCorrectly(
+    function testFuzz_SIGU_PARSE_1_D_tryRecoverEoaSigner_randomKeyAndOffset_recoversCorrectly(
         uint256 privateKey,
         uint8 prefixLength
     ) public view {
@@ -1204,7 +1204,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
         bytes memory combined = abi.encodePacked(prefix, sig);
 
-        (bool success, address signer) = harness.tryRecoverEOASigner(combined, prefixLength, TEST_HASH, v);
+        (bool success, address signer) = harness.tryRecoverEoaSigner(combined, prefixLength, TEST_HASH, v);
 
         assertTrue(success, "Should always recover valid signature");
         assertEq(signer, expectedSigner, "Should always recover correct signer");
@@ -1531,10 +1531,10 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     {
         innerLength = uint16(bound(innerLength, 0, 1000));
 
-        _assertTryRecoverSignerAtOffsetRandomERC1271InnerLengthOffsetCorrect(innerLength);
+        _assertTryRecoverSignerAtOffsetRandomErc1271InnerLengthOffsetCorrect(innerLength);
     }
 
-    function _assertTryRecoverSignerAtOffsetRandomERC1271InnerLengthOffsetCorrect(uint16 innerLength) internal view {
+    function _assertTryRecoverSignerAtOffsetRandomErc1271InnerLengthOffsetCorrect(uint16 innerLength) internal view {
         bytes memory payload = new bytes(innerLength);
         bytes memory sig = _buildContractSignature(address(validSigner1271), payload);
 
@@ -1547,29 +1547,29 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     /// @dev Test case: Random multi-signature arrays (N EOA + M ERC-1271) should always have correct offset
     ///      chaining, with the final offset equaling the total combined length. [SIGU-PARSE-4]
     function testFuzz_SIGU_PARSE_4_B__FSU_ATOFF_5_tryRecoverSignerAtOffset_mixedMultiSig_offsetChainingWorks(
-        uint8 numEOA,
+        uint8 numEoa,
         uint8 numContract
     ) public view {
-        numEOA = uint8(bound(numEOA, 0, 5));
+        numEoa = uint8(bound(numEoa, 0, 5));
         numContract = uint8(bound(numContract, 0, 5));
 
-        _assertTryRecoverSignerAtOffsetMixedMultiSigOffsetChainingWorks(numEOA, numContract);
+        _assertTryRecoverSignerAtOffsetMixedMultiSigOffsetChainingWorks(numEoa, numContract);
     }
 
-    function _assertTryRecoverSignerAtOffsetMixedMultiSigOffsetChainingWorks(uint8 numEOA, uint8 numContract)
+    function _assertTryRecoverSignerAtOffsetMixedMultiSigOffsetChainingWorks(uint8 numEoa, uint8 numContract)
         internal
         view
     {
         // Need at least 1 signature
-        if (numEOA == 0 && numContract == 0) {
-            numEOA = 1;
+        if (numEoa == 0 && numContract == 0) {
+            numEoa = 1;
         }
 
-        uint256 totalSigs = uint256(numEOA) + uint256(numContract);
+        uint256 totalSigs = uint256(numEoa) + uint256(numContract);
         bytes[] memory sigs = new bytes[](totalSigs);
 
         // Build EOA signatures first
-        for (uint256 i = 0; i < numEOA; i++) {
+        for (uint256 i = 0; i < numEoa; i++) {
             uint256 pk = i + 1; // Private keys 1, 2, 3, ...
             sigs[i] = _signHash(pk, TEST_HASH);
         }
@@ -1577,7 +1577,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         // Then build contract signatures
         for (uint256 i = 0; i < numContract; i++) {
             bytes memory payload = new bytes(i + 1); // Varying inner sig lengths
-            sigs[numEOA + i] = _buildContractSignature(address(validSigner1271), payload);
+            sigs[numEoa + i] = _buildContractSignature(address(validSigner1271), payload);
         }
 
         bytes memory combined = _concatSignatures(sigs);
@@ -1664,10 +1664,10 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         // Setup: build a valid contract signature with a fuzzed inner-signature length.
         innerLength = uint16(bound(innerLength, 0, 512));
 
-        _assertValidERC1271SignatureRecoversExpectedSigner(innerLength);
+        _assertValidErc1271SignatureRecoversExpectedSigner(innerLength);
     }
 
-    function _assertValidERC1271SignatureRecoversExpectedSigner(uint16 innerLength) internal view {
+    function _assertValidErc1271SignatureRecoversExpectedSigner(uint16 innerLength) internal view {
         bytes memory payload = new bytes(innerLength);
         bytes memory signature = _buildContractSignature(address(validSigner1271), payload);
 
@@ -1700,7 +1700,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         view
     {
         bytes memory payload = new bytes(innerLength);
-        address signerContract = _selectFailingERC1271Signer(caseSelector);
+        address signerContract = _selectFailingErc1271Signer(caseSelector);
         bytes memory signature = _buildContractSignature(signerContract, payload);
 
         // Call: attempt recovery through the contract-signer path and direct ERC-1271 validation path.
@@ -1713,7 +1713,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         assertFalse(validationSuccess, "direct ERC-1271 validation should fail for all failing variants");
     }
 
-    function _selectFailingERC1271Signer(uint8 caseSelector) internal view returns (address) {
+    function _selectFailingErc1271Signer(uint8 caseSelector) internal view returns (address) {
         address[7] memory failingSigners = [
             address(wrongMagicSigner1271),
             address(revertingSigner1271),
@@ -1815,11 +1815,11 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         // Verify: the wrapper should fail closed rather than return a partial tuple.
     }
 
-    /// @dev Verifies `_tryRecoverEOASigner` rejects fuzzed high-`s` signatures even when the payload is embedded at
+    /// @dev Verifies `_tryRecoverEoaSigner` rejects fuzzed high-`s` signatures even when the payload is embedded at
     /// a random non-zero offset.
     /// @param privateKey Fuzzed private key used to construct the high-`s` signature.
     /// @param prefixLength Fuzzed noisy prefix length before the embedded signature bytes.
-    function testFuzz_FSU_EOA_3_tryRecoverEOASigner_highSMalleableSignaturesAlwaysRejected(
+    function testFuzz_FSU_EOA_3_tryRecoverEoaSigner_highSMalleableSignaturesAlwaysRejected(
         uint256 privateKey,
         uint8 prefixLength
     ) public view {
@@ -1831,7 +1831,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         uint8 v = uint8(signature[0]);
 
         // Call: recover the embedded signature through the helper-targeted harness wrapper.
-        (bool success, address signer) = harness.tryRecoverEOASigner(prefixedSignature, prefixLength, TEST_HASH, v);
+        (bool success, address signer) = harness.tryRecoverEoaSigner(prefixedSignature, prefixLength, TEST_HASH, v);
 
         // Verify: high-`s` signatures are always rejected by the EOA helper.
         assertFalse(success, "high-s signatures should always be rejected by _tryRecoverEOASigner");

@@ -184,7 +184,7 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         bytes memory operationData = abi.encode(NEW_GUARDIAN_A);
         uint256 salt = 1008;
-        AdminAuthParams memory wrongAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory wrongAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.FinalizeUpdateGuardian,
             operationData: operationData,
             isApproval: true,

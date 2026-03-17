@@ -198,7 +198,7 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK);
         bytes memory operationData = abi.encode(NEW_GUARDIAN_A);
         uint256 salt = 2008;
-        AdminAuthParams memory wrongAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory wrongAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.InitiateUpdateGuardian,
             operationData: operationData,
             isApproval: true,

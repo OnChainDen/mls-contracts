@@ -19,7 +19,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
      * @param hash Operation hash used during verification
      * @return signer Recovered signer address, or `address(0)` if recovery fails
      */
-    function _recoverEOASigner(bytes memory signature, bytes32 hash) internal pure returns (address signer) {
+    function _recoverEoaSigner(bytes memory signature, bytes32 hash) internal pure returns (address signer) {
         require(signature.length == 65, "invalid signature length");
 
         uint8 v;
@@ -58,7 +58,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         uint256 salt = 2018;
         uint256 expiration = block.timestamp + 1 hours;
 
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: operationType,
             operationData: operationData,
             isApproval: false,
@@ -89,7 +89,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         uint256 salt = 2019;
         uint256 expiration = block.timestamp + 1 hours;
 
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: operationType,
             operationData: operationData,
             isApproval: false,
@@ -120,7 +120,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         uint256 salt = 2020;
         uint256 expiration = block.timestamp + 1 hours;
 
-        AdminAuthParams memory approvalAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory approvalAuth = _buildAdminAuthParamsForEoa({
             operationType: operationType,
             operationData: operationData,
             isApproval: true,
@@ -136,7 +136,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
             expirationTimestamp: expiration,
             isApproval: false
         });
-        address recoveredSigner = _recoverEOASigner(approvalAuth.signatures, rejectionOperationHash);
+        address recoveredSigner = _recoverEoaSigner(approvalAuth.signatures, rejectionOperationHash);
 
         // Verify: using approval-domain signatures for the rejection path should fail live signer validation and leave
         // the nonce unused.
@@ -158,7 +158,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         bytes memory signedData = abi.encode(address(0xAAC));
         bytes memory mutatedData = abi.encode(address(0xAAD));
 
-        AdminAuthParams memory authTypeMutation = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory authTypeMutation = _buildAdminAuthParamsForEoa({
             operationType: OperationType.Upgrade,
             operationData: signedData,
             isApproval: false,
@@ -174,7 +174,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
         harness.rejectAdminOperation(OperationType.ModifyPolicies, signedData, authTypeMutation);
 
-        AdminAuthParams memory authDataMutation = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory authDataMutation = _buildAdminAuthParamsForEoa({
             operationType: OperationType.Upgrade,
             operationData: signedData,
             isApproval: false,
@@ -197,7 +197,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         uint256 expiration = block.timestamp - 1;
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.Upgrade,
             operationData: abi.encode(address(0xAAE)),
             isApproval: false,
@@ -225,7 +225,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         bytes memory operationData = abi.encode(address(0xAAF));
         uint256 salt = 2024;
 
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: operationType,
             operationData: operationData,
             isApproval: false,
@@ -260,7 +260,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         uint256 expiration = block.timestamp + 1 hours;
 
         bytes memory operationData = _encodeOperationDataForModifyAdmins(adminsToAdd, adminsToRemove, newThreshold);
-        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             isApproval: false,
@@ -268,7 +268,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
             expirationTimestamp: expiration,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        AdminAuthParams memory approvalAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory approvalAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             isApproval: true,
@@ -310,7 +310,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         uint256 expiration = block.timestamp + 1 hours;
 
         bytes memory operationData = _encodeOperationDataForModifyAdmins(adminsToAdd, adminsToRemove, newThreshold);
-        AdminAuthParams memory approvalAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory approvalAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             isApproval: true,
@@ -318,7 +318,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
             expirationTimestamp: expiration,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             isApproval: false,
@@ -354,7 +354,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         bytes memory mutatedData = abi.encode("mutated");
         uint256 salt = 2027;
 
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.Upgrade,
             operationData: signedData,
             isApproval: false,
@@ -398,7 +398,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
             _encodeOperationDataForModifyAdmins(intendedAdminsToAdd, noAdminsToRemove, 1);
         bytes memory wrongOperationData = _encodeOperationDataForModifyAdmins(wrongAdminsToAdd, noAdminsToRemove, 1);
 
-        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: wrongOperationData,
             isApproval: false,
@@ -406,7 +406,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
             expirationTimestamp: expiration,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        AdminAuthParams memory approvalAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory approvalAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: intendedOperationData,
             isApproval: true,
@@ -448,7 +448,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
 
         // Setup: configure one-admin auth signed over the account-transaction domain that reject-admin must reject.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.AccountTransaction,
             operationData: operationData,
             isApproval: false,
@@ -482,7 +482,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         // Setup: configure one-admin auth signed over the account-transaction rejection domain that admin reject must
         // reject.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.AccountTransactionRejection,
             operationData: operationData,
             isApproval: false,
@@ -520,7 +520,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         for (uint256 i = 0; i < operationTypes.length; i++) {
             uint256 salt = 3000 + i;
             // Build operation-type-specific rejection authorization.
-            AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+            AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
                 operationType: operationTypes[i],
                 operationData: operationData[i],
                 isApproval: false,
@@ -548,7 +548,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         bytes memory emptyOperationData = bytes("");
         uint256 salt = 2028;
 
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.Upgrade,
             operationData: emptyOperationData,
             isApproval: false,

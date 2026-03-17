@@ -707,7 +707,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.InitiateInitializeTransactionRecovery,
             operationData: validOperationData,
             isApproval: false,
@@ -716,7 +716,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        AdminAuthParams memory wrongTypeAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory wrongTypeAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.FinalizeInitializeTransactionRecovery,
             operationData: validOperationData,
             isApproval: true,
@@ -1271,7 +1271,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         AdminAuthParams memory secondAuth = AdminAuthParams({
             salt: 211,
             expirationTimestamp: block.timestamp + 30 days,
-            signatures: _buildSortedEOASignatures(secondOperationHash, buildUint256Array(ADMIN_PK_1))
+            signatures: _buildSortedEoaSignatures(secondOperationHash, buildUint256Array(ADMIN_PK_1))
         });
         uint256 firstNonce =
             harness.computeNonce(OperationType.FinalizeInitializeTransactionRecovery, operationData, 210);

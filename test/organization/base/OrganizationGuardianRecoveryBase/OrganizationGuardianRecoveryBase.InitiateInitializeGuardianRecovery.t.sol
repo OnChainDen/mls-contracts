@@ -306,7 +306,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         bytes memory operationData = abi.encode(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
-        AdminAuthParams memory wrongAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory wrongAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.FinalizeInitializeGuardianRecovery,
             operationData: operationData,
             isApproval: true,

@@ -293,8 +293,8 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             );
         } else if (mode == 1) {
             // ERC-20 transfer destination is encoded recipient.
-            bytes memory allowedData = _encodeERC20Transfer(allowedDestination, amount);
-            bytes memory deniedData = _encodeERC20Transfer(otherDestination, amount);
+            bytes memory allowedData = _encodeErc20Transfer(allowedDestination, amount);
+            bytes memory deniedData = _encodeErc20Transfer(otherDestination, amount);
 
             allowedResult = harness.isDestinationAllowedByPolicyViaPolicyLibrary(
                 policy, tokenContract, 0, allowedData, destinationProof
@@ -606,7 +606,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
                 address(0xAA59),
                 address(0xC59),
                 0,
-                _encodeERC20Transfer(allowedDestination, bound(allowedArg, 1, type(uint96).max)),
+                _encodeErc20Transfer(allowedDestination, bound(allowedArg, 1, type(uint96).max)),
                 initiator1,
                 proofs
             ),
@@ -780,12 +780,12 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         PolicyTransactionCase memory validCase = PolicyTransactionCase({
             to: useERC20 ? tokenContract : allowedDestination,
             value: useERC20 ? 0 : transferAmount,
-            data: useERC20 ? _encodeERC20Transfer(allowedDestination, transferAmount) : bytes("")
+            data: useERC20 ? _encodeErc20Transfer(allowedDestination, transferAmount) : bytes("")
         });
         PolicyTransactionCase memory wrongDestinationCase = PolicyTransactionCase({
             to: useERC20 ? tokenContract : deniedDestination,
             value: useERC20 ? 0 : transferAmount,
-            data: useERC20 ? _encodeERC20Transfer(deniedDestination, transferAmount) : bytes("")
+            data: useERC20 ? _encodeErc20Transfer(deniedDestination, transferAmount) : bytes("")
         });
 
         assertTrue(
@@ -847,7 +847,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
                         address(0xAA60),
                         tokenContract,
                         0,
-                        _encodeERC20Transfer(allowedDestination, transferAmount),
+                        _encodeErc20Transfer(allowedDestination, transferAmount),
                         initiator1,
                         proofs
                     );
@@ -856,7 +856,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
                     address(0xAA60),
                     tokenContract,
                     0,
-                    _encodeERC20Transfer(deniedDestination, transferAmount),
+                    _encodeErc20Transfer(deniedDestination, transferAmount),
                     initiator1,
                     proofs
                 );
@@ -898,7 +898,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         if (useTokenTransfer) {
             if (useERC20) {
                 return PolicyTransactionCase({
-                    to: tokenContract, value: 0, data: _encodeERC20Transfer(destination, transferAmount)
+                    to: tokenContract, value: 0, data: _encodeErc20Transfer(destination, transferAmount)
                 });
             }
 

@@ -70,7 +70,7 @@ abstract contract OrganizationGuardianRecoveryBaseSuiteBase is OrganizationAdmin
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
         operationData = abi.encode(recoveryAddress, timelockDurationSeconds);
-        auth = _buildAdminAuthParamsForEOA({
+        auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.InitiateInitializeGuardianRecovery,
             operationData: operationData,
             isApproval: isApproval,
@@ -92,7 +92,7 @@ abstract contract OrganizationGuardianRecoveryBaseSuiteBase is OrganizationAdmin
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
         operationData = abi.encode(pendingAddress, pendingTimelock);
-        auth = _buildAdminAuthParamsForEOA({
+        auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.FinalizeInitializeGuardianRecovery,
             operationData: operationData,
             isApproval: isApproval,
@@ -114,7 +114,7 @@ abstract contract OrganizationGuardianRecoveryBaseSuiteBase is OrganizationAdmin
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
         operationData = abi.encode(pendingAddress, pendingTimelock);
-        auth = _buildAdminAuthParamsForEOA({
+        auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.CancelInitializeGuardianRecovery,
             operationData: operationData,
             isApproval: isApproval,

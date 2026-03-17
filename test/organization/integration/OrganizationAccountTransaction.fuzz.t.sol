@@ -299,7 +299,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
             policy = _buildApprovalPolicy(TransactionType.TokenTransfers, PolicyType.AutoApprove);
             to = TOKEN;
             value = 0;
-            data = _encodeERC20Transfer(RECIPIENT, boundedAmount);
+            data = _encodeErc20Transfer(RECIPIENT, boundedAmount);
             expectedUsage = boundedAmount;
             expectedDestination = RECIPIENT;
         } else {

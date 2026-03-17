@@ -54,7 +54,7 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
             "required-approvals wrapper mismatch"
         );
 
-        bytes memory transfer = _encodeERC20Transfer(address(0xBEEF), 11);
+        bytes memory transfer = _encodeErc20Transfer(address(0xBEEF), 11);
         assertEq(
             harness.getActualDestinationViaLibrary(address(0xCAFE), transfer, 0),
             harness.getActualDestinationViaPolicyLibrary(address(0xCAFE), transfer, 0),

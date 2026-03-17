@@ -76,7 +76,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         uint256[] memory keys = new uint256[](2);
         keys[0] = REVIEWER_PK_1;
         keys[1] = REVIEWER_PK_2;
-        bytes memory signatures = _buildSortedEOASignatures(messageHash, keys);
+        bytes memory signatures = _buildSortedEoaSignatures(messageHash, keys);
 
         // Call: execute `areApprovalsValidViaPolicyLibrary` with the happy-path payload.
         bool ok = harness.areApprovalsValidViaPolicyLibrary(policy, signatures, messageHash);
@@ -94,7 +94,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         uint256[] memory keys = new uint256[](2);
         keys[0] = REVIEWER_PK_1;
         keys[1] = REVIEWER_PK_2;
-        bytes memory signatures = _buildSortedEOASignatures(messageHash, keys);
+        bytes memory signatures = _buildSortedEoaSignatures(messageHash, keys);
 
         // Call: execute `areApprovalsValidViaPolicyLibrary` with the happy-path payload.
         bool ok = harness.areApprovalsValidViaPolicyLibrary(policy, signatures, messageHash);
@@ -273,7 +273,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         uint256[] memory keys = new uint256[](2);
         keys[0] = REVIEWER_PK_1;
         keys[1] = REVIEWER_PK_2;
-        bytes memory signatures = _buildSortedEOASignatures(messageHash, keys);
+        bytes memory signatures = _buildSortedEoaSignatures(messageHash, keys);
 
         // Call: execute `areApprovalsValidViaPolicyLibrary` with the happy-path payload.
         bool first = harness.areApprovalsValidViaPolicyLibrary(policy, signatures, messageHash);

@@ -502,7 +502,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
         uint256 salt = 3109;
         uint256 expiration = block.timestamp + 1 hours;
         bytes memory operationData = abi.encode(keccak256(abi.encode(rawModifications)));
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyGroups,
             operationData: operationData,
             isApproval: true,

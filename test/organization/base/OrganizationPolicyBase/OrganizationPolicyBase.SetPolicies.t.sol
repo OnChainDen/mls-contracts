@@ -275,7 +275,7 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyPolicies,
             operationData: operationData,
             isApproval: false,
@@ -323,7 +323,7 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
             expirationTimestamp: auth.expirationTimestamp,
             isApproval: true
         });
-        address expectedRecoveredSigner = _recoverEOASignerFromPackedSignature(tamperedOperationHash, auth.signatures);
+        address expectedRecoveredSigner = _recoverEoaSignerFromPackedSignature(tamperedOperationHash, auth.signatures);
 
         // Verify: assert that tampering invalidates the recovered signer and bubbles strict admin signer validation.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, expectedRecoveredSigner));
@@ -361,7 +361,7 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
             expirationTimestamp: auth.expirationTimestamp,
             isApproval: true
         });
-        address expectedRecoveredSigner = _recoverEOASignerFromPackedSignature(tamperedOperationHash, auth.signatures);
+        address expectedRecoveredSigner = _recoverEoaSignerFromPackedSignature(tamperedOperationHash, auth.signatures);
 
         // Verify: assert that tampering invalidates the recovered signer and bubbles strict admin signer validation.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, expectedRecoveredSigner));
@@ -762,7 +762,7 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
     /**
      * @dev Helper: recovers signer from one packed EOA signature (`v || r || s`) against `hash`.
      */
-    function _recoverEOASignerFromPackedSignature(bytes32 hash, bytes memory signatures)
+    function _recoverEoaSignerFromPackedSignature(bytes32 hash, bytes memory signatures)
         internal
         pure
         returns (address)

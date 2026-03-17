@@ -37,7 +37,7 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
             harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, abi.encodePacked(uint8(0x02), hex"AA"));
         bytes4 unknown7F =
             harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, abi.encodePacked(uint8(0x7F), hex"BB"));
-        bytes4 unknownFF =
+        bytes4 unknownFf =
             harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, abi.encodePacked(uint8(0xFF), hex"CC"));
 
         // Verify: only supported routing prefixes should return magic.
@@ -45,7 +45,7 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
         assertEq(policyResult, SignatureUtils.ERC1271_MAGIC_VALUE, "policy prefix should produce magic");
         assertEq(unknown02, SignatureUtils.ERC1271_INVALID_VALUE, "unknown prefix should return invalid");
         assertEq(unknown7F, SignatureUtils.ERC1271_INVALID_VALUE, "unknown prefix should return invalid");
-        assertEq(unknownFF, SignatureUtils.ERC1271_INVALID_VALUE, "unknown prefix should return invalid");
+        assertEq(unknownFf, SignatureUtils.ERC1271_INVALID_VALUE, "unknown prefix should return invalid");
     }
 
     /// @dev Verifies representative supported and non-policy payload classes stay on the magic-or-invalid surface.

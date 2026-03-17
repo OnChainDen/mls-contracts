@@ -1094,7 +1094,7 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         pks[2] = ADMIN_PK_3;
         pks[3] = ADMIN_PK_4;
 
-        bytes memory signatures = _buildSortedEOASignatures(operationHash, pks);
+        bytes memory signatures = _buildSortedEoaSignatures(operationHash, pks);
         return AdminAuthParams({salt: salt, expirationTimestamp: expirationTimestamp, signatures: signatures});
     }
 
@@ -1113,11 +1113,11 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         uint256[] memory pks = new uint256[](1);
         pks[0] = ADMIN_PK_1;
 
-        bytes memory signatures = _buildSortedEOASignatures(operationHash, pks);
+        bytes memory signatures = _buildSortedEoaSignatures(operationHash, pks);
         return AdminAuthParams({salt: salt, expirationTimestamp: expirationTimestamp, signatures: signatures});
     }
 
-    function _buildSortedEOASignatures(bytes32 operationHash, uint256[] memory privateKeys)
+    function _buildSortedEoaSignatures(bytes32 operationHash, uint256[] memory privateKeys)
         internal
         view
         returns (bytes memory)

@@ -45,48 +45,48 @@ contract TimelockUtilsTest is Test {
     TimelockUtilsHarness public harness;
 
     /// @dev Cached values from the library constants for readability
-    uint256 MIN_DURATION;
-    uint256 MAX_DURATION;
+    uint256 minDuration;
+    uint256 maxDuration;
 
     /// @dev Deploys the harness and caches the library timelock bounds for fuzzing.
     function setUp() public {
         harness = new TimelockUtilsHarness();
-        MIN_DURATION = harness.minTimelockDuration();
-        MAX_DURATION = harness.maxTimelockDuration();
+        minDuration = harness.minTimelockDuration();
+        maxDuration = harness.maxTimelockDuration();
 
         // Sanity check: verify constants match expected values
-        assertEq(MIN_DURATION, 2 days, "MIN should be 2 days");
-        assertEq(MAX_DURATION, 30 days, "MAX should be 30 days");
+        assertEq(minDuration, 2 days, "MIN should be 2 days");
+        assertEq(maxDuration, 30 days, "MAX should be 30 days");
     }
 
     /// @dev Test case: Duration exactly at MIN (2 days) should succeed.
     function test_validateTimelockDurationOrRevert_atMin_succeeds() public view {
         // Should not revert
-        harness.validateTimelockDurationOrRevert(MIN_DURATION);
+        harness.validateTimelockDurationOrRevert(minDuration);
     }
 
     /// @dev Test case: Duration exactly at MAX (30 days) should succeed.
     function test_validateTimelockDurationOrRevert_atMax_succeeds() public view {
         // Should not revert
-        harness.validateTimelockDurationOrRevert(MAX_DURATION);
+        harness.validateTimelockDurationOrRevert(maxDuration);
     }
 
     /// @dev Test case: Duration at MIN - 1 should revert with InvalidTimelockDuration.
     function test_validateTimelockDurationOrRevert_belowMin_reverts() public {
-        uint256 belowMin = MIN_DURATION - 1;
+        uint256 belowMin = minDuration - 1;
 
         vm.expectRevert(
-            abi.encodeWithSelector(TimelockUtils.InvalidTimelockDuration.selector, belowMin, MIN_DURATION, MAX_DURATION)
+            abi.encodeWithSelector(TimelockUtils.InvalidTimelockDuration.selector, belowMin, minDuration, maxDuration)
         );
         harness.validateTimelockDurationOrRevert(belowMin);
     }
 
     /// @dev Test case: Duration at MAX + 1 should revert with InvalidTimelockDuration.
     function test_validateTimelockDurationOrRevert_aboveMax_reverts() public {
-        uint256 aboveMax = MAX_DURATION + 1;
+        uint256 aboveMax = maxDuration + 1;
 
         vm.expectRevert(
-            abi.encodeWithSelector(TimelockUtils.InvalidTimelockDuration.selector, aboveMax, MIN_DURATION, MAX_DURATION)
+            abi.encodeWithSelector(TimelockUtils.InvalidTimelockDuration.selector, aboveMax, minDuration, maxDuration)
         );
         harness.validateTimelockDurationOrRevert(aboveMax);
     }
@@ -94,7 +94,7 @@ contract TimelockUtilsTest is Test {
     /// @dev Test case: Duration of 0 should revert with InvalidTimelockDuration.
     function test_validateTimelockDurationOrRevert_zero_reverts() public {
         vm.expectRevert(
-            abi.encodeWithSelector(TimelockUtils.InvalidTimelockDuration.selector, 0, MIN_DURATION, MAX_DURATION)
+            abi.encodeWithSelector(TimelockUtils.InvalidTimelockDuration.selector, 0, minDuration, maxDuration)
         );
         harness.validateTimelockDurationOrRevert(0);
     }
@@ -107,7 +107,7 @@ contract TimelockUtilsTest is Test {
     /// @dev Test case: Any duration in [MIN, MAX] should succeed.
     function testFuzz_validateTimelockDurationOrRevert_withinRange_succeeds(uint256 duration) public view {
         // Setup: bound the fuzzed duration inside the valid timelock range.
-        duration = bound(duration, MIN_DURATION, MAX_DURATION);
+        duration = bound(duration, minDuration, maxDuration);
 
         // Call: validate the bounded in-range timelock duration.
         harness.validateTimelockDurationOrRevert(duration);
@@ -118,11 +118,11 @@ contract TimelockUtilsTest is Test {
     /// @dev Test case: Any duration outside [MIN, MAX] should revert with InvalidTimelockDuration.
     function testFuzz_validateTimelockDurationOrRevert_outsideRange_reverts(uint256 duration) public {
         // Setup: constrain the fuzzed duration outside the valid timelock range.
-        vm.assume(duration < MIN_DURATION || duration > MAX_DURATION);
+        vm.assume(duration < minDuration || duration > maxDuration);
 
         // Call: validate the out-of-range timelock, expecting `InvalidTimelockDuration`.
         vm.expectRevert(
-            abi.encodeWithSelector(TimelockUtils.InvalidTimelockDuration.selector, duration, MIN_DURATION, MAX_DURATION)
+            abi.encodeWithSelector(TimelockUtils.InvalidTimelockDuration.selector, duration, minDuration, maxDuration)
         );
         harness.validateTimelockDurationOrRevert(duration);
 

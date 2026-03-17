@@ -622,7 +622,7 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
         uint256 expirationTimestamp = block.timestamp + 30 days;
         bytes32 operationHash =
             organization.getAdminOperationHash(operationType, operationData, salt, expirationTimestamp, isApproval);
-        bytes memory signatures = _buildSortedEOASignatures(operationHash, _singlePrivateKeyArray(ADMIN_PK_1));
+        bytes memory signatures = _buildSortedEoaSignatures(operationHash, _singlePrivateKeyArray(ADMIN_PK_1));
         auth = AdminAuthParams({salt: salt, expirationTimestamp: expirationTimestamp, signatures: signatures});
     }
 
@@ -884,7 +884,7 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
      * @param privateKeys Private keys that will sign `operationHash`.
      * @return signatures Canonically ordered concatenated signatures.
      */
-    function _buildSortedEOASignatures(bytes32 operationHash, uint256[] memory privateKeys)
+    function _buildSortedEoaSignatures(bytes32 operationHash, uint256[] memory privateKeys)
         internal
         view
         returns (bytes memory signatures)

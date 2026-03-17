@@ -209,7 +209,7 @@ abstract contract OrganizationPolicyTestBase is OrganizationGroupsTestBase, Byte
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
         operationData = abi.encode(newPoliciesRoot, keccak256(bytes(ipfsCid)));
-        auth = _buildAdminAuthParamsForEOA({
+        auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyPolicies,
             operationData: operationData,
             isApproval: isApproval,
@@ -229,21 +229,21 @@ abstract contract OrganizationPolicyTestBase is OrganizationGroupsTestBase, Byte
     /**
      * @dev Encodes ERC-20 `transfer(address,uint256)` calldata.
      */
-    function _encodeERC20Transfer(address to, uint256 amount) internal pure returns (bytes memory) {
+    function _encodeErc20Transfer(address to, uint256 amount) internal pure returns (bytes memory) {
         return abi.encodeWithSelector(IERC20.transfer.selector, to, amount);
     }
 
     /**
      * @dev Encodes ERC-20 `approve(address,uint256)` calldata.
      */
-    function _encodeERC20Approve(address spender, uint256 amount) internal pure returns (bytes memory) {
+    function _encodeErc20Approve(address spender, uint256 amount) internal pure returns (bytes memory) {
         return abi.encodeWithSelector(IERC20.approve.selector, spender, amount);
     }
 
     /**
      * @dev Encodes ERC-20 `transferFrom(address,address,uint256)` calldata.
      */
-    function _encodeERC20TransferFrom(address from, address to, uint256 amount) internal pure returns (bytes memory) {
+    function _encodeErc20TransferFrom(address from, address to, uint256 amount) internal pure returns (bytes memory) {
         return abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, amount);
     }
 

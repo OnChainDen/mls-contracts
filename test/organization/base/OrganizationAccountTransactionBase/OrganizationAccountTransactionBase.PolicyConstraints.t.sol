@@ -320,7 +320,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
         ValidationProofs memory allowedProofs = _setSinglePolicyRootAndBuildProofs(9020, allowedPolicy);
         allowedProofs.destinationProof = recipientProof;
-        bytes memory hundredTokenTransfer = _encodeERC20Transfer(RECIPIENT, 100);
+        bytes memory hundredTokenTransfer = _encodeErc20Transfer(RECIPIENT, 100);
         (bytes memory allowedSig, uint256 allowedExpiration) =
             _signExecution(INITIATOR_PK_1, address(account), address(allowedToken), 0, hundredTokenTransfer, 20, 9020);
 
@@ -351,7 +351,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
         ValidationProofs memory recipientOnlyProofs = _setSinglePolicyRootAndBuildProofs(9021, recipientOnlyPolicy);
         recipientOnlyProofs.destinationProof = tokenAddressProof;
-        bytes memory recipientCheckData = _encodeERC20Transfer(RECIPIENT, 10);
+        bytes memory recipientCheckData = _encodeErc20Transfer(RECIPIENT, 10);
         (bytes memory recipientOnlySig, uint256 recipientOnlyExpiration) =
             _signExecution(INITIATOR_PK_1, address(account), address(allowedToken), 0, recipientCheckData, 21, 9021);
 
@@ -1609,7 +1609,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
         operationData = _encodeOperationDataForModifyMembers(membersToAdd, membersToRemove);
-        auth = _buildAdminAuthParamsForEOA({
+        auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyMembers,
             operationData: operationData,
             isApproval: isApproval,

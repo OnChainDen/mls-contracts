@@ -19,7 +19,7 @@ contract LibPolicyApprovalFuzzTest is PolicyLibrariesFuzzTestBase {
         uint256[] memory keys = new uint256[](2);
         keys[0] = REVIEWER_PK_1;
         keys[1] = REVIEWER_PK_2;
-        bytes memory sortedSignatures = _buildSortedEOASignatures(messageHash, keys);
+        bytes memory sortedSignatures = _buildSortedEoaSignatures(messageHash, keys);
 
         bytes memory reviewer1Signature = _signHash(REVIEWER_PK_1, messageHash);
         bytes memory reviewer2Signature = _signHash(REVIEWER_PK_2, messageHash);

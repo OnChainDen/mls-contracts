@@ -40,7 +40,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
             shouldBeFuture ? block.timestamp + offset : (block.timestamp > offset ? block.timestamp - offset : 0);
         uint256 salt = 4101;
         bytes memory operationData = abi.encode("floa-auth-38", expiration);
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             isApproval: true,
@@ -102,7 +102,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
         uint256 salt = bound(saltRaw, 1, type(uint256).max - 1);
         uint256 expiration = block.timestamp + bound(uint256(offsetSeconds), 1, 10 days);
         bytes memory signedOperationData = abi.encode("floa-auth-39", signedSeed);
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: signedOperationData,
             isApproval: true,
@@ -171,7 +171,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
         uint256 salt = bound(saltRaw, 1, type(uint256).max);
         uint256 expiration = block.timestamp + bound(uint256(offsetSeconds), 1, 10 days);
         bytes memory operationData = abi.encode("floa-auth-39-chain-org", signedSeed);
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             isApproval: true,
@@ -243,7 +243,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
         if (signatureCount > 1) privateKeys[1] = ADMIN_PK_2;
         if (signatureCount > 2) privateKeys[2] = ADMIN_PK_3;
 
-        bytes memory signatures = _buildSortedEOASignatures(operationHash, privateKeys);
+        bytes memory signatures = _buildSortedEoaSignatures(operationHash, privateKeys);
         AdminAuthParams memory auth =
             AdminAuthParams({salt: salt, expirationTimestamp: expiration, signatures: signatures});
 
@@ -461,7 +461,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
         uint256 salt = 4003;
         uint256 expiration = block.timestamp + 1 hours;
 
-        AdminAuthParams memory signedAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory signedAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: signedOperationData,
             isApproval: true,
@@ -515,7 +515,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
 
         AdminAuthParams memory auth;
         if (mode == 0) {
-            auth = _buildAdminAuthParamsForEOA({
+            auth = _buildAdminAuthParamsForEoa({
                 operationType: OperationType.ModifyAdmins,
                 operationData: signedOperationData,
                 isApproval: true,
@@ -535,7 +535,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
             });
         } else if (mode == 1) {
             vm.assume(signedSeed != executedSeed);
-            auth = _buildAdminAuthParamsForEOA({
+            auth = _buildAdminAuthParamsForEoa({
                 operationType: OperationType.ModifyAdmins,
                 operationData: signedOperationData,
                 isApproval: true,
@@ -554,7 +554,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
                 authParams: auth
             });
         } else if (mode == 2) {
-            auth = _buildAdminAuthParamsForEOA({
+            auth = _buildAdminAuthParamsForEoa({
                 operationType: OperationType.ModifyMembers,
                 operationData: signedOperationData,
                 isApproval: true,
@@ -573,7 +573,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
                 authParams: auth
             });
         } else {
-            auth = _buildAdminAuthParamsForEOA({
+            auth = _buildAdminAuthParamsForEoa({
                 operationType: OperationType.ModifyAdmins,
                 operationData: signedOperationData,
                 isApproval: false,
@@ -730,12 +730,12 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
         AdminAuthParams memory rejectionAuth = AdminAuthParams({
             salt: salt,
             expirationTimestamp: expiration,
-            signatures: _buildSortedEOASignatures(rejectionHash, buildUint256Array(ADMIN_PK_1))
+            signatures: _buildSortedEoaSignatures(rejectionHash, buildUint256Array(ADMIN_PK_1))
         });
         AdminAuthParams memory approvalAuth = AdminAuthParams({
             salt: salt,
             expirationTimestamp: expiration,
-            signatures: _buildSortedEOASignatures(approvalHash, buildUint256Array(ADMIN_PK_1))
+            signatures: _buildSortedEoaSignatures(approvalHash, buildUint256Array(ADMIN_PK_1))
         });
         uint256 nonce = org.computeNonce(OperationType.Upgrade, operationData, salt);
 
@@ -776,7 +776,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
         AdminAuthParams memory auth = AdminAuthParams({
             salt: salt,
             expirationTimestamp: expiration,
-            signatures: _buildSortedEOASignatures(operationHash, buildUint256Array(ADMIN_PK_1))
+            signatures: _buildSortedEoaSignatures(operationHash, buildUint256Array(ADMIN_PK_1))
         });
         uint256 nonce = org.computeNonce(OperationType.Upgrade, operationData, salt);
 

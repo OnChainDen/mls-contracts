@@ -143,7 +143,7 @@ abstract contract OrganizationGroupsTestBase is OrganizationAdminTestBase {
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
         operationData = _encodeOperationDataForModifyGroups(modifications);
-        auth = _buildAdminAuthParamsForEOA({
+        auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyGroups,
             operationData: operationData,
             isApproval: isApproval,

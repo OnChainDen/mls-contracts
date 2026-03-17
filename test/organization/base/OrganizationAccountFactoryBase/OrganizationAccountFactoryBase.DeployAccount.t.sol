@@ -151,7 +151,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
         AdminAuthParams memory secondAuth = AdminAuthParams({
             salt: secondAdminSalt,
             expirationTimestamp: expiration,
-            signatures: _buildSortedEOASignatures(secondOperationHash, buildUint256Array(ADMIN_PK_1))
+            signatures: _buildSortedEoaSignatures(secondOperationHash, buildUint256Array(ADMIN_PK_1))
         });
 
         uint256 firstOrgNonce = _computeDeployAccountNonce(operationData, firstAdminSalt);
@@ -255,7 +255,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
         AdminAuthParams memory secondAuth = AdminAuthParams({
             salt: 51_034,
             expirationTimestamp: expiration,
-            signatures: _buildSortedEOASignatures(secondOperationHash, buildUint256Array(ADMIN_PK_1))
+            signatures: _buildSortedEoaSignatures(secondOperationHash, buildUint256Array(ADMIN_PK_1))
         });
 
         vm.prank(GUARDIAN);
@@ -354,7 +354,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
 
         bytes memory operationData = _encodeOperationDataForDeployAccount(create2Salt);
 
-        AdminAuthParams memory wrongTypeAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory wrongTypeAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.UpgradeAccount,
             operationData: operationData,
             isApproval: true,

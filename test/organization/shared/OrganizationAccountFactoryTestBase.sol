@@ -66,7 +66,7 @@ abstract contract OrganizationAccountFactoryTestBase is OrganizationAdminTestBas
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
         operationData = _encodeOperationDataForDeployAccount(create2Salt);
-        auth = _buildAdminAuthParamsForEOA({
+        auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.DeployAccount,
             operationData: operationData,
             isApproval: isApproval,
@@ -87,7 +87,7 @@ abstract contract OrganizationAccountFactoryTestBase is OrganizationAdminTestBas
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
         operationData = _encodeOperationDataForSetAccountImplementation(newImplementation);
-        auth = _buildAdminAuthParamsForEOA({
+        auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.UpgradeAccount,
             operationData: operationData,
             isApproval: isApproval,
