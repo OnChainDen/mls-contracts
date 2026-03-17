@@ -179,7 +179,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` succeeds with valid admin auth
     /// and consumes the derived nonce.
-    function test_L_5_validateAdminAuth_thresholdOneSingleValidSignature_succeedsAndConsumesNonce() public {
+    function test_validateAdminAuth_thresholdOneSingleValidSignature_succeedsAndConsumesNonce() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -521,7 +521,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` succeeds once and then rejects a
     /// replay of the same nonce.
-    function test_L_15_validateAdminAuth_nonceReplay_revertsNonceAlreadyUsed() public {
+    function test_validateAdminAuth_nonceReplay_revertsNonceAlreadyUsed() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
