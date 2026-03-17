@@ -280,6 +280,24 @@ contract PolicyRateLimitsTest is Test {
         assertEq(actual, expected, "Window should be calculated relative to anchor");
     }
 
+    function test_computeTimeWindow_beforeAnchor_returnsZero() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+        policy.config.rateLimit.anchorTimestamp = 500_000;
+
+        vm.warp(499_999);
+        uint256 actual = LibOrganizationPolicy.computeTimeWindow(policy);
+        assertEq(actual, 0, "Window should be 0 when block.timestamp < anchor");
+    }
+
+    function test_computeTimeWindow_atAnchor_returnsZero() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+        policy.config.rateLimit.anchorTimestamp = 500_000;
+
+        vm.warp(500_000);
+        uint256 actual = LibOrganizationPolicy.computeTimeWindow(policy);
+        assertEq(actual, 0, "Window should be 0 when block.timestamp == anchor");
+    }
+
     function test_checkAndUpdateRateLimit_withAnchor_resetsAtAnchorAlignedBoundary() public {
         Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
         policy.config.rateLimit.anchorTimestamp = 999_000;
