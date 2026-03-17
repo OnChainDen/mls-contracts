@@ -10,11 +10,15 @@ import {SignatureTestHelpers} from "test/helpers/SignatureTestHelpers.sol";
 import {
     InitializationSuiteBase
 } from "test/organization/base/OrganizationInitializationBase/OrganizationInitializationBaseSuiteBase.sol";
-import {
-    OrganizationImplementationHarness
-} from "test/organization/shared/OrganizationUpgradeHarnesses.sol";
+import {OrganizationImplementationHarness} from "test/organization/shared/OrganizationUpgradeHarnesses.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
-import {ContractType, GroupModification, GroupModificationType, InitializationParams, OperationType} from "types/CommonTypes.sol";
+import {
+    ContractType,
+    GroupModification,
+    GroupModificationType,
+    InitializationParams,
+    OperationType
+} from "types/CommonTypes.sol";
 import {
     ApprovalConfig,
     ApproverType,
@@ -187,7 +191,13 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         (OrganizationImplementationHarness org,) = _deployAdminOrg(200_001);
         address[] memory toAdd = _generateAddresses(1, 0xF000);
         address[] memory toRemove = buildEmptyAddressArray();
-        AdminAuthParams memory auth = _buildAdminAuth(org, OperationType.ModifyMembers, abi.encode(keccak256(abi.encode(toAdd)), keccak256(abi.encode(toRemove))), 200_002, true);
+        AdminAuthParams memory auth = _buildAdminAuth(
+            org,
+            OperationType.ModifyMembers,
+            abi.encode(keccak256(abi.encode(toAdd)), keccak256(abi.encode(toRemove))),
+            200_002,
+            true
+        );
 
         vm.prank(GUARDIAN);
         vm.startSnapshotGas("modifyMembers_addOne");
@@ -199,7 +209,13 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         (OrganizationImplementationHarness org,) = _deployAdminOrg(200_003);
         address[] memory toAdd = _generateAddresses(10, 0xF100);
         address[] memory toRemove = buildEmptyAddressArray();
-        AdminAuthParams memory auth = _buildAdminAuth(org, OperationType.ModifyMembers, abi.encode(keccak256(abi.encode(toAdd)), keccak256(abi.encode(toRemove))), 200_004, true);
+        AdminAuthParams memory auth = _buildAdminAuth(
+            org,
+            OperationType.ModifyMembers,
+            abi.encode(keccak256(abi.encode(toAdd)), keccak256(abi.encode(toRemove))),
+            200_004,
+            true
+        );
 
         vm.prank(GUARDIAN);
         vm.startSnapshotGas("modifyMembers_addTen");
@@ -211,7 +227,13 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         (OrganizationImplementationHarness org,) = _deployAdminOrg(200_005);
         address[] memory toAdd = _generateAddresses(100, 0xF200);
         address[] memory toRemove = buildEmptyAddressArray();
-        AdminAuthParams memory auth = _buildAdminAuth(org, OperationType.ModifyMembers, abi.encode(keccak256(abi.encode(toAdd)), keccak256(abi.encode(toRemove))), 200_006, true);
+        AdminAuthParams memory auth = _buildAdminAuth(
+            org,
+            OperationType.ModifyMembers,
+            abi.encode(keccak256(abi.encode(toAdd)), keccak256(abi.encode(toRemove))),
+            200_006,
+            true
+        );
 
         vm.prank(GUARDIAN);
         vm.startSnapshotGas("modifyMembers_addHundred");
@@ -223,7 +245,13 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         (OrganizationImplementationHarness org,) = _deployAdminOrg(200_007);
         address[] memory toAdd = buildEmptyAddressArray();
         address[] memory toRemove = buildArray(initiator);
-        AdminAuthParams memory auth = _buildAdminAuth(org, OperationType.ModifyMembers, abi.encode(keccak256(abi.encode(toAdd)), keccak256(abi.encode(toRemove))), 200_008, true);
+        AdminAuthParams memory auth = _buildAdminAuth(
+            org,
+            OperationType.ModifyMembers,
+            abi.encode(keccak256(abi.encode(toAdd)), keccak256(abi.encode(toRemove))),
+            200_008,
+            true
+        );
 
         vm.prank(GUARDIAN);
         vm.startSnapshotGas("modifyMembers_removeOne");
@@ -237,11 +265,18 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         address[] memory toAdd = buildArray(newAdmin);
         address[] memory toRemove = buildEmptyAddressArray();
         // Must be a member first
-        AdminAuthParams memory memberAuth = _buildAdminAuth(org, OperationType.ModifyMembers, abi.encode(keccak256(abi.encode(toAdd)), keccak256(abi.encode(toRemove))), 200_010, true);
+        AdminAuthParams memory memberAuth = _buildAdminAuth(
+            org,
+            OperationType.ModifyMembers,
+            abi.encode(keccak256(abi.encode(toAdd)), keccak256(abi.encode(toRemove))),
+            200_010,
+            true
+        );
         vm.prank(GUARDIAN);
         org.modifyMembers(toAdd, toRemove, memberAuth);
 
-        bytes memory operationData = abi.encode(keccak256(abi.encode(toAdd)), keccak256(abi.encode(toRemove)), uint256(4));
+        bytes memory operationData =
+            abi.encode(keccak256(abi.encode(toAdd)), keccak256(abi.encode(toRemove)), uint256(4));
         AdminAuthParams memory auth = _buildAdminAuth(org, OperationType.ModifyAdmins, operationData, 200_011, true);
 
         vm.prank(GUARDIAN);
@@ -254,7 +289,8 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         (OrganizationImplementationHarness org,) = _deployAdminOrg(200_012);
         address[] memory toAdd = buildEmptyAddressArray();
         address[] memory toRemove = buildArray(admin5);
-        bytes memory operationData = abi.encode(keccak256(abi.encode(toAdd)), keccak256(abi.encode(toRemove)), uint256(3));
+        bytes memory operationData =
+            abi.encode(keccak256(abi.encode(toAdd)), keccak256(abi.encode(toRemove)), uint256(3));
         AdminAuthParams memory auth = _buildAdminAuth(org, OperationType.ModifyAdmins, operationData, 200_013, true);
 
         vm.prank(GUARDIAN);
@@ -392,15 +428,21 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
     }
 
     function test_executeAccountTx_manualApprove_20policies_gas() public {
-        _runPolicyScalingTest(20, PolicyType.RequireManualApproval, "executeAccountTx_manualApprove_20policies", 300_004);
+        _runPolicyScalingTest(
+            20, PolicyType.RequireManualApproval, "executeAccountTx_manualApprove_20policies", 300_004
+        );
     }
 
     function test_executeAccountTx_manualApprove_100policies_gas() public {
-        _runPolicyScalingTest(100, PolicyType.RequireManualApproval, "executeAccountTx_manualApprove_100policies", 300_005);
+        _runPolicyScalingTest(
+            100, PolicyType.RequireManualApproval, "executeAccountTx_manualApprove_100policies", 300_005
+        );
     }
 
     function test_executeAccountTx_manualApprove_1000policies_gas() public {
-        _runPolicyScalingTest(1000, PolicyType.RequireManualApproval, "executeAccountTx_manualApprove_1000policies", 300_006);
+        _runPolicyScalingTest(
+            1000, PolicyType.RequireManualApproval, "executeAccountTx_manualApprove_1000policies", 300_006
+        );
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -436,11 +478,24 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
             _deployOrgWithAutoApprovePolicy(TransactionType.Any, RateLimitType.None, 500_001);
         vm.deal(account, 1 ether);
 
-        bytes memory sig = _signInitiatorTx(address(org), account, RECIPIENT, 0.1 ether, bytes(""), 500_002, block.timestamp + 1 days, POLICY_ID, true);
+        bytes memory sig = _signInitiatorTx(
+            address(org), account, RECIPIENT, 0.1 ether, bytes(""), 500_002, block.timestamp + 1 days, POLICY_ID, true
+        );
 
         vm.prank(GUARDIAN);
         vm.startSnapshotGas("executeAccountTx_nativeTransfer_noRateLimit");
-        org.executeAccountTransaction(account, RECIPIENT, 0.1 ether, bytes(""), 500_002, block.timestamp + 1 days, POLICY_ID, sig, bytes(""), proofs);
+        org.executeAccountTransaction(
+            account,
+            RECIPIENT,
+            0.1 ether,
+            bytes(""),
+            500_002,
+            block.timestamp + 1 days,
+            POLICY_ID,
+            sig,
+            bytes(""),
+            proofs
+        );
         vm.stopSnapshotGas("executeAccountTx_nativeTransfer_noRateLimit");
     }
 
@@ -450,11 +505,15 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         bytes memory data = abi.encodeWithSelector(IERC20.transfer.selector, RECIPIENT, 1000);
         mockToken.mint(account, 10_000);
 
-        bytes memory sig = _signInitiatorTx(address(org), account, address(mockToken), 0, data, 500_004, block.timestamp + 1 days, POLICY_ID, true);
+        bytes memory sig = _signInitiatorTx(
+            address(org), account, address(mockToken), 0, data, 500_004, block.timestamp + 1 days, POLICY_ID, true
+        );
 
         vm.prank(GUARDIAN);
         vm.startSnapshotGas("executeAccountTx_tokenTransfer_noRateLimit");
-        org.executeAccountTransaction(account, address(mockToken), 0, data, 500_004, block.timestamp + 1 days, POLICY_ID, sig, bytes(""), proofs);
+        org.executeAccountTransaction(
+            account, address(mockToken), 0, data, 500_004, block.timestamp + 1 days, POLICY_ID, sig, bytes(""), proofs
+        );
         vm.stopSnapshotGas("executeAccountTx_tokenTransfer_noRateLimit");
     }
 
@@ -463,11 +522,15 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
             _deployOrgWithAutoApprovePolicy(TransactionType.ContractInteractions, RateLimitType.None, 500_005);
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
 
-        bytes memory sig = _signInitiatorTx(address(org), account, address(mockTarget), 0, data, 500_006, block.timestamp + 1 days, POLICY_ID, true);
+        bytes memory sig = _signInitiatorTx(
+            address(org), account, address(mockTarget), 0, data, 500_006, block.timestamp + 1 days, POLICY_ID, true
+        );
 
         vm.prank(GUARDIAN);
         vm.startSnapshotGas("executeAccountTx_contractInteraction_noRateLimit");
-        org.executeAccountTransaction(account, address(mockTarget), 0, data, 500_006, block.timestamp + 1 days, POLICY_ID, sig, bytes(""), proofs);
+        org.executeAccountTransaction(
+            account, address(mockTarget), 0, data, 500_006, block.timestamp + 1 days, POLICY_ID, sig, bytes(""), proofs
+        );
         vm.stopSnapshotGas("executeAccountTx_contractInteraction_noRateLimit");
     }
 
@@ -476,11 +539,24 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
             _deployOrgWithAutoApprovePolicy(TransactionType.Any, RateLimitType.TimeInterval, 500_007);
         vm.deal(account, 1 ether);
 
-        bytes memory sig = _signInitiatorTx(address(org), account, RECIPIENT, 0.1 ether, bytes(""), 500_008, block.timestamp + 1 days, POLICY_ID, true);
+        bytes memory sig = _signInitiatorTx(
+            address(org), account, RECIPIENT, 0.1 ether, bytes(""), 500_008, block.timestamp + 1 days, POLICY_ID, true
+        );
 
         vm.prank(GUARDIAN);
         vm.startSnapshotGas("executeAccountTx_nativeTransfer_withRateLimit");
-        org.executeAccountTransaction(account, RECIPIENT, 0.1 ether, bytes(""), 500_008, block.timestamp + 1 days, POLICY_ID, sig, bytes(""), proofs);
+        org.executeAccountTransaction(
+            account,
+            RECIPIENT,
+            0.1 ether,
+            bytes(""),
+            500_008,
+            block.timestamp + 1 days,
+            POLICY_ID,
+            sig,
+            bytes(""),
+            proofs
+        );
         vm.stopSnapshotGas("executeAccountTx_nativeTransfer_withRateLimit");
     }
 
@@ -490,11 +566,15 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         bytes memory data = abi.encodeWithSelector(IERC20.transfer.selector, RECIPIENT, 1000);
         mockToken.mint(account, 10_000);
 
-        bytes memory sig = _signInitiatorTx(address(org), account, address(mockToken), 0, data, 500_010, block.timestamp + 1 days, POLICY_ID, true);
+        bytes memory sig = _signInitiatorTx(
+            address(org), account, address(mockToken), 0, data, 500_010, block.timestamp + 1 days, POLICY_ID, true
+        );
 
         vm.prank(GUARDIAN);
         vm.startSnapshotGas("executeAccountTx_tokenTransfer_withRateLimit");
-        org.executeAccountTransaction(account, address(mockToken), 0, data, 500_010, block.timestamp + 1 days, POLICY_ID, sig, bytes(""), proofs);
+        org.executeAccountTransaction(
+            account, address(mockToken), 0, data, 500_010, block.timestamp + 1 days, POLICY_ID, sig, bytes(""), proofs
+        );
         vm.stopSnapshotGas("executeAccountTx_tokenTransfer_withRateLimit");
     }
 
@@ -503,11 +583,15 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
             _deployOrgWithAutoApprovePolicy(TransactionType.ContractInteractions, RateLimitType.TimeInterval, 500_011);
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
 
-        bytes memory sig = _signInitiatorTx(address(org), account, address(mockTarget), 0, data, 500_012, block.timestamp + 1 days, POLICY_ID, true);
+        bytes memory sig = _signInitiatorTx(
+            address(org), account, address(mockTarget), 0, data, 500_012, block.timestamp + 1 days, POLICY_ID, true
+        );
 
         vm.prank(GUARDIAN);
         vm.startSnapshotGas("executeAccountTx_contractInteraction_withRateLimit");
-        org.executeAccountTransaction(account, address(mockTarget), 0, data, 500_012, block.timestamp + 1 days, POLICY_ID, sig, bytes(""), proofs);
+        org.executeAccountTransaction(
+            account, address(mockTarget), 0, data, 500_012, block.timestamp + 1 days, POLICY_ID, sig, bytes(""), proofs
+        );
         vm.stopSnapshotGas("executeAccountTx_contractInteraction_withRateLimit");
     }
 
@@ -526,11 +610,15 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         bytes memory data = abi.encodeWithSelector(IERC20.transfer.selector, RECIPIENT, 1000);
         mockToken.mint(account, 10_000);
 
-        bytes memory sig = _signInitiatorTx(address(org), account, address(mockToken), 0, data, 500_015, block.timestamp + 1 days, POLICY_ID, true);
+        bytes memory sig = _signInitiatorTx(
+            address(org), account, address(mockToken), 0, data, 500_015, block.timestamp + 1 days, POLICY_ID, true
+        );
 
         vm.prank(GUARDIAN);
         vm.startSnapshotGas("executeAccountTx_tokenTransfer_rateLimitPerEntity");
-        org.executeAccountTransaction(account, address(mockToken), 0, data, 500_015, block.timestamp + 1 days, POLICY_ID, sig, bytes(""), proofs);
+        org.executeAccountTransaction(
+            account, address(mockToken), 0, data, 500_015, block.timestamp + 1 days, POLICY_ID, sig, bytes(""), proofs
+        );
         vm.stopSnapshotGas("executeAccountTx_tokenTransfer_rateLimitPerEntity");
     }
 
@@ -543,12 +631,27 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
             _deployOrgWithAutoApprovePolicy(TransactionType.Any, RateLimitType.None, 600_001);
         vm.deal(account, 1 ether);
 
-        bytes memory initiatorSig = _signInitiatorTx(address(org), account, RECIPIENT, 0.1 ether, bytes(""), 600_002, block.timestamp + 1 days, POLICY_ID, true);
-        bytes memory rejectionSig = _signInitiatorTx(address(org), account, RECIPIENT, 0.1 ether, bytes(""), 600_002, block.timestamp + 1 days, POLICY_ID, false);
+        bytes memory initiatorSig = _signInitiatorTx(
+            address(org), account, RECIPIENT, 0.1 ether, bytes(""), 600_002, block.timestamp + 1 days, POLICY_ID, true
+        );
+        bytes memory rejectionSig = _signInitiatorTx(
+            address(org), account, RECIPIENT, 0.1 ether, bytes(""), 600_002, block.timestamp + 1 days, POLICY_ID, false
+        );
 
         vm.prank(GUARDIAN);
         vm.startSnapshotGas("rejectAccountTx_autoApprove");
-        org.rejectAccountTransaction(account, RECIPIENT, 0.1 ether, bytes(""), 600_002, block.timestamp + 1 days, POLICY_ID, initiatorSig, rejectionSig, proofs);
+        org.rejectAccountTransaction(
+            account,
+            RECIPIENT,
+            0.1 ether,
+            bytes(""),
+            600_002,
+            block.timestamp + 1 days,
+            POLICY_ID,
+            initiatorSig,
+            rejectionSig,
+            proofs
+        );
         vm.stopSnapshotGas("rejectAccountTx_autoApprove");
     }
 
@@ -562,13 +665,37 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
 
         vm.deal(account, 1 ether);
 
-        bytes memory initiatorSig = _signInitiatorTx(address(org), account, RECIPIENT, 0.1 ether, bytes(""), 600_005, block.timestamp + 1 days, POLICY_ID, true);
-        bytes32 reviewHash = _computeReviewTxHash(address(org), account, RECIPIENT, 0.1 ether, bytes(""), 600_005, block.timestamp + 1 days, POLICY_ID, false, initiatorSig);
+        bytes memory initiatorSig = _signInitiatorTx(
+            address(org), account, RECIPIENT, 0.1 ether, bytes(""), 600_005, block.timestamp + 1 days, POLICY_ID, true
+        );
+        bytes32 reviewHash = _computeReviewTxHash(
+            address(org),
+            account,
+            RECIPIENT,
+            0.1 ether,
+            bytes(""),
+            600_005,
+            block.timestamp + 1 days,
+            POLICY_ID,
+            false,
+            initiatorSig
+        );
         bytes memory reviewSig = _signHash(reviewerPk, reviewHash);
 
         vm.prank(GUARDIAN);
         vm.startSnapshotGas("rejectAccountTx_manualApprove");
-        org.rejectAccountTransaction(account, RECIPIENT, 0.1 ether, bytes(""), 600_005, block.timestamp + 1 days, POLICY_ID, initiatorSig, reviewSig, proofs);
+        org.rejectAccountTransaction(
+            account,
+            RECIPIENT,
+            0.1 ether,
+            bytes(""),
+            600_005,
+            block.timestamp + 1 days,
+            POLICY_ID,
+            initiatorSig,
+            reviewSig,
+            proofs
+        );
         vm.stopSnapshotGas("rejectAccountTx_manualApprove");
     }
 
@@ -648,7 +775,9 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
 
         vm.prank(AUTHORIZED_DEPLOYER);
         org = OrganizationImplementationHarness(
-            payable(factory.deployOrganization(bytes32(saltSeed), address(gasImplementation), address(whitelist), params))
+            payable(factory.deployOrganization(
+                    bytes32(saltSeed), address(gasImplementation), address(whitelist), params
+                ))
         );
     }
 
@@ -667,7 +796,8 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
             membersToRemove: buildEmptyAddressArray()
         });
         bytes memory operationData = abi.encode(keccak256(abi.encode(mods)));
-        AdminAuthParams memory auth = _buildAdminAuth(org, OperationType.ModifyGroups, operationData, saltSeed + 1000, true);
+        AdminAuthParams memory auth =
+            _buildAdminAuth(org, OperationType.ModifyGroups, operationData, saltSeed + 1000, true);
         vm.prank(GUARDIAN);
         org.modifyGroups(mods, auth);
     }
@@ -692,11 +822,14 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
 
         vm.prank(AUTHORIZED_DEPLOYER);
         org = OrganizationImplementationHarness(
-            payable(factory.deployOrganization(bytes32(saltSeed), address(gasImplementation), address(whitelist), params))
+            payable(factory.deployOrganization(
+                    bytes32(saltSeed), address(gasImplementation), address(whitelist), params
+                ))
         );
 
         bytes32 create2Salt = bytes32(saltSeed + 1);
-        AdminAuthParams memory auth = _buildSimpleAdminAuth(org, OperationType.DeployAccount, abi.encode(create2Salt), saltSeed + 2, true);
+        AdminAuthParams memory auth =
+            _buildSimpleAdminAuth(org, OperationType.DeployAccount, abi.encode(create2Salt), saltSeed + 2, true);
         vm.prank(GUARDIAN);
         account = org.deployAccount(create2Salt, auth);
     }
@@ -721,11 +854,14 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
 
         vm.prank(AUTHORIZED_DEPLOYER);
         org = OrganizationImplementationHarness(
-            payable(factory.deployOrganization(bytes32(saltSeed), address(gasImplementation), address(whitelist), params))
+            payable(factory.deployOrganization(
+                    bytes32(saltSeed), address(gasImplementation), address(whitelist), params
+                ))
         );
 
         bytes32 create2Salt = bytes32(saltSeed + 1);
-        AdminAuthParams memory auth = _buildSimpleAdminAuth(org, OperationType.DeployAccount, abi.encode(create2Salt), saltSeed + 2, true);
+        AdminAuthParams memory auth =
+            _buildSimpleAdminAuth(org, OperationType.DeployAccount, abi.encode(create2Salt), saltSeed + 2, true);
         vm.prank(GUARDIAN);
         account = org.deployAccount(create2Salt, auth);
     }
@@ -773,11 +909,14 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
 
         vm.prank(AUTHORIZED_DEPLOYER);
         org = OrganizationImplementationHarness(
-            payable(factory.deployOrganization(bytes32(saltSeed), address(gasImplementation), address(whitelist), params))
+            payable(factory.deployOrganization(
+                    bytes32(saltSeed), address(gasImplementation), address(whitelist), params
+                ))
         );
 
         bytes32 create2Salt = bytes32(saltSeed + 1);
-        AdminAuthParams memory auth = _buildSimpleAdminAuth(org, OperationType.DeployAccount, abi.encode(create2Salt), saltSeed + 2, true);
+        AdminAuthParams memory auth =
+            _buildSimpleAdminAuth(org, OperationType.DeployAccount, abi.encode(create2Salt), saltSeed + 2, true);
         vm.prank(GUARDIAN);
         account = org.deployAccount(create2Salt, auth);
     }
@@ -806,7 +945,9 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
                     initiatorMember: initiator,
                     initiatorGroupId: 0
                 }),
-                token: TokenFilter({anyToken: true, tokenAddress: address(0), hasAmountThreshold: false, amountThreshold: 0}),
+                token: TokenFilter({
+                    anyToken: true, tokenAddress: address(0), hasAmountThreshold: false, amountThreshold: 0
+                }),
                 rateLimit: RateLimitConfig({
                     limitType: RateLimitType.None,
                     timeIntervalHours: 0,
@@ -817,7 +958,9 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
                     destinationScope: RateLimitScope.AcrossAll
                 })
             }),
-            roots: PolicyRoots({sourceAccountsRoot: bytes32(0), customDestinationsRoot: bytes32(0), allowedFunctionsRoot: bytes32(0)})
+            roots: PolicyRoots({
+                sourceAccountsRoot: bytes32(0), customDestinationsRoot: bytes32(0), allowedFunctionsRoot: bytes32(0)
+            })
         });
     }
 
@@ -829,7 +972,11 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         policy.config.approval.approvalThreshold = 1;
     }
 
-    function _buildManualApproveGroupPolicy(uint256 groupId, uint8 threshold) internal view returns (Policy memory policy) {
+    function _buildManualApproveGroupPolicy(uint256 groupId, uint8 threshold)
+        internal
+        view
+        returns (Policy memory policy)
+    {
         policy = _buildAutoApprovePolicy();
         policy.config.approval.policyType = PolicyType.RequireManualApproval;
         policy.config.approval.approverType = ApproverType.Group;
@@ -861,7 +1008,8 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
     ) internal returns (ValidationProofs memory proofs) {
         bytes32 root = _computePolicyLeaf(policyId, policy);
         bytes memory operationData = abi.encode(root, keccak256(bytes("ipfs://gas-test")));
-        AdminAuthParams memory auth = _buildSimpleAdminAuth(org, OperationType.ModifyPolicies, operationData, salt, true);
+        AdminAuthParams memory auth =
+            _buildSimpleAdminAuth(org, OperationType.ModifyPolicies, operationData, salt, true);
         vm.prank(GUARDIAN);
         org.setPolicies(root, "ipfs://gas-test", auth);
         proofs = _buildEmptyProofs(policy);
@@ -936,7 +1084,8 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         bool isApproval
     ) internal view returns (AdminAuthParams memory) {
         uint256 expirationTimestamp = block.timestamp + 30 days;
-        bytes32 operationHash = org.getAdminOperationHash(operationType, operationData, salt, expirationTimestamp, isApproval);
+        bytes32 operationHash =
+            org.getAdminOperationHash(operationType, operationData, salt, expirationTimestamp, isApproval);
 
         uint256[] memory pks = new uint256[](4);
         pks[0] = ADMIN_PK_1;
@@ -957,7 +1106,8 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         bool isApproval
     ) internal view returns (AdminAuthParams memory) {
         uint256 expirationTimestamp = block.timestamp + 30 days;
-        bytes32 operationHash = org.getAdminOperationHash(operationType, operationData, salt, expirationTimestamp, isApproval);
+        bytes32 operationHash =
+            org.getAdminOperationHash(operationType, operationData, salt, expirationTimestamp, isApproval);
 
         uint256[] memory pks = new uint256[](1);
         pks[0] = ADMIN_PK_1;
@@ -1004,7 +1154,9 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         uint256 policyId,
         bool isApproval
     ) internal view returns (bytes memory) {
-        bytes32 hash = _computeInitiatorTxHash(organization, account, to, value, data, salt, expirationTimestamp, policyId, isApproval);
+        bytes32 hash = _computeInitiatorTxHash(
+            organization, account, to, value, data, salt, expirationTimestamp, policyId, isApproval
+        );
         return _signHash(INITIATOR_PK, hash);
     }
 
@@ -1022,8 +1174,16 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         bytes32 structHash = keccak256(
             abi.encode(
                 INITIATE_ACCOUNT_TRANSACTION_TYPEHASH,
-                organization, account, to, value, keccak256(data),
-                salt, expirationTimestamp, policyId, isApproval, block.chainid
+                organization,
+                account,
+                to,
+                value,
+                keccak256(data),
+                salt,
+                expirationTimestamp,
+                policyId,
+                isApproval,
+                block.chainid
             )
         );
         return keccak256(abi.encodePacked("\x19\x01", _getDomainSeparator(organization), structHash));
@@ -1044,8 +1204,16 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         bytes32 structHash = keccak256(
             abi.encode(
                 REVIEW_ACCOUNT_TRANSACTION_TYPEHASH,
-                organization, account, to, value, keccak256(data),
-                salt, expirationTimestamp, policyId, isApproval, block.chainid,
+                organization,
+                account,
+                to,
+                value,
+                keccak256(data),
+                salt,
+                expirationTimestamp,
+                policyId,
+                isApproval,
+                block.chainid,
                 keccak256(initiatorSignature)
             )
         );
@@ -1054,7 +1222,9 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
 
     function _getDomainSeparator(address organization) internal view returns (bytes32) {
         return keccak256(
-            abi.encode(EIP712_DOMAIN_TYPEHASH, ORGANIZATION_NAME_HASH, ORGANIZATION_VERSION_HASH, block.chainid, organization)
+            abi.encode(
+                EIP712_DOMAIN_TYPEHASH, ORGANIZATION_NAME_HASH, ORGANIZATION_VERSION_HASH, block.chainid, organization
+            )
         );
     }
 
@@ -1074,12 +1244,9 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
     // ══════════════════════════════════════════════════════════════════════
 
     /// @dev Runs a policy-scaling gas test with N policies in the tree.
-    function _runPolicyScalingTest(
-        uint256 policyCount,
-        PolicyType approvalType,
-        string memory label,
-        uint256 saltSeed
-    ) internal {
+    function _runPolicyScalingTest(uint256 policyCount, PolicyType approvalType, string memory label, uint256 saltSeed)
+        internal
+    {
         uint256 reviewerPk = 0xBB01;
         address reviewer = vm.addr(reviewerPk);
 
@@ -1106,23 +1273,39 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
             _buildMultiPolicyTreeAndProofs(policyCount, targetIndex, POLICY_ID, policy);
 
         bytes memory operationData = abi.encode(root, keccak256(bytes("ipfs://gas-test")));
-        AdminAuthParams memory auth = _buildSimpleAdminAuth(org, OperationType.ModifyPolicies, operationData, saltSeed + 100, true);
+        AdminAuthParams memory auth =
+            _buildSimpleAdminAuth(org, OperationType.ModifyPolicies, operationData, saltSeed + 100, true);
         vm.prank(GUARDIAN);
         org.setPolicies(root, "ipfs://gas-test", auth);
 
         uint256 txSalt = saltSeed + 200;
         uint256 expiration = block.timestamp + 1 days;
-        bytes memory initiatorSig = _signInitiatorTx(address(org), account, RECIPIENT, 0.1 ether, bytes(""), txSalt, expiration, POLICY_ID, true);
+        bytes memory initiatorSig = _signInitiatorTx(
+            address(org), account, RECIPIENT, 0.1 ether, bytes(""), txSalt, expiration, POLICY_ID, true
+        );
 
         bytes memory reviewSigs = bytes("");
         if (approvalType == PolicyType.RequireManualApproval) {
-            bytes32 reviewHash = _computeReviewTxHash(address(org), account, RECIPIENT, 0.1 ether, bytes(""), txSalt, expiration, POLICY_ID, true, initiatorSig);
+            bytes32 reviewHash = _computeReviewTxHash(
+                address(org),
+                account,
+                RECIPIENT,
+                0.1 ether,
+                bytes(""),
+                txSalt,
+                expiration,
+                POLICY_ID,
+                true,
+                initiatorSig
+            );
             reviewSigs = _signHash(reviewerPk, reviewHash);
         }
 
         vm.prank(GUARDIAN);
         vm.startSnapshotGas(label);
-        org.executeAccountTransaction(account, RECIPIENT, 0.1 ether, bytes(""), txSalt, expiration, POLICY_ID, initiatorSig, reviewSigs, proofs);
+        org.executeAccountTransaction(
+            account, RECIPIENT, 0.1 ether, bytes(""), txSalt, expiration, POLICY_ID, initiatorSig, reviewSigs, proofs
+        );
         vm.stopSnapshotGas(label);
     }
 
@@ -1139,9 +1322,13 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
 
         uint256 txSalt = saltSeed + 200;
         uint256 expiration = block.timestamp + 1 days;
-        bytes memory initiatorSig = _signInitiatorTx(address(org), account, RECIPIENT, 0.1 ether, bytes(""), txSalt, expiration, POLICY_ID, true);
+        bytes memory initiatorSig = _signInitiatorTx(
+            address(org), account, RECIPIENT, 0.1 ether, bytes(""), txSalt, expiration, POLICY_ID, true
+        );
 
-        bytes32 reviewHash = _computeReviewTxHash(address(org), account, RECIPIENT, 0.1 ether, bytes(""), txSalt, expiration, POLICY_ID, true, initiatorSig);
+        bytes32 reviewHash = _computeReviewTxHash(
+            address(org), account, RECIPIENT, 0.1 ether, bytes(""), txSalt, expiration, POLICY_ID, true, initiatorSig
+        );
 
         // Build sorted reviewer signatures
         address[] memory signers = new address[](reviewerCount);
@@ -1162,7 +1349,18 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
 
         vm.prank(GUARDIAN);
         vm.startSnapshotGas(label);
-        org.executeAccountTransaction(account, RECIPIENT, 0.1 ether, bytes(""), txSalt, expiration, POLICY_ID, initiatorSig, reviewSignatures, proofs);
+        org.executeAccountTransaction(
+            account,
+            RECIPIENT,
+            0.1 ether,
+            bytes(""),
+            txSalt,
+            expiration,
+            POLICY_ID,
+            initiatorSig,
+            reviewSignatures,
+            proofs
+        );
         vm.stopSnapshotGas(label);
     }
 }
