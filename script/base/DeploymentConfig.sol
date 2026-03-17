@@ -30,6 +30,8 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
     /// @return The cached TOML content
     function _toml() internal returns (string memory) {
         if (bytes(_tomlContent).length == 0) {
+            // Intentionally read local deployment configuration from disk for script execution.
+            // forge-lint: disable-next-line(unsafe-cheatcode)
             _tomlContent = vm.readFile("deployment.toml");
         }
         return _tomlContent;
