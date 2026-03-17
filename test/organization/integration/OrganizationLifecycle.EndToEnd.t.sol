@@ -440,7 +440,11 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
             abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardian.selector, NON_GUARDIAN, GUARDIAN)
         );
         vm.prank(NON_GUARDIAN);
-        organization.setPolicies(bytes32(uint256(1)), "ipfs://unauthorized", AdminAuthParams(0, 0, bytes("")));
+        organization.setPolicies(
+            bytes32(uint256(1)),
+            "ipfs://unauthorized",
+            AdminAuthParams({salt: 0, expirationTimestamp: 0, signatures: bytes("")})
+        );
 
         vm.expectRevert(
             abi.encodeWithSelector(
