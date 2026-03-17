@@ -525,6 +525,8 @@ contract BytesUtilsTest is Test {
         bytes memory result = harness.sliceRange(input, startIndex, sliceLength);
 
         // Call: inspect the stored last output word in memory after performing the partial-word copy.
+        // Intentional floor-to-word-boundary: (x / 32) * 32 rounds down to the nearest 32-byte alignment.
+        // forge-lint: disable-next-line(divide-before-multiply)
         uint256 wordOffset = (uint256(sliceLength) / 32) * 32;
         bytes32 lastWord;
         assembly {
