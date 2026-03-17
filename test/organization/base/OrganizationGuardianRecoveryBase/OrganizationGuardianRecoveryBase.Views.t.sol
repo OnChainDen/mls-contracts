@@ -13,7 +13,7 @@ import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 contract OrganizationGuardianRecoveryBaseViewsTest is OrganizationGuardianRecoveryBaseSuiteBase {
     /// @dev Verifies `OrganizationGuardianRecoveryBase.getGuardianRecoveryState` getter returns full storage struct and
     /// is callable by any address.
-    function test_OGRB_GGRS_1__OGRB_GGRS_2_getterReturnsFullStructAndIsPublic() public {
+    function test_getterReturnsFullStructAndIsPublic() public {
         // Setup: seed pending deferred-init tuple and seed pending recovery-guardian update.
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp + 3 days, true);
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -45,7 +45,7 @@ contract OrganizationGuardianRecoveryBaseViewsTest is OrganizationGuardianRecove
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.getGuardianRecoveryState` getter returns zeroed struct when
     /// recovery has not been configured.
-    function test_OGRB_GGRS_3_noRecoveryConfigured_returnsZeroedStruct() public {
+    function test_noRecoveryConfigured_returnsZeroedStruct() public {
         // Setup: start from clean recovery state.
         recoveryStateHarness.resetGuardianRecoveryStorage();
 
@@ -65,7 +65,7 @@ contract OrganizationGuardianRecoveryBaseViewsTest is OrganizationGuardianRecove
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.getGuardianRecoveryState` getter reflects configured,
     /// recovery-update pending, and deferred-init pending states.
-    function test_OGRB_GGRS_4__OGRB_GGRS_5__OGRB_GGRS_6_getterReflectsConfiguredAndBothPendingFlows() public {
+    function test_getterReflectsConfiguredAndBothPendingFlows() public {
         // Setup: seed pending deferred-init tuple and seed pending recovery-guardian update.
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_B, block.timestamp + 2 days, false);
         recoveryStateHarness.setGuardianRecoveryPendingInit(

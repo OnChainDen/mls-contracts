@@ -22,7 +22,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     bytes32 internal constant GOLDEN_MESSAGE_HASH = keccak256("golden-review-hash");
 
     /// @dev Verifies that different organization addresses produce different review hashes.
-    function test_LOAS_GRSH_1_LOACS_GRSH_3_getReviewSignatureHash_differentOrganizations_returnsDifferentHashes()
+    function test_getReviewSignatureHash_differentOrganizations_returnsDifferentHashes()
         public
     {
         // Setup: deploy a second harness with a different organization address.
@@ -50,7 +50,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that changing account changes the review signature hash.
-    function test_LOAS_GRSH_2_getReviewSignatureHash_differentAccount_returnsDifferentHash() public {
+    function test_getReviewSignatureHash_differentAccount_returnsDifferentHash() public {
         // Setup: select deterministic initiator signature fixture.
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
         uint256 expiration = block.timestamp + 1 days;
@@ -76,7 +76,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that changing message hash changes the review signature hash.
-    function test_LOAS_GRSH_3_getReviewSignatureHash_differentMessageHash_returnsDifferentHash() public {
+    function test_getReviewSignatureHash_differentMessageHash_returnsDifferentHash() public {
         // Setup: select deterministic initiator signature fixture.
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
         uint256 expiration = block.timestamp + 1 days;
@@ -102,7 +102,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that changing policy id changes the review signature hash.
-    function test_LOAS_GRSH_4_getReviewSignatureHash_differentPolicyId_returnsDifferentHash() public {
+    function test_getReviewSignatureHash_differentPolicyId_returnsDifferentHash() public {
         // Setup: select deterministic initiator signature fixture.
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
         uint256 expiration = block.timestamp + 1 days;
@@ -128,7 +128,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that changing expiration timestamp changes the review signature hash.
-    function test_LOAS_GRSH_5_getReviewSignatureHash_differentExpiration_returnsDifferentHash() public {
+    function test_getReviewSignatureHash_differentExpiration_returnsDifferentHash() public {
         // Setup: select deterministic initiator signature fixture.
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
         uint256 expirationA = block.timestamp + 1 days;
@@ -155,7 +155,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that changing chain id changes the review signature hash.
-    function test_LOAS_GRSH_6_LOACS_GRSH_3_getReviewSignatureHash_differentChainId_returnsDifferentHash() public {
+    function test_getReviewSignatureHash_differentChainId_returnsDifferentHash() public {
         // Setup: select deterministic review-hash inputs.
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
         uint256 expiration = block.timestamp + 1 days;
@@ -185,7 +185,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that review hash derivation includes `keccak256(initiatorSignature)`.
-    function test_E712_HASH_4_LOAS_GRSH_7_LOACS_GRSH_1_getReviewSignatureHash_includesInitiatorSignatureHashField()
+    function test_getReviewSignatureHash_includesInitiatorSignatureHashField()
         public
         view
     {
@@ -238,7 +238,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that different initiator signatures produce different review hashes.
-    function test_LOAS_GRSH_8_LOACS_GRSH_2_getReviewSignatureHash_differentInitiatorSignatures_returnsDifferentHash()
+    function test_getReviewSignatureHash_differentInitiatorSignatures_returnsDifferentHash()
         public
         view
     {
@@ -268,7 +268,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies empty initiator signatures are hashed as `keccak256(\"\")`.
-    function test_LOACS_GRSH_4_getReviewSignatureHash_emptyInitiatorSignature_usesKeccakOfEmptyBytes() public view {
+    function test_getReviewSignatureHash_emptyInitiatorSignature_usesKeccakOfEmptyBytes() public view {
         // Setup: choose deterministic review-hash inputs with an empty initiator signature.
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = bytes("");
@@ -302,7 +302,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies review hash remains distinct from the initiator hash for the same request metadata.
-    function test_LOACS_GRSH_6_getReviewSignatureHash_isDistinctFromInitiatorHash() public view {
+    function test_getReviewSignatureHash_isDistinctFromInitiatorHash() public view {
         // Setup: choose deterministic request inputs and one concrete initiator signature payload.
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
@@ -323,7 +323,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that review hash uses `REVIEW_SIGNATURE_VALIDATION_TYPEHASH` and not initiator typehash.
-    function test_LOAS_GRSH_9_getReviewSignatureHash_usesReviewTypehash() public view {
+    function test_getReviewSignatureHash_usesReviewTypehash() public view {
         // Setup: choose deterministic review-hash inputs.
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
@@ -371,7 +371,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that review hash uses EIP-712 typed-data hashing with domain separator.
-    function test_LOAS_GRSH_10_LOACS_GRSH_7_getReviewSignatureHash_usesTypedDataHashWithDomainSeparator() public view {
+    function test_getReviewSignatureHash_usesTypedDataHashWithDomainSeparator() public view {
         // Setup: choose deterministic review-hash inputs.
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
@@ -406,7 +406,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that identical inputs always produce identical review hashes.
-    function test_LOAS_GRSH_11_getReviewSignatureHash_sameInputs_isDeterministic() public view {
+    function test_getReviewSignatureHash_sameInputs_isDeterministic() public view {
         // Setup: choose deterministic baseline inputs.
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
@@ -432,7 +432,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that known golden inputs produce the expected precomputed review hash.
-    function test_LOAS_GRSH_12_LOACS_GRSH_5_getReviewSignatureHash_goldenInputs_matchesExpectedHash() public view {
+    function test_getReviewSignatureHash_goldenInputs_matchesExpectedHash() public view {
         // Setup: use the deterministic golden input fixture.
         bytes memory initiatorSignature =
             hex"1b36495ecf0f3b4f4e8b6b65b0d8b73f53da5ea8327f24df1920525f9f93072ee88f40f2bc74fbad801f28cd26ecee6a10d1f294f4f3696f9de7b51176efdc7d54";

@@ -12,7 +12,7 @@ import {ConstraintType} from "types/PolicyTypes.sol";
  */
 contract LibPolicyParameterConstraintsBoolConstraintTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that canonical true word with exact true passes.
-    function test_LPPC_ATYPE_8_isBoolParameterAllowedByConstraint_exactTrueCanonicalWord_returnsTrue() public view {
+    function test_isBoolParameterAllowedByConstraint_exactTrueCanonicalWord_returnsTrue() public view {
         // Setup: configure a valid fixture for canonical true word with exact true passes.
         // Call: execute `isBoolParameterAllowedByConstraintViaPolicyLibrary` with the happy-path payload.
         bool allowed = harness.isBoolParameterAllowedByConstraintViaPolicyLibrary(
@@ -36,7 +36,7 @@ contract LibPolicyParameterConstraintsBoolConstraintTest is LibPolicyParameterCo
     }
 
     /// @dev Verifies that exact mismatch returns false.
-    function test_LPPC_ATYPE_8_isBoolParameterAllowedByConstraint_exactMismatch_returnsFalse() public view {
+    function test_isBoolParameterAllowedByConstraint_exactMismatch_returnsFalse() public view {
         // Setup: build fixture inputs where exact mismatch returns false should be denied.
         // Call: execute `isBoolParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.isBoolParameterAllowedByConstraintViaPolicyLibrary(
@@ -86,7 +86,7 @@ contract LibPolicyParameterConstraintsBoolConstraintTest is LibPolicyParameterCo
     }
 
     /// @dev Verifies that oversized comparison payloads fail closed.
-    function test_POL_INV_14_isBoolParameterAllowedByConstraint_oversizedComparisonData_returnsFalse() public view {
+    function test_isBoolParameterAllowedByConstraint_oversizedComparisonData_returnsFalse() public view {
         // Setup: append an extra 32-byte word so comparison data is not exactly one slot.
         bytes memory oversized = bytes.concat(abi.encode(true), bytes32(uint256(99)));
 
@@ -114,7 +114,7 @@ contract LibPolicyParameterConstraintsBoolConstraintTest is LibPolicyParameterCo
     }
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
-    function test_POL_INV_14_isBoolParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
+    function test_isBoolParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
         public
     {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails

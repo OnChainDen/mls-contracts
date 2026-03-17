@@ -11,8 +11,8 @@ import {
  * @dev Unit tests for `LibOrganizationGuardian.initiateGuardianUpdate`.
  */
 contract LibOrganizationGuardianInitiateGuardianUpdateTest is LibOrganizationGuardianSuiteBase {
-    /// @dev Verifies LOG-IGU-1: valid new guardian sets pending guardian in storage.
-    function test_LOG_IGU_1_validNewGuardian_setsPendingGuardian() public {
+    /// @dev Verifies valid new guardian sets pending guardian in storage.
+    function test_validNewGuardian_setsPendingGuardian() public {
         // Setup
         _clearPendingGuardianState();
 
@@ -23,8 +23,8 @@ contract LibOrganizationGuardianInitiateGuardianUpdateTest is LibOrganizationGua
         assertEq(harness.getPendingGuardianViaLibrary(), NEW_GUARDIAN_A, "pending guardian should be set");
     }
 
-    /// @dev Verifies LOG-IGU-2: zero-address guardian reverts `InvalidGuardianAddress`.
-    function test_LOG_IGU_2_zeroAddress_revertsInvalidGuardianAddress() public {
+    /// @dev Verifies zero-address guardian reverts `InvalidGuardianAddress`.
+    function test_zeroAddress_revertsInvalidGuardianAddress() public {
         // Setup
         _clearPendingGuardianState();
 
@@ -36,8 +36,8 @@ contract LibOrganizationGuardianInitiateGuardianUpdateTest is LibOrganizationGua
         assertEq(harness.getPendingGuardianViaLibrary(), address(0), "pending guardian should remain unset");
     }
 
-    /// @dev Verifies LOG-IGU-3: existing pending update reverts `GuardianUpdateAlreadyPending`.
-    function test_LOG_IGU_3_alreadyPending_revertsGuardianUpdateAlreadyPending() public {
+    /// @dev Verifies existing pending update reverts `GuardianUpdateAlreadyPending`.
+    function test_alreadyPending_revertsGuardianUpdateAlreadyPending() public {
         // Setup
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
         guardianStateHarness.setPendingGuardianUpdateTimestamp(block.timestamp + 1 days);
@@ -51,8 +51,8 @@ contract LibOrganizationGuardianInitiateGuardianUpdateTest is LibOrganizationGua
         assertEq(harness.getPendingGuardianViaLibrary(), NEW_GUARDIAN_A, "existing pending guardian should remain");
     }
 
-    /// @dev Verifies LOG-IGU-4: `canFinalizeAtTimestamp` equals `block.timestamp + timelockDuration`.
-    function test_LOG_IGU_4__LOG_AOTIGU_1_canFinalizeTimestamp_equalsBlockTimestampPlusTimelockDuration() public {
+    /// @dev Verifies `canFinalizeAtTimestamp` equals `block.timestamp + timelockDuration`.
+    function test_canFinalizeTimestamp_equalsBlockTimestampPlusTimelockDuration() public {
         // Setup
         _clearPendingGuardianState();
         uint256 expectedCanFinalizeAt = block.timestamp + ADMIN_OPERATION_TIMELOCK;
@@ -68,8 +68,8 @@ contract LibOrganizationGuardianInitiateGuardianUpdateTest is LibOrganizationGua
         );
     }
 
-    /// @dev Verifies LOG-IGU-5: initiation sets `isGuardianUpdateReadyForAcceptance` to false.
-    function test_LOG_IGU_5_setsReadyForAcceptanceFalse() public {
+    /// @dev Verifies initiation sets `isGuardianUpdateReadyForAcceptance` to false.
+    function test_setsReadyForAcceptanceFalse() public {
         // Setup
         guardianStateHarness.setIsGuardianUpdateReadyForAcceptance(true);
         guardianStateHarness.setPendingGuardian(address(0));
@@ -85,8 +85,8 @@ contract LibOrganizationGuardianInitiateGuardianUpdateTest is LibOrganizationGua
         );
     }
 
-    /// @dev Verifies LOG-IGU-6: initiation emits `GuardianUpdateInitiated` with expected payload.
-    function test_LOG_IGU_6_emitsGuardianUpdateInitiated() public {
+    /// @dev Verifies initiation emits `GuardianUpdateInitiated` with expected payload.
+    function test_emitsGuardianUpdateInitiated() public {
         // Setup
         _clearPendingGuardianState();
         uint256 expectedCanFinalizeAt = block.timestamp + ADMIN_OPERATION_TIMELOCK;
@@ -102,7 +102,7 @@ contract LibOrganizationGuardianInitiateGuardianUpdateTest is LibOrganizationGua
 
     /// @dev Verifies `LibOrganizationGuardian.initiateGuardianUpdate` emits the same `canFinalizeAtTimestamp` that it
     /// persists in storage for the pending guardian update.
-    function test_LOG_AOTIGU_2_initiateGuardianUpdate_eventTimestampMatchesPersistedPendingTimestamp() public {
+    function test_initiateGuardianUpdate_eventTimestampMatchesPersistedPendingTimestamp() public {
         // Setup: clear any pending guardian state and precompute the expected finalize timestamp from the admin-op
         // timelock.
         _clearPendingGuardianState();
@@ -121,8 +121,8 @@ contract LibOrganizationGuardianInitiateGuardianUpdateTest is LibOrganizationGua
         );
     }
 
-    /// @dev Verifies LOG-IGU-7: initiating update does not change current guardian.
-    function test_LOG_IGU_7_currentGuardianRemainsUnchangedDuringPendingState() public {
+    /// @dev Verifies initiating update does not change current guardian.
+    function test_currentGuardianRemainsUnchangedDuringPendingState() public {
         // Setup
         _clearPendingGuardianState();
 
@@ -133,8 +133,8 @@ contract LibOrganizationGuardianInitiateGuardianUpdateTest is LibOrganizationGua
         assertEq(harness.getGuardianViaLibrary(), GUARDIAN, "current guardian should not change during initiate");
     }
 
-    /// @dev Verifies LOG-IGU-8: proposing the same address as current guardian is allowed.
-    function test_LOG_IGU_8_sameAddressAsCurrentGuardian_stillSucceeds() public {
+    /// @dev Verifies proposing the same address as current guardian is allowed.
+    function test_sameAddressAsCurrentGuardian_stillSucceeds() public {
         // Setup
         _clearPendingGuardianState();
 

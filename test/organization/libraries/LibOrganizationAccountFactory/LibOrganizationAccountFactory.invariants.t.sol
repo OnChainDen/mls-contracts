@@ -40,7 +40,7 @@ contract LibOrganizationAccountFactoryInvariants is LibOrganizationAccountFactor
     }
 
     /// @dev Verifies invariant: every successful deploy marks `deployedAccounts[addr] = true`.
-    function invariant_AF_IT_1_everySuccessfulDeploy_setsDeploymentTrackingTrue() public view {
+    function invariant_everySuccessfulDeploy_setsDeploymentTrackingTrue() public view {
         // Setup: read tracked successful deployment count from invariant handler.
         uint256 length = handler.trackedDeployedAccountsLength();
         // Call: iterate tracked deployments and query current deployment status.
@@ -55,8 +55,7 @@ contract LibOrganizationAccountFactoryInvariants is LibOrganizationAccountFactor
     }
 
     /// @dev Verifies invariant: deployed account beacon binding (organization address) never changes.
-    /// SAG-INV-5
-    function invariant_AI_INV_2_AF_IT_2__SAG_INV_5_deployedAccount_beaconBindingRemainsOrganization() public view {
+    function invariant_deployedAccount_beaconBindingRemainsOrganization() public view {
         // Setup: read tracked successful deployment count from invariant handler.
         uint256 length = handler.trackedDeployedAccountsLength();
         // Call: iterate tracked deployed accounts and read organization binding through proxy.
@@ -69,7 +68,7 @@ contract LibOrganizationAccountFactoryInvariants is LibOrganizationAccountFactor
     }
 
     /// @dev Verifies invariant: implementation updates cannot succeed unless target implementation is whitelisted.
-    function invariant_AF_IT_3_whitelistEnforcement_noSuccessfulUnwhitelistedImplementationUpdate() public view {
+    function invariant_whitelistEnforcement_noSuccessfulUnwhitelistedImplementationUpdate() public view {
         // Setup: read handler flag tracking unauthorized successful implementation updates.
         // Call: evaluate whether an un-whitelisted update ever succeeded during fuzzing.
         // Verify: un-whitelisted implementation updates should never succeed.
@@ -80,7 +79,7 @@ contract LibOrganizationAccountFactoryInvariants is LibOrganizationAccountFactor
     }
 
     /// @dev Verifies invariant: computed address always matches tracked deployment address for each successful salt.
-    function invariant_AF_IT_4_computeAccountAddress_matchesTrackedDeploymentAddressForSuccessfulSalts() public view {
+    function invariant_computeAccountAddress_matchesTrackedDeploymentAddressForSuccessfulSalts() public view {
         // Setup: read tracked successful deployment count from invariant handler.
         uint256 length = handler.trackedDeployedAccountsLength();
         // Call: recompute CREATE2 destination for each tracked salt.
@@ -94,7 +93,7 @@ contract LibOrganizationAccountFactoryInvariants is LibOrganizationAccountFactor
     }
 
     /// @dev Verifies invariant: `deployedAccounts` mapping is monotonic and never flips true back to false.
-    function invariant_ACCF_INV_3_AF_IT_5_deployedAccountsMapping_monotonicTrueState() public view {
+    function invariant_deployedAccountsMapping_monotonicTrueState() public view {
         // Setup: read count of addresses previously observed with `deployedAccounts == true`.
         uint256 length = handler.trackedObservedTrueAccountsLength();
         // Call: iterate each observed-true account and re-read deployment status.

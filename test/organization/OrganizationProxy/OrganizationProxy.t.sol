@@ -20,8 +20,8 @@ import {InitializationParams} from "types/CommonTypes.sol";
  */
 contract OrganizationProxyTest is InitializationSuiteBase {
     /// @dev Verifies `OrganizationProxy.constructor` stores deployer, whitelist, and implementation values in their
-    /// expected storage slots. [ORP-CON-1]
-    function test_OPX_CTOR_1__OPX_CTOR_2__OPX_CTOR_3__ORP_CON_1_constructor_setsDeployerWhitelistAndImplementationSlots()
+    /// expected storage slots.
+    function test_constructor_setsDeployerWhitelistAndImplementationSlots()
         public
     {
         // Setup: Select a direct deployer account for deploying the proxy outside the factory flow.
@@ -47,7 +47,7 @@ contract OrganizationProxyTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `OrganizationProxy.constructor` reverts when the implementation address is not a contract.
-    function test_OPX_CTOR_4_constructor_nonContractImplementation_reverts() public {
+    function test_constructor_nonContractImplementation_reverts() public {
         // Setup: Prepare a non-contract implementation address for constructor input.
         address nonContractImplementation = address(0xF401);
 
@@ -60,8 +60,8 @@ contract OrganizationProxyTest is InitializationSuiteBase {
         // Verify: Constructor safety checks reject non-contract implementations.
     }
 
-    /// @dev Verifies `OrganizationProxy.constructor` reverts with `ZeroAddress` when whitelist is zero. [ORP-CON-3]
-    function test_OPX_CTOR_5__ORP_CON_3_constructor_zeroWhitelist_revertsZeroAddress() public {
+    /// @dev Verifies `OrganizationProxy.constructor` reverts with `ZeroAddress` when whitelist is zero.
+    function test_constructor_zeroWhitelist_revertsZeroAddress() public {
         // Setup: Prepare a zero whitelist address for constructor input.
         address zeroWhitelist = address(0);
 
@@ -73,7 +73,7 @@ contract OrganizationProxyTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `OrganizationProxy.constructor` rejects non-contract whitelist addresses as a safety requirement.
-    function test_OPX_CTOR_6_constructor_nonContractWhitelist_revertsDesiredBehavior() public {
+    function test_constructor_nonContractWhitelist_revertsDesiredBehavior() public {
         // Setup: Prepare a non-contract whitelist address for proxy construction.
         address nonContractWhitelist = address(0xF402);
 
@@ -85,7 +85,7 @@ contract OrganizationProxyTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies direct proxy deployment allows only the direct deployer to call `initialize`.
-    function test_OPX_CTOR_7_directDeployment_onlyDirectDeployerCanInitialize() public {
+    function test_directDeployment_onlyDirectDeployerCanInitialize() public {
         // Setup: Deploy a proxy directly and prepare initialize calls from the deployer and a different caller.
         address directDeployer = address(0xF501);
         address otherCaller = address(0xF502);
@@ -112,7 +112,7 @@ contract OrganizationProxyTest is InitializationSuiteBase {
 
     /// @dev Verifies proxy delegation preserves `getDeployerAddress` and `isInitialized` behavior before and after
     /// initialization.
-    function test_OPX_DEL_1_proxyDelegatesInitializationViewsAndState() public {
+    function test_proxyDelegatesInitializationViewsAndState() public {
         // Setup: Deploy a proxy directly with valid initialization params.
         address deployer = address(0xF601);
         InitializationParams memory params = _defaultInitializationParams();
@@ -136,7 +136,7 @@ contract OrganizationProxyTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies multiple proxies sharing one implementation maintain isolated initialization state.
-    function test_OPX_DEL_2_multipleProxiesSameImplementation_keepInitializationStateIsolated() public {
+    function test_multipleProxiesSameImplementation_keepInitializationStateIsolated() public {
         // Setup: Deploy two proxies with different deployers and distinct initialization parameter sets.
         address deployerA = address(0xF701);
         address deployerB = address(0xF702);
@@ -171,7 +171,7 @@ contract OrganizationProxyTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies factory-based proxy deployment does not expose an uninitialized proxy state.
-    function test_OPX_DEL_3_factoryDeploymentPath_isInitializedAtomically() public {
+    function test_factoryDeploymentPath_isInitializedAtomically() public {
         // Setup: Prepare a valid factory deployment tuple and initialization params.
         bytes32 salt = bytes32(uint256(6001));
         InitializationParams memory params = _defaultInitializationParams();
@@ -184,7 +184,7 @@ contract OrganizationProxyTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies proxy initialization does not overwrite deployer or whitelist constructor storage slots.
-    function test_OPX_DEL_4_initialize_doesNotOverwriteDeployerOrWhitelistSlots() public {
+    function test_initialize_doesNotOverwriteDeployerOrWhitelistSlots() public {
         // Setup: Deploy a proxy directly and snapshot deployer/whitelist storage words before initialization.
         address deployer = address(0xF801);
         InitializationParams memory params = _defaultInitializationParams();

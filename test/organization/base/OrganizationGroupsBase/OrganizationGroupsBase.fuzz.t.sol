@@ -18,7 +18,7 @@ contract OrganizationGroupsBaseFuzzTest is OrganizationGroupsBaseSuiteBase {
      * @param rawGroupId Raw group id used to derive a bounded group identifier
      * @param saltRaw Raw salt used to derive a bounded nonce salt
      */
-    function testFuzz_FOGB_GROUP_54_modifyGroupsIsGuardianOnly(uint256 rawGroupId, uint256 saltRaw) public {
+    function testFuzz_modifyGroupsIsGuardianOnly(uint256 rawGroupId, uint256 saltRaw) public {
         uint256 groupId = bound(rawGroupId, 1, 50_000);
 
         // Setup: configure one valid admin/member signer and build one signed create-group batch.
@@ -52,7 +52,7 @@ contract OrganizationGroupsBaseFuzzTest is OrganizationGroupsBaseSuiteBase {
      * @param saltRaw Raw salt used to derive a bounded nonce salt
      * @param mutationSelector Chooses which batch component to mutate after signing
      */
-    function testFuzz_FOGB_GROUP_54_modifyGroupsBindsSignaturesToExactModificationBatch(
+    function testFuzz_modifyGroupsBindsSignaturesToExactModificationBatch(
         uint256 rawGroupId,
         uint256 saltRaw,
         uint8 mutationSelector

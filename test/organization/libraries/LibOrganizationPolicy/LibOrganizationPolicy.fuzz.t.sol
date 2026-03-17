@@ -21,7 +21,7 @@ contract LibOrganizationPolicyFuzzTest is LibOrganizationPolicySuiteBase {
      * @param destination Destination used for the rate-limit helper call
      * @param initiator Initiator used for the rate-limit helper call
      */
-    function testFuzz_FLOP_SET_55_setPolicies_rootChangesOnlyThroughExplicitSetPoliciesCalls(
+    function testFuzz_setPolicies_rootChangesOnlyThroughExplicitSetPoliciesCalls(
         bytes32 initialRoot,
         bytes32 nextRoot,
         uint96 usageAmountRaw,

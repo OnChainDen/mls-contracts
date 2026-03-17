@@ -30,7 +30,7 @@ contract OrganizationAdminOperationTimelockCrossFileFuzzTest is InitializationSu
      * @dev Verifies all admin-operation timelock initiation call sites compute `pendingTimestamp = start + duration`.
      * @param durationSeconds Fuzzed in-range admin-operation timelock duration shared across the three call sites.
      */
-    function testFuzz_AOT_FUZ_1_allAdminTimelockInitiationsComputePendingTimestampFromConfiguredDuration(uint256 durationSeconds)
+    function testFuzz_allAdminTimelockInitiationsComputePendingTimestampFromConfiguredDuration(uint256 durationSeconds)
         public
     {
         // Setup: bound the shared admin-operation timelock and deploy one fresh harness per initiation path.
@@ -74,7 +74,7 @@ contract OrganizationAdminOperationTimelockCrossFileFuzzTest is InitializationSu
      * and `t+1`.
      * @param durationSeconds Fuzzed in-range admin-operation timelock duration shared across the finalize paths.
      */
-    function testFuzz_AOT_FUZ_2_finalizeTimingUsesSharedTimelockBoundaryAcrossAllCallSites(uint256 durationSeconds)
+    function testFuzz_finalizeTimingUsesSharedTimelockBoundaryAcrossAllCallSites(uint256 durationSeconds)
         public
     {
         // Setup: bound the shared admin-operation timelock used by every timing assertion below.
@@ -92,7 +92,7 @@ contract OrganizationAdminOperationTimelockCrossFileFuzzTest is InitializationSu
      * @dev Verifies out-of-range admin-operation timelock durations always revert organization initialization.
      * @param durationSeconds Fuzzed candidate admin-operation timelock duration.
      */
-    function testFuzz_AOT_FUZ_3_outOfRangeAdminTimelockDurationsAlwaysRevertInitialization(uint256 durationSeconds)
+    function testFuzz_outOfRangeAdminTimelockDurationsAlwaysRevertInitialization(uint256 durationSeconds)
         public
     {
         // Setup: deploy a fresh initialization harness and skip in-range durations that belong to the success path.
@@ -129,7 +129,7 @@ contract OrganizationAdminOperationTimelockCrossFileFuzzTest is InitializationSu
      * @param durationSeconds Fuzzed in-range admin-operation timelock duration shared across both deferred-init flows.
      * @param warpGap Seconds to advance before re-initiating each deferred-init flow.
      */
-    function testFuzz_AOT_FUZ_4_cancelAndReinitCyclesClearPendingFieldsAndComputeFreshTimestamps(
+    function testFuzz_cancelAndReinitCyclesClearPendingFieldsAndComputeFreshTimestamps(
         uint256 durationSeconds,
         uint256 warpGap
     ) public {
@@ -195,7 +195,7 @@ contract OrganizationAdminOperationTimelockCrossFileFuzzTest is InitializationSu
      * @param recoveryAddressSet Whether the configuration address field is non-zero.
      * @param timelockSet Whether the configuration timelock field is non-zero.
      */
-    function testFuzz_AOT_FUZ_5_partialRecoveryConfigurationsAlwaysFailInternalNotConfiguredGuards(
+    function testFuzz_partialRecoveryConfigurationsAlwaysFailInternalNotConfiguredGuards(
         bool recoveryAddressSet,
         bool timelockSet
     ) public {

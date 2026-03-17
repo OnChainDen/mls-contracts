@@ -44,7 +44,7 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
     }
 
     /// @dev Verifies `AdminOperation` signatures cannot authorize the `InitiateAccountTransaction` approval flow.
-    function test_E712_MTI_1_validateTransactionApproval_rejectsAdminOperationSignatureReplay() public {
+    function test_validateTransactionApproval_rejectsAdminOperationSignatureReplay() public {
         // Setup: configure a valid admin signer on the admin harness and a transaction policy that authorizes only the
         // transaction initiator fixture.
         _configureAdminHarness(admin1);
@@ -78,7 +78,7 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
     }
 
     /// @dev Verifies `InitiateAccountTransaction` signatures cannot authorize the `ReviewAccountTransaction` flow.
-    function test_E712_MTI_2_validateTransactionApproval_rejectsInitiatorSignatureReplayAsReviewSignature() public {
+    function test_validateTransactionApproval_rejectsInitiatorSignatureReplayAsReviewSignature() public {
         // Setup: configure a manual-approval transaction policy with one authorized reviewer.
         Policy memory txPolicy = _buildTxPolicy(PolicyType.RequireManualApproval, initiator1, reviewer1);
         ValidationProofs memory txProofs =
@@ -107,7 +107,7 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
     }
 
     /// @dev Verifies `InitiateSignatureValidation` signatures cannot authorize the `ReviewSignatureValidation` flow.
-    function test_E712_MTI_3_validatePolicyBasedSignature_rejectsInitiatorSignatureReplayAsReviewSignature() public {
+    function test_validatePolicyBasedSignature_rejectsInitiatorSignatureReplayAsReviewSignature() public {
         // Setup: configure a manual-approval signature policy with a valid guardian signature over the review hash.
         policyStateHarness.setGuardian(guardianSigner);
         bytes4 actual;
@@ -151,7 +151,7 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
     }
 
     /// @dev Verifies account-transaction and ERC-1271 signatures cannot be replayed across each other's flows.
-    function test_E712_MTI_4_crossFlowReplay_rejectsTransactionAndPolicySignaturesAcrossFlows() public {
+    function test_crossFlowReplay_rejectsTransactionAndPolicySignaturesAcrossFlows() public {
         // Setup: configure valid transaction and signature policies on their respective harnesses.
         ValidationProofs memory txProofs;
         policyStateHarness.setGuardian(guardianSigner);
@@ -232,7 +232,7 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
     }
 
     /// @dev Verifies the system-defined message-type hashes remain distinct for the same seeded inputs.
-    function test_E712_MTI_5_messageTypeHashesRemainDistinctForSameSeededInputs() public {
+    function test_messageTypeHashesRemainDistinctForSameSeededInputs() public {
         // Setup: derive one deterministic admin hash, transaction initiator/review hash pair, and signature
         // initiator/review hash pair over aligned seeded inputs.
         _configureAdminHarness(admin1);
@@ -287,7 +287,7 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
     }
 
     /// @dev Verifies recovery and policy type-prefixed signatures cannot authorize each other's validation routes.
-    function test_E712_MTI_6__LOAS_AISO_1__LOAS_AISO_2_isValidSignature_rejectsRecoveryAndPolicyFlowPrefixReplay()
+    function test_isValidSignature_rejectsRecoveryAndPolicyFlowPrefixReplay()
         public
     {
         // Setup: configure valid recovery and valid policy-signature fixtures.
@@ -327,7 +327,7 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
 
     /// @dev Verifies fuzzed initiator-signature byte mutations always alter both transaction and ERC-1271 review
     /// hashes.
-    function testFuzz_E712_FUZ_4_reviewHashes_randomInitiatorSignatureBytesAlwaysChangeHashes(
+    function testFuzz_reviewHashes_randomInitiatorSignatureBytesAlwaysChangeHashes(
         bytes calldata initiatorSignatureA,
         bytes calldata initiatorSignatureB
     ) public view {
@@ -364,7 +364,7 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
     }
 
     /// @dev Verifies fuzzed cross-flow replay attempts over wrong message-type hashes are always rejected.
-    function testFuzz_E712_FUZ_5_crossFlowReplayAttempts_wrongMessageTypeHashesAreAlwaysRejected(
+    function testFuzz_crossFlowReplayAttempts_wrongMessageTypeHashesAreAlwaysRejected(
         uint8 caseSelectorRaw,
         uint256 saltRaw,
         bytes32 seedHash

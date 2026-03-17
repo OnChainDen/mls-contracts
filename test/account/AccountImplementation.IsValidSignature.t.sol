@@ -11,8 +11,7 @@ import {AccountImplementationSuiteBase} from "test/account/AccountImplementation
  */
 contract AccountImplementationIsValidSignatureTest is AccountImplementationSuiteBase {
     /// @dev Verifies exact `(account, hash, signature)` delegation to organization signature validation.
-    /// AI-AENT-8
-    function test_AI_AENT_8__ACI_IVS_1__ACI_IVS_4_isValidSignature_delegatesExactArguments_returnsOrganizationResult()
+    function test_isValidSignature_delegatesExactArguments_returnsOrganizationResult()
         public
     {
         // Setup: configure expected delegated tuple and organization approval result.
@@ -30,7 +29,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies delegation preserves empty signature payloads.
-    function test_ACI_IVS_2_isValidSignature_delegatesEmptySignature_returnsOrganizationResult() public {
+    function test_isValidSignature_delegatesEmptySignature_returnsOrganizationResult() public {
         // Setup: enforce exact empty-signature delegation tuple with sentinel result.
         bytes32 hash = keccak256("account-signature-empty");
         bytes memory signature = bytes("");
@@ -47,7 +46,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies delegation preserves long signature payloads.
-    function test_ACI_IVS_3_isValidSignature_delegatesLargeSignature_returnsOrganizationResult() public {
+    function test_isValidSignature_delegatesLargeSignature_returnsOrganizationResult() public {
         // Setup: build long signature payload and enforce exact delegation tuple.
         bytes32 hash = keccak256("account-signature-large");
         bytes memory signature = new bytes(1024);
@@ -67,7 +66,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies organization-provided sentinel value is returned as-is, proving forwarding.
-    function test_ACI_IVS_5_isValidSignature_organizationReturnsSentinel_bubblesSentinel() public {
+    function test_isValidSignature_organizationReturnsSentinel_bubblesSentinel() public {
         // Setup: configure organization to return a sentinel distinct from both magic and invalid values.
         bytes4 sentinel = bytes4(0xCAFE0005);
         beacon.clearExpectedSignatureValidation();
@@ -82,7 +81,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies arbitrary non-magic organization values are returned unchanged.
-    function test_ACI_IVS_6_isValidSignature_organizationReturnsCustomValue_bubblesCustomValue() public {
+    function test_isValidSignature_organizationReturnsCustomValue_bubblesCustomValue() public {
         // Setup: configure custom non-standard bytes4 return.
         bytes4 custom = 0xDEADBEEF;
         beacon.clearExpectedSignatureValidation();
@@ -112,7 +111,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies organization custom-error reverts are converted to invalid value.
-    function test_ACI_IVS_7_isValidSignature_organizationRevertsWithCustomError_returnsInvalidValue() public {
+    function test_isValidSignature_organizationRevertsWithCustomError_returnsInvalidValue() public {
         // Setup: set sentinel so forwarding would surface it, then configure revert.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(bytes4(0xCAFE0007));
@@ -126,7 +125,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies organization revert-string failures are converted to invalid value.
-    function test_ACI_IVS_8_isValidSignature_organizationRevertsWithString_returnsInvalidValue() public {
+    function test_isValidSignature_organizationRevertsWithString_returnsInvalidValue() public {
         // Setup: set sentinel so forwarding would surface it, then configure string revert.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(bytes4(0xCAFE0008));
@@ -140,7 +139,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies organization panic reverts are converted to invalid value.
-    function test_ACI_IVS_9_isValidSignature_organizationRevertsWithPanic_returnsInvalidValue() public {
+    function test_isValidSignature_organizationRevertsWithPanic_returnsInvalidValue() public {
         // Setup: set sentinel so forwarding would surface it, then configure panic.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(bytes4(0xCAFE0009));
@@ -154,7 +153,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies organization no-data reverts are converted to invalid value.
-    function test_ACI_IVS_10_isValidSignature_organizationRevertsWithoutData_returnsInvalidValue() public {
+    function test_isValidSignature_organizationRevertsWithoutData_returnsInvalidValue() public {
         // Setup: set sentinel so forwarding would surface it, then configure empty revert.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(bytes4(0xCAFE0010));
@@ -168,7 +167,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies empty successful return payloads are treated as invalid signatures.
-    function test_ACI_IVS_11_isValidSignature_organizationReturnsEmptyData_returnsInvalidValue() public {
+    function test_isValidSignature_organizationReturnsEmptyData_returnsInvalidValue() public {
         // Setup: set sentinel so forwarding would surface it, then configure empty return.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(bytes4(0xCAFE0011));
@@ -182,7 +181,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies short successful return payloads are treated as invalid signatures.
-    function test_ACI_IVS_12_isValidSignature_organizationReturnsShortData_returnsInvalidValue() public {
+    function test_isValidSignature_organizationReturnsShortData_returnsInvalidValue() public {
         // Setup: set sentinel so forwarding would surface it, then configure 31-byte return.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(bytes4(0xCAFE0012));
@@ -197,7 +196,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies delegated-call argument mismatches in organization are converted to invalid value.
-    function test_ACI_IVS_13_isValidSignature_organizationArgumentGuardReverts_returnsInvalidValue() public {
+    function test_isValidSignature_organizationArgumentGuardReverts_returnsInvalidValue() public {
         // Setup: set sentinel so forwarding would surface it, then enforce mismatched tuple.
         bytes32 hash = keccak256("org-argument-guard");
         bytes memory signature = hex"445566";

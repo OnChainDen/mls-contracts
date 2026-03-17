@@ -42,7 +42,7 @@ contract OAFBAccountImplementationVersion3 {
  */
 contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountFactoryBaseSuiteBase {
     /// @dev Verifies non-guardian callers are rejected by the `onlyGuardian` modifier.
-    function test_OAFB_DA_1_deployAccount_nonGuardianCaller_revertsOnlyGuardian() public {
+    function test_deployAccount_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup: configure a valid one-admin baseline and prepare empty auth payload.
         _setSingleAdminThresholdOne();
         AdminAuthParams memory auth;
@@ -55,7 +55,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies insufficient admin signatures revert through admin-auth validation.
-    function test_OAFB_DA_2_deployAccount_insufficientAdminSignatures_revertsViaAdminAuthValidation() public {
+    function test_deployAccount_insufficientAdminSignatures_revertsViaAdminAuthValidation() public {
         bytes32 create2Salt = bytes32(uint256(4102));
 
         // Setup: require two signatures but provide one.
@@ -80,7 +80,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies replaying the same nonce after success reverts with `NonceAlreadyUsed`.
-    function test_OAFB_DA_3_NMAFB_AEP_1__OAF_DA_2_deployAccount_replaySameNonce_revertsAfterSuccessfulExecution()
+    function test_deployAccount_replaySameNonce_revertsAfterSuccessfulExecution()
         public
     {
         bytes32 create2Salt = bytes32(uint256(4103));
@@ -112,7 +112,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
 
     /// @dev Verifies `OrganizationAccountFactoryBase.deployAccount` isolates admin-auth salts and allows one
     /// successful deployment per fresh organization for identical `create2Salt` values.
-    function test_NMAFB_AEP_2_deployAccount_sameCreate2Salt_usesIndependentNoncesAndSucceedsAcrossFreshOrganizations()
+    function test_deployAccount_sameCreate2Salt_usesIndependentNoncesAndSucceedsAcrossFreshOrganizations()
         public
     {
         bytes32 create2Salt = bytes32(uint256(41_031));
@@ -179,7 +179,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
 
     /// @dev Verifies `OrganizationAccountFactoryBase.deployAccount` reverts on the second deployment when using the
     /// same `create2Salt` with a different admin-auth salt on the same organization due to CREATE2 collision.
-    function test_NMAFB_AEP_3_deployAccount_sameCreate2Salt_differentAdminSalt_sameOrg_revertsCreate2Collision()
+    function test_deployAccount_sameCreate2Salt_differentAdminSalt_sameOrg_revertsCreate2Collision()
         public
     {
         bytes32 create2Salt = bytes32(uint256(41_032));
@@ -219,8 +219,8 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies deployed-account tracking is isolated per organization even when both orgs deploy with the same
-    /// CREATE2 salt. [OAF-DA-3]
-    function test_OAF_DA_3_deployAccount_otherOrganizationAccountIsNotTrackedAsLocallyDeployed() public {
+    /// CREATE2 salt.
+    function test_deployAccount_otherOrganizationAccountIsNotTrackedAsLocallyDeployed() public {
         bytes32 create2Salt = bytes32(uint256(41_032));
         uint256 expiration = block.timestamp + 1 hours;
 
@@ -282,8 +282,8 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
         assertTrue(firstAccount != secondAccount, "distinct organizations should deploy distinct account addresses");
     }
 
-    /// @dev Verifies guardian + valid auth deploys a deterministic account that is immediately callable. [OAF-DA-1]
-    function test_OAFB_DA_7__OAF_DA_1_deployAccount_guardianWithValidAuth_delegatesToLibraryAndMarksDeployed() public {
+    /// @dev Verifies guardian + valid auth deploys a deterministic account that is immediately callable.
+    function test_deployAccount_guardianWithValidAuth_delegatesToLibraryAndMarksDeployed() public {
         bytes32 create2Salt = bytes32(uint256(4104));
 
         // Setup: configure one-admin auth and set a versioned beacon implementation whose runtime behavior is easy to
@@ -318,7 +318,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies `deployAccount` returns the exact deterministic address for the given salt.
-    function test_OAFB_DA_8__OAF_CAA_2_deployAccount_returnsCorrectDeterministicAddress() public {
+    function test_deployAccount_returnsCorrectDeterministicAddress() public {
         bytes32 create2Salt = bytes32(uint256(4105));
 
         // Setup: configure one-admin auth and set a valid beacon implementation.
@@ -345,7 +345,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies admin auth for deploy-account uses `OperationType.DeployAccount`.
-    function test_OAFB_DA_9_deployAccount_operationTypeIsDeployAccount_inAdminAuthValidation() public {
+    function test_deployAccount_operationTypeIsDeployAccount_inAdminAuthValidation() public {
         bytes32 create2Salt = bytes32(uint256(4106));
 
         // Setup: configure one-admin auth and set a valid beacon implementation.
@@ -389,7 +389,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies golden operation-data bytes are exactly `abi.encode(create2Salt)` for a fixed salt.
-    function test_OAFB_DA_10_deployAccount_operationDataGoldenVector_matchesExpectedBytesAndHash() public pure {
+    function test_deployAccount_operationDataGoldenVector_matchesExpectedBytesAndHash() public pure {
         bytes32 create2Salt = bytes32(uint256(0xA11CE5));
 
         // Setup: fixed golden vector for deterministic operation-data encoding checks.
@@ -405,7 +405,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies expired auth params revert with `AdminOperationExpired`.
-    function test_OAFB_DA_4_deployAccount_expiredAuthParams_revertsAdminOperationExpired() public {
+    function test_deployAccount_expiredAuthParams_revertsAdminOperationExpired() public {
         bytes32 create2Salt = bytes32(uint256(4182));
 
         // Setup: configure one-admin auth and sign with an already-expired timestamp.
@@ -430,7 +430,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies tampering `create2Salt` after signing invalidates auth and reverts.
-    function test_OAFB_DA_5_deployAccount_create2SaltTamperingAfterSigning_invalidatesAuthAndReverts() public {
+    function test_deployAccount_create2SaltTamperingAfterSigning_invalidatesAuthAndReverts() public {
         bytes32 signedCreate2Salt = bytes32(uint256(4183));
         bytes32 tamperedCreate2Salt = bytes32(uint256(4184));
 
@@ -456,7 +456,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies failed auth does not consume nonce and corrected signatures succeed on retry.
-    function test_OAFB_DA_6_deployAccount_failedAuth_doesNotConsumeNonceAndCanRetryWithCorrectedSignatures() public {
+    function test_deployAccount_failedAuth_doesNotConsumeNonceAndCanRetryWithCorrectedSignatures() public {
         bytes32 create2Salt = bytes32(uint256(4184));
 
         // Setup: require two signatures but provide one for the first attempt.
@@ -498,7 +498,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
 
     /// @dev Verifies `OrganizationAccountFactoryBase.deployAccount` rolls back the second admin-auth nonce when a
     /// duplicate `create2Salt` hits the downstream CREATE2 collision path.
-    function test_NMAFB_AEP_7__OAF_DA_4_deployAccount_duplicateCreate2Salt_rollsBackSecondNonce() public {
+    function test_deployAccount_duplicateCreate2Salt_rollsBackSecondNonce() public {
         bytes32 create2Salt = bytes32(uint256(4185));
 
         // Setup: configure a valid implementation, deploy once to occupy the CREATE2 slot, and prepare a second
@@ -539,7 +539,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies previously deployed accounts execute new implementation code immediately after upgrade.
-    function test_OAFB_SAI_12__OAF_SAI_1_setAccountImplementation_previouslyDeployedAccountsImmediatelyUseNewImplementation()
+    function test_setAccountImplementation_previouslyDeployedAccountsImmediatelyUseNewImplementation()
         public
     {
         // Setup: configure versioned implementations, set V1, and deploy two accounts.
@@ -600,7 +600,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies accounts deployed after implementation upgrade use the latest implementation.
-    function test_OAFB_SAI_13__OAF_SAI_2_setAccountImplementation_newlyDeployedAccountsAfterUpgradeUseNewImplementation()
+    function test_setAccountImplementation_newlyDeployedAccountsAfterUpgradeUseNewImplementation()
         public
     {
         // Setup: set V1, then upgrade to V2 before deploying.
@@ -648,7 +648,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies sequential implementation upgrades preserve expected behavior across V1 -> V2 -> V3.
-    function test_OAFB_SAI_14_setAccountImplementation_sequentialUpgradesPreserveBehaviorAcrossVersions() public {
+    function test_setAccountImplementation_sequentialUpgradesPreserveBehaviorAcrossVersions() public {
         // Setup: whitelist three versions, set V1, and deploy account.
         _setSingleAdminThresholdOne();
         address implV1 = address(new OAFBAccountImplementationVersion1());
@@ -708,7 +708,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies all accounts under one organization share a single implementation pointer.
-    function test_ACCF_INV_5_OAFB_SAI_15_setAccountImplementation_allAccountsShareSingleImplementationPointer() public {
+    function test_setAccountImplementation_allAccountsShareSingleImplementationPointer() public {
         // Setup: deploy two accounts under V1 and then move pointer to V2.
         _setSingleAdminThresholdOne();
         address implV1 = address(new OAFBAccountImplementationVersion1());

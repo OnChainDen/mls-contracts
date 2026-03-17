@@ -49,8 +49,7 @@ contract ContractInteractionUtilsTest is Test {
     }
 
     /// @dev Test case: Exactly 4 bytes of calldata (minimum valid input) should return those 4 bytes as the selector.
-    ///      [TXUT-PARSE-4]
-    function test_TXUT_PARSE_4_A_extractFunctionSelector_exactly4Bytes_returnsThoseBytes() public view {
+    function test_extractFunctionSelector_exactly4Bytes_returnsThoseBytes() public view {
         bytes memory data = hex"deadbeef";
         assertEq(data.length, 4, "Data should be exactly 4 bytes");
 
@@ -103,8 +102,7 @@ contract ContractInteractionUtilsTest is Test {
     }
 
     /// @dev Test case: Random calldata (>= 4 bytes) should always extract the correct first 4 bytes as the selector.
-    ///      [TXUT-PARSE-4]
-    function testFuzz_TXUT_PARSE_4_B_extractFunctionSelector_randomCalldata_extractsFirst4Bytes(bytes calldata data)
+    function testFuzz_extractFunctionSelector_randomCalldata_extractsFirst4Bytes(bytes calldata data)
         public
         view
     {
@@ -124,7 +122,7 @@ contract ContractInteractionUtilsTest is Test {
     /// @dev Verifies `ContractInteractionUtils.extractFunctionSelector` always reverts for calldata shorter than four
     /// bytes.
     /// @param data Fuzzed calldata constrained below the minimum selector length.
-    function testFuzz_FCIU_SELECT_19_extractFunctionSelector_shortCalldataAlwaysReverts(bytes calldata data) public {
+    function testFuzz_extractFunctionSelector_shortCalldataAlwaysReverts(bytes calldata data) public {
         // Setup: constrain fuzz calldata below the minimum selector length.
         vm.assume(data.length < 4);
 

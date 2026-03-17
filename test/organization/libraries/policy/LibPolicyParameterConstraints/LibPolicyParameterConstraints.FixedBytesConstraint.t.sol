@@ -12,7 +12,7 @@ import {ConstraintType} from "types/PolicyTypes.sol";
  */
 contract LibPolicyParameterConstraintsFixedBytesConstraintTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that exact bytes32 match passes and mismatch fails.
-    function test_LPPC_ATYPE_11_isFixedBytesParameterAllowedByConstraint_exactMatchAndMismatch() public view {
+    function test_isFixedBytesParameterAllowedByConstraint_exactMatchAndMismatch() public view {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for exact bytes32 match passes and
         // mismatch fails.
         bytes32 expected = keccak256("fixed-bytes");
@@ -78,7 +78,7 @@ contract LibPolicyParameterConstraintsFixedBytesConstraintTest is LibPolicyParam
     }
 
     /// @dev Verifies that oversized comparison payloads fail closed for fixed bytes checks.
-    function test_POL_INV_14_isFixedBytesParameterAllowedByConstraint_oversizedComparisonData_returnsFalse()
+    function test_isFixedBytesParameterAllowedByConstraint_oversizedComparisonData_returnsFalse()
         public
         view
     {
@@ -116,7 +116,7 @@ contract LibPolicyParameterConstraintsFixedBytesConstraintTest is LibPolicyParam
     }
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
-    function test_POL_INV_14_isFixedBytesParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
+    function test_isFixedBytesParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
         public
     {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails

@@ -25,7 +25,7 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     /// @dev Verifies `LibOrganizationSignatures.computeNonce` is deterministic for identical inputs.
-    function test_NMSIG_CN_1__NMSIG_INV_3_computeNonce_sameInputsRemainDeterministic() public view {
+    function test_computeNonce_sameInputsRemainDeterministic() public view {
         // Setup: define one nonce tuple with fixed operation type, payload, and salt.
         bytes memory operationData = abi.encode(address(0xA11CE), uint256(7));
 
@@ -38,7 +38,7 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     /// @dev Verifies `LibOrganizationSignatures.computeNonce` changes when any bound field changes.
-    function test_NMSIG_CN_2__NMSIG_CN_3__NMSIG_CN_4__NMSIG_CN_5__NMSIG_INV_4__NMSIG_INV_5_computeNonce_changesWhenBoundFieldChanges()
+    function test_computeNonce_changesWhenBoundFieldChanges()
         public
     {
         // Setup: define a baseline tuple and deploy a second harness to vary the organization address binding.
@@ -62,7 +62,7 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     /// @dev Verifies `LibOrganizationSignatures.computeNonce` supports deterministic empty payloads.
-    function test_NMSIG_CN_6_computeNonce_emptyOperationDataIsSupported() public view {
+    function test_computeNonce_emptyOperationDataIsSupported() public view {
         // Setup: use an empty operation payload with a fixed operation type and salt.
         bytes memory emptyOperationData = bytes("");
 
@@ -75,7 +75,7 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     /// @dev Verifies `LibOrganizationSignatures.computeNonce` supports deterministic large payloads.
-    function test_NMSIG_CN_7_computeNonce_largeOperationDataIsSupported() public view {
+    function test_computeNonce_largeOperationDataIsSupported() public view {
         // Setup: fill a large payload so hashing covers a non-trivial calldata size.
         bytes memory largeOperationData = new bytes(4096);
         for (uint256 i = 0; i < largeOperationData.length; i++) {
@@ -93,7 +93,7 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     /// @dev Verifies `LibOrganizationSignatures.validateAndConsumeNonceOrRevert` consumes a fresh nonce exactly once.
-    function test_NMSIG_VCN_1__NMSIG_VCN_4_validateAndConsumeNonce_consumesFreshNonceAndUpdatesUsage() public {
+    function test_validateAndConsumeNonce_consumesFreshNonceAndUpdatesUsage() public {
         // Setup: derive a fresh nonce and assert its pre-consume view state.
         uint256 nonce = harness.computeNonceViaLibrary(OperationType.ModifyGroups, abi.encode(uint256(23)), 23);
         assertFalse(harness.isNonceUsedViaLibrary(nonce), "fresh nonce should start unused");
@@ -106,7 +106,7 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     /// @dev Verifies `LibOrganizationSignatures.validateAndConsumeNonceOrRevert` reverts with the exact reused nonce.
-    function test_NMSIG_VCN_2__NMSIG_VCN_3__NMSIG_INV_2_validateAndConsumeNonce_reusedNonceRevertsWithExactValue()
+    function test_validateAndConsumeNonce_reusedNonceRevertsWithExactValue()
         public
     {
         // Setup: consume one nonce once so the next attempt hits the replay path.
@@ -120,7 +120,7 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     /// @dev Verifies consuming one nonce does not mark an unrelated nonce as used.
-    function test_NMSIG_VCN_5_validateAndConsumeNonce_consumingOneNonceDoesNotTouchAnother() public {
+    function test_validateAndConsumeNonce_consumingOneNonceDoesNotTouchAnother() public {
         // Setup: derive two nonces from different salts under the same operation tuple.
         bytes memory operationData = abi.encode(address(0xD00D), uint256(25));
         uint256 nonceA = harness.computeNonceViaLibrary(OperationType.ModifyAdmins, operationData, 25);
@@ -135,7 +135,7 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     /// @dev Verifies once a nonce is consumed it stays used across later successful nonce consumptions.
-    function test_NMSIG_VCN_6__NMSIG_INV_1_validateAndConsumeNonce_consumedNonceRemainsMonotonicAcrossLaterOperations()
+    function test_validateAndConsumeNonce_consumedNonceRemainsMonotonicAcrossLaterOperations()
         public
     {
         // Setup: derive two distinct nonces in the same harness storage.

@@ -70,7 +70,7 @@ contract OrganizationAdminBaseFuzzTest is OrganizationAdminBaseSuiteBase {
      * @param useRejectPath Whether to exercise the rejection entry point instead of the execution entry point
      * @param saltRaw Raw salt used to derive a bounded nonce salt
      */
-    function testFuzz_FOAB_ADMOP_45_modifyAdminsAndRejectAdminOperationAreGuardianOnly(
+    function testFuzz_modifyAdminsAndRejectAdminOperationAreGuardianOnly(
         bool useRejectPath,
         uint256 saltRaw
     ) public {
@@ -111,7 +111,7 @@ contract OrganizationAdminBaseFuzzTest is OrganizationAdminBaseSuiteBase {
      * @param useRejectPath Whether to exercise the rejection entry point instead of the execution entry point
      * @param saltRaw Raw salt used to derive a bounded nonce salt
      */
-    function testFuzz_FOAB_ADMOP_45_modifyAdminsAndRejectAdminOperationBindSignaturesToExactPayload(
+    function testFuzz_modifyAdminsAndRejectAdminOperationBindSignaturesToExactPayload(
         uint8 mutationSelector,
         bool useRejectPath,
         uint256 saltRaw

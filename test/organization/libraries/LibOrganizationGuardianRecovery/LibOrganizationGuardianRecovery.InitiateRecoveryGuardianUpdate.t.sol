@@ -15,7 +15,7 @@ import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 contract LibOrganizationGuardianRecoveryInitiateRecoveryGuardianUpdateTest is LibOrganizationGuardianRecoverySuiteBase {
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate` valid initiate writes pending
     /// guardian, timestamp, and ready=false.
-    function test_LOGR_IRGU_1__LOGR_IRGU_2__LOGR_IRGU_3_validInitiate_writesPendingFields() public {
+    function test_validInitiate_writesPendingFields() public {
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
         uint256 expectedCanFinalizeAt = block.timestamp + GUARDIAN_RECOVERY_TIMELOCK;
@@ -32,7 +32,7 @@ contract LibOrganizationGuardianRecoveryInitiateRecoveryGuardianUpdateTest is Li
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate` zero guardian and already-pending
     /// flows revert.
-    function test_LOGR_IRGU_4__LOGR_IRGU_5_zeroGuardianOrAlreadyPending_revert() public {
+    function test_zeroGuardianOrAlreadyPending_revert() public {
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
@@ -54,7 +54,7 @@ contract LibOrganizationGuardianRecoveryInitiateRecoveryGuardianUpdateTest is Li
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate` event emits guardian from normal
     /// storage and initiate does not change current guardian.
-    function test_LOGR_IRGU_6__LOGR_IRGU_7__LOGR_IRGU_8_eventUsesNormalGuardianStorageAndGuardianRemainsUnchanged()
+    function test_eventUsesNormalGuardianStorageAndGuardianRemainsUnchanged()
         public
     {
         // Setup: reconfigure baseline recovery address and timelock.
@@ -75,7 +75,7 @@ contract LibOrganizationGuardianRecoveryInitiateRecoveryGuardianUpdateTest is Li
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate` initiating to same address as
     /// current guardian is allowed.
-    function test_LOGR_IRGU_9_sameAsCurrentGuardian_succeeds() public {
+    function test_sameAsCurrentGuardian_succeeds() public {
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
         recoveryStateHarness.setGuardian(NEW_GUARDIAN_A);
@@ -93,7 +93,7 @@ contract LibOrganizationGuardianRecoveryInitiateRecoveryGuardianUpdateTest is Li
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate` initiate mutates only
     /// recovery-update pending fields.
-    function test_LOGR_IRGU_10_initiateOnlyMutatesRecoveryUpdatePendingFields() public {
+    function test_initiateOnlyMutatesRecoveryUpdatePendingFields() public {
         // Setup: reconfigure baseline recovery address and timelock and seed pending deferred-init tuple.
         _resetAndConfigureRecovery();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -124,7 +124,7 @@ contract LibOrganizationGuardianRecoveryInitiateRecoveryGuardianUpdateTest is Li
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate` invalid configured recovery
     /// timelock reverts and does not create pending update.
-    function test_LOGR_IRGU_11_invalidConfiguredTimelock_revertsAndDoesNotCreatePendingUpdate() public {
+    function test_invalidConfiguredTimelock_revertsAndDoesNotCreatePendingUpdate() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryConfig(GUARDIAN_RECOVERY_ADDRESS, 1 days);

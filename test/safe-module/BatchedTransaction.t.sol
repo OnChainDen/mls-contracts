@@ -200,7 +200,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies `execute` succeeds as no-op for empty transactions bytes.
-    function test_BT_EVB_1_executeEmptyTransactionsSucceedsAsNoop() public {
+    function test_executeEmptyTransactionsSucceedsAsNoop() public {
         // Call: execute with empty bytes (no sub-transactions).
         (bool success,) = _executeBatchViaDelegatecall("");
 
@@ -208,8 +208,8 @@ contract BatchedTransactionTest is Test {
         assertTrue(success, "Empty batch should succeed as no-op");
     }
 
-    /// @dev Verifies `execute` successfully executes a single packed transaction. [ASIG-INV-14]
-    function test_ASIG_INV_14_A_BT_EVB_2_executeSinglePackedTransaction() public {
+    /// @dev Verifies `execute` successfully executes a single packed transaction.
+    function test_executeSinglePackedTransaction() public {
         // Setup: encode a single setValue(42) call.
         bytes memory data = abi.encodeWithSelector(MockBTTarget.setValue.selector, 42);
         bytes memory encoded = _encodeTx(address(target1), data);
@@ -223,9 +223,8 @@ contract BatchedTransactionTest is Test {
         assertEq(target1.callCount(), 1, "Target should have received exactly one call");
     }
 
-    // ISEM-BTE-1
-    /// @dev Verifies `execute` runs multiple packed transactions in encoded order. [ASIG-INV-15]
-    function test_ASIG_INV_15_A_ISEM_BTE_1__BT_EVB_3_executeMultipleTransactionsInOrder() public {
+    /// @dev Verifies `execute` runs multiple packed transactions in encoded order.
+    function test_executeMultipleTransactionsInOrder() public {
         // Setup: encode three sub-transactions in specific order.
         bytes[] memory txs = new bytes[](3);
         txs[0] = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 10));
@@ -242,7 +241,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies repeated calls to same target preserve order and cumulative state.
-    function test_ASIG_INV_15_B_BT_EVB_4_executeRepeatedCallsCumulativeState() public {
+    function test_executeRepeatedCallsCumulativeState() public {
         // Setup: five recordCall() invocations with ordered IDs to a CallOrderTracker.
         CallOrderTracker tracker = new CallOrderTracker();
         bytes[] memory txs = new bytes[](5);
@@ -263,7 +262,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies zero-length calldata sub-transaction is valid (fallback/receive path).
-    function test_BT_EVB_5_executeZeroLengthCalldataCallsFallback() public {
+    function test_executeZeroLengthCalldataCallsFallback() public {
         // Setup: deploy target that accepts empty calls via fallback.
         EmptyCallTarget emptyTarget = new EmptyCallTarget();
         bytes memory encoded = _encodeTx(address(emptyTarget), "");
@@ -276,8 +275,8 @@ contract BatchedTransactionTest is Test {
         assertTrue(emptyTarget.wasCalled(), "Fallback should have been called");
     }
 
-    /// @dev Verifies mixed targets within one batch execute correctly. [ASIG-INV-14]
-    function test_ASIG_INV_14_B_BT_EVB_6_executeMixedTargetsBatch() public {
+    /// @dev Verifies mixed targets within one batch execute correctly.
+    function test_executeMixedTargetsBatch() public {
         // Setup: encode sub-transactions targeting different contracts.
         EmptyCallTarget emptyTarget = new EmptyCallTarget();
         bytes[] memory txs = new bytes[](3);
@@ -296,7 +295,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies direct call mode (non-delegatecall) works and target sees `msg.sender == BatchedTransaction`.
-    function test_BT_EVB_7_executeDirectCallTargetSeesBatchedTxAsSender() public {
+    function test_executeDirectCallTargetSeesBatchedTxAsSender() public {
         // Setup: encode a single transaction.
         bytes memory encoded = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 42));
 
@@ -309,7 +308,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies direct call mode still enforces self-target blocking.
-    function test_BT_EVB_8_executeDirectCallBlocksSelfTarget() public {
+    function test_executeDirectCallBlocksSelfTarget() public {
         // Setup: encode a sub-transaction targeting BatchedTransaction itself.
         bytes memory encoded = _encodeTx(address(batchedTx), abi.encodeWithSelector(MockBTTarget.setValue.selector, 42));
 
@@ -319,7 +318,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies delegatecall mode sub-calls see `msg.sender` == delegatecaller (this test contract as Safe).
-    function test_BT_EVB_9_executeDelegatecallSubCallsSeeDelegatecallerAsSender() public {
+    function test_executeDelegatecallSubCallsSeeDelegatecallerAsSender() public {
         // Setup: encode a single transaction. When delegatecalled, address(this) is this test contract.
         bytes memory encoded = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 42));
 
@@ -333,10 +332,8 @@ contract BatchedTransactionTest is Test {
         );
     }
 
-    // ISEM-BTE-3
     /// @dev Verifies delegatecall context: sub-transaction targeting delegatecaller reverts `CannotCallSafe`.
-    ///      [ASIG-INV-9]
-    function test_ASIG_INV_9_A_ISEM_BTE_3__BT_ESF_1_executeDelegatecallSelfTargetRevertsCannotCallSafe() public {
+    function test_executeDelegatecallSelfTargetRevertsCannotCallSafe() public {
         // Setup: encode sub-transaction targeting address(this) (the "Safe" when delegatecalled).
         bytes memory data = abi.encodeWithSelector(MockBTTarget.setValue.selector, 42);
         bytes memory encoded = _encodeTx(address(this), data);
@@ -354,8 +351,8 @@ contract BatchedTransactionTest is Test {
         assertEq(actualSelector, expectedSelector, "Should revert with CannotCallSafe");
     }
 
-    /// @dev Verifies self-target in later sub-transaction reverts the entire batch. [ASIG-INV-9]
-    function test_ASIG_INV_9_B_BT_ESF_2_executeSelfTargetInLaterTxRevertsEntireBatch() public {
+    /// @dev Verifies self-target in later sub-transaction reverts the entire batch.
+    function test_executeSelfTargetInLaterTxRevertsEntireBatch() public {
         // Setup: first tx is valid, second tx targets address(this).
         bytes[] memory txs = new bytes[](2);
         txs[0] = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 10));
@@ -369,7 +366,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies any sub-transaction revert causes entire batch revert.
-    function test_BT_ESF_3_executeAnySubTxRevertCausesEntireBatchRevert() public {
+    function test_executeAnySubTxRevertCausesEntireBatchRevert() public {
         // Setup: single reverting sub-transaction.
         bytes memory data = abi.encodeWithSelector(MockBTTarget.revertingFunction.selector);
         bytes memory encoded = _encodeTx(address(target1), data);
@@ -381,10 +378,8 @@ contract BatchedTransactionTest is Test {
         assertFalse(success, "Reverting sub-transaction should cause batch revert");
     }
 
-    // ISEM-BTE-2
     /// @dev Verifies first sub-call success + second sub-call revert => first side effects rolled back.
-    ///      [ASIG-INV-9]
-    function test_ASIG_INV_9_C_ISEM_BTE_2__BT_ESF_4_executeSecondTxRevertRollsBackFirstTx() public {
+    function test_executeSecondTxRevertRollsBackFirstTx() public {
         // Setup: first tx succeeds (setValue(10)), second tx reverts.
         bytes[] memory txs = new bytes[](2);
         txs[0] = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 10));
@@ -400,7 +395,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies first sub-call success + second CannotCallSafe => first side effects rolled back.
-    function test_BT_ESF_5_executeCannotCallSafeRollsBackPriorSuccesses() public {
+    function test_executeCannotCallSafeRollsBackPriorSuccesses() public {
         // Setup: first tx succeeds, second tx targets Safe (address(this) in delegatecall context).
         bytes[] memory txs = new bytes[](2);
         txs[0] = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 10));
@@ -414,9 +409,8 @@ contract BatchedTransactionTest is Test {
         assertEq(target1.value(), 0, "First tx side effects should be rolled back on CannotCallSafe");
     }
 
-    // ISEM-BTE-4
     /// @dev Verifies payable target receives `msg.value == 0` for every sub-call.
-    function test_ISEM_BTE_4__BT_ESF_6_executeSubCallsReceiveZeroMsgValue() public {
+    function test_executeSubCallsReceiveZeroMsgValue() public {
         // Setup: deploy target that tracks msg.value.
         MsgValueTracker tracker = new MsgValueTracker();
         bytes[] memory txs = new bytes[](2);
@@ -433,7 +427,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies sub-call requiring positive msg.value fails and reverts whole batch.
-    function test_BT_ESF_7_executeSubCallRequiringEthFailsBatch() public {
+    function test_executeSubCallRequiringEthFailsBatch() public {
         // Setup: target that requires ETH.
         RequiresEthBTTarget ethTarget = new RequiresEthBTTarget();
         bytes memory encoded =
@@ -447,7 +441,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies batch cannot transfer ETH from delegatecaller balance.
-    function test_BT_ESF_8_executeBatchCannotTransferEthFromDelegatecaller() public {
+    function test_executeBatchCannotTransferEthFromDelegatecaller() public {
         // Setup: fund this test contract (simulating a Safe with ETH).
         vm.deal(address(this), 10 ether);
         MsgValueTracker tracker = new MsgValueTracker();
@@ -462,7 +456,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies all sub-transactions are executed as CALL (no per-subtx delegatecall path).
-    function test_BT_ESF_9_executeSubTransactionsUseCallNotDelegatecall() public {
+    function test_executeSubTransactionsUseCallNotDelegatecall() public {
         // Setup: encode a single sub-transaction. In CALL mode, target sees its own address(this).
         bytes memory encoded = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 42));
 
@@ -477,7 +471,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies no partial completion is observable after any failure (all-or-nothing).
-    function test_BT_ESF_10_executeNoPartialCompletionOnFailure() public {
+    function test_executeNoPartialCompletionOnFailure() public {
         // Setup: first two txs succeed, third reverts.
         bytes[] memory txs = new bytes[](3);
         txs[0] = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 100));
@@ -496,7 +490,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies failed execution never returns success=true (no silent partial failure).
-    function test_BT_ESF_11_executeFailedExecutionNeverReturnsTrue() public {
+    function test_executeFailedExecutionNeverReturnsTrue() public {
         // Setup: reverting sub-transaction.
         bytes memory encoded =
             _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.revertingFunction.selector));
@@ -509,7 +503,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies malformed first transaction causes revert before any external call.
-    function test_BT_EMB_3_executeMalformedFirstTxRevertsBeforeExternalCall() public {
+    function test_executeMalformedFirstTxRevertsBeforeExternalCall() public {
         // Setup: encode a batch where first tx is a reverting function, ensuring no state change.
         bytes memory encoded =
             _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.revertingFunction.selector));
@@ -523,7 +517,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies malformed later transaction reverts and rolls back earlier successful sub-calls.
-    function test_BT_EMB_4_executeMalformedLaterTxRollsBackEarlier() public {
+    function test_executeMalformedLaterTxRollsBackEarlier() public {
         // Setup: first tx succeeds, second tx reverts.
         bytes[] memory txs = new bytes[](2);
         txs[0] = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 42));
@@ -538,7 +532,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies exact boundary case: header-only entry with dataLength=0 is accepted.
-    function test_BT_EMB_6_executeHeaderOnlyWithZeroDataLength() public {
+    function test_executeHeaderOnlyWithZeroDataLength() public {
         // Setup: encode a sub-transaction with dataLength=0 targeting a fallback-accepting contract.
         EmptyCallTarget emptyTarget = new EmptyCallTarget();
         bytes memory headerOnly = abi.encodePacked(address(emptyTarget), uint64(0));
@@ -553,7 +547,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies offset/length confusion cannot bypass self-call block (CannotCallSafe).
-    function test_ASIG_INV_9_D_BT_EMB_8_executeOffsetLengthConfusionCannotBypassSelfCallBlock() public {
+    function test_executeOffsetLengthConfusionCannotBypassSelfCallBlock() public {
         EmptyCallTarget emptyTarget = new EmptyCallTarget();
         bytes4 expectedSelector = IBatchedTransaction.CannotCallSafe.selector;
 
@@ -616,7 +610,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies malformed payload must not silently succeed using zero-padded calldata.
-    function test_BT_EMB_9_executeMalformedPayloadDoesNotSilentlySucceed() public {
+    function test_executeMalformedPayloadDoesNotSilentlySucceed() public {
         // Setup: valid header with dataLength pointing to non-existent data (only zeros from padding).
         // This tests that zero-padded reads don't cause silent success with wrong calldata.
         bytes memory encoded = abi.encodePacked(
@@ -634,8 +628,8 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies bounded packed batches with fuzzed calldata lengths terminate while preserving exact field
-    ///      decoding under delegatecall execution. [ASIG-INV-14]
-    function testFuzz_ASIG_INV_14_C__FBT_EXEC_159_executeBatchFieldDecodingForwardsExactToAndData(
+    ///  decoding under delegatecall execution.
+    function testFuzz_executeBatchFieldDecodingForwardsExactToAndData(
         uint8 rawCount,
         bytes32 seed
     ) public {
@@ -666,7 +660,7 @@ contract BatchedTransactionTest is Test {
 
     /// @dev Verifies malformed packed payload tails revert atomically without preserving earlier successful effects.
     /// @param rawValidPrefixCount The number of valid prefix sub-transactions prepended before the malformed tail.
-    function testFuzz_FBT_EXEC_158_malformedPackedPayloadsRevertAtomically(uint8 rawValidPrefixCount) public {
+    function testFuzz_malformedPackedPayloadsRevertAtomically(uint8 rawValidPrefixCount) public {
         uint8 validPrefixCount = uint8(bound(rawValidPrefixCount, 1, 4));
         MockBTTarget[] memory targets = new MockBTTarget[](validPrefixCount);
         bytes[] memory prefixTxs = new bytes[](validPrefixCount);
@@ -695,8 +689,8 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies a well-formed packed batch executes every encoded sub-tx exactly once with no skips or
-    ///      repeats. [ASIG-INV-15]
-    function testFuzz_ASIG_INV_15_C_executeWellFormedBatchExecutesEachSubTxExactlyOnce(uint8 rawCount) public {
+    ///  repeats.
+    function testFuzz_executeWellFormedBatchExecutesEachSubTxExactlyOnce(uint8 rawCount) public {
         uint8 count = uint8(bound(rawCount, 1, 8));
         MockBTTarget[] memory targets = new MockBTTarget[](count);
         bytes[] memory txs = new bytes[](count);
@@ -721,7 +715,7 @@ contract BatchedTransactionTest is Test {
     /// @dev Verifies every fallback-shaped sub-call executes with `msg.value == 0` regardless of payload bytes.
     /// @param rawCount The bounded number of fallback targets in the fuzzed batch.
     /// @param seed Entropy used to derive distinct fallback calldata payloads.
-    function testFuzz_FBT_EXEC_160_executeSubcallsAlwaysUseZeroValueRegardlessOfPayloadShape(
+    function testFuzz_executeSubcallsAlwaysUseZeroValueRegardlessOfPayloadShape(
         uint8 rawCount,
         bytes32 seed
     ) public {

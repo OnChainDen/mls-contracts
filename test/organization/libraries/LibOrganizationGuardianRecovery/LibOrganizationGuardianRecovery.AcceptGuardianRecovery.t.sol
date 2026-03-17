@@ -14,7 +14,7 @@ import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 contract LibOrganizationGuardianRecoveryAcceptGuardianRecoveryTest is LibOrganizationGuardianRecoverySuiteBase {
     /// @dev Verifies `LibOrganizationGuardianRecovery.acceptGuardianRecovery` accept writes guardian in normal storage,
     /// clears pending, emits event, and preserves config/pending-init.
-    function test_LOGR_AGR_1__LOGR_AGR_2__LOGR_AGR_3__LOGR_AGR_4__LOGR_AGR_7__LOGR_AGR_8__LOGR_AGR_9__LOGR_AGR_10__LOGR_AGR_12_acceptUpdatesGuardianAndClearsPending()
+    function test_acceptUpdatesGuardianAndClearsPending()
         public
     {
         // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending
@@ -65,7 +65,7 @@ contract LibOrganizationGuardianRecoveryAcceptGuardianRecoveryTest is LibOrganiz
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.acceptGuardianRecovery` no pending update reverts with
     /// `NoPendingRecoveryGuardianUpdate`.
-    function test_LOGR_AGR_5_noPendingUpdate_revertsNoPendingRecoveryGuardianUpdate() public {
+    function test_noPendingUpdate_revertsNoPendingRecoveryGuardianUpdate() public {
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
@@ -79,7 +79,7 @@ contract LibOrganizationGuardianRecoveryAcceptGuardianRecoveryTest is LibOrganiz
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.acceptGuardianRecovery` not-ready update reverts with
     /// `RecoveryGuardianUpdateNotReadyForAcceptance`.
-    function test_LOGR_AGR_6_notReadyForAcceptance_revertsRecoveryGuardianUpdateNotReadyForAcceptance() public {
+    function test_notReadyForAcceptance_revertsRecoveryGuardianUpdateNotReadyForAcceptance() public {
         // Setup: reconfigure baseline recovery address and timelock and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
@@ -94,7 +94,7 @@ contract LibOrganizationGuardianRecoveryAcceptGuardianRecoveryTest is LibOrganiz
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.acceptGuardianRecovery` pending guardian equal to current
     /// guardian still clears pending and emits event with equal addresses.
-    function test_LOGR_AGR_11_pendingGuardianEqualsCurrentGuardian_acceptStillClearsStateAndEmits() public {
+    function test_pendingGuardianEqualsCurrentGuardian_acceptStillClearsStateAndEmits() public {
         // Setup: reconfigure baseline recovery address and timelock, seed pending recovery-guardian update, and
         // position timestamp at timelock boundary.
         _resetAndConfigureRecovery();

@@ -15,8 +15,8 @@ import {OperationType} from "types/CommonTypes.sol";
  * @dev Unit tests for `OrganizationGuardianBase.cancelGuardianUpdate`.
  */
 contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardianBaseSuiteBase {
-    /// @dev Verifies OGB-CGU-1: non-guardian caller reverts via `onlyGuardian`.
-    function test_OGB_CGU_1_GUARD_INV_6_C_nonGuardianCaller_revertsOnlyGuardian() public {
+    /// @dev Verifies non-guardian caller reverts via `onlyGuardian`.
+    function test_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
@@ -38,8 +38,8 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         assertEq(harness.pendingGuardian(), NEW_GUARDIAN_A, "pending guardian should remain unchanged");
     }
 
-    /// @dev Verifies OGB-CGU-2: insufficient admin signatures revert.
-    function test_OGB_CGU_2_insufficientAdminSignatures_reverts() public {
+    /// @dev Verifies insufficient admin signatures revert.
+    function test_insufficientAdminSignatures_reverts() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
@@ -61,8 +61,8 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         assertEq(harness.pendingGuardian(), NEW_GUARDIAN_A, "pending guardian should remain unchanged");
     }
 
-    /// @dev Verifies OGB-CGU-3: replaying the same nonce reverts after successful execution.
-    function test_OGB_CGU_3__NMGUB_GUF_5_replaySameNonce_revertsNonceAlreadyUsed() public {
+    /// @dev Verifies replaying the same nonce reverts after successful execution.
+    function test_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3901);
@@ -89,8 +89,8 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         harness.cancelGuardianUpdate(auth);
     }
 
-    /// @dev Verifies OGB-CGU-4: the approval path succeeds with `OperationType.CancelUpdateGuardian`.
-    function test_OGB_CGU_4_operationTypeCancelUpdateGuardian_authorizesExecution() public {
+    /// @dev Verifies the approval path succeeds with `OperationType.CancelUpdateGuardian`.
+    function test_operationTypeCancelUpdateGuardian_authorizesExecution() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3902);
@@ -113,8 +113,8 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         assertFalse(harness.getUsedNonce(finalizeNonce), "finalize nonce should remain unused");
     }
 
-    /// @dev Verifies OGB-CGU-5: operation data encodes current pending guardian.
-    function test_OGB_CGU_5_operationDataEncodesPendingGuardian_bindingHolds() public {
+    /// @dev Verifies operation data encodes current pending guardian.
+    function test_operationDataEncodesPendingGuardian_bindingHolds() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3903);
@@ -139,8 +139,8 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
     }
 
     /// @dev Verifies `OrganizationGuardianBase.cancelGuardianUpdate` clears a pending normal guardian update before
-    /// finalization. [OGU-GU-4]
-    function test_OGB_CGU_6__OGU_GU_4__GUARD_INV_8_A_delegatesToLibrary_andClearsPendingState() public {
+    /// finalization.
+    function test_delegatesToLibrary_andClearsPendingState() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3904);
@@ -163,8 +163,8 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         assertEq(harness.guardian(), GUARDIAN, "guardian should remain unchanged");
     }
 
-    /// @dev Verifies OGB-CGU-7: rejection signatures cannot execute cancellation.
-    function test_OGB_CGU_7_rejectionSignatures_cannotExecuteCancellation() public {
+    /// @dev Verifies rejection signatures cannot execute cancellation.
+    function test_rejectionSignatures_cannotExecuteCancellation() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3905);
@@ -187,8 +187,8 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
     }
 
     /// @dev Verifies `OrganizationGuardianBase.cancelGuardianUpdate` rejects initiate-stage signatures reused during
-    /// cancel-stage authorization. [OGU-GU-2]
-    function test_OGB_CGU_8__NMGUB_GUF_7__OGU_GU_2_differentOperationTypeSignatures_cannotAuthorizeCancellation()
+    /// cancel-stage authorization.
+    function test_differentOperationTypeSignatures_cannotAuthorizeCancellation()
         public
     {
         // Setup
@@ -215,8 +215,8 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         assertFalse(harness.getUsedNonce(cancelNonce), "cancel nonce should remain unused");
     }
 
-    /// @dev Verifies OGB-CGU-9: cancel signatures for pending guardian A fail after pending guardian changes to B.
-    function test_OGB_CGU_9__NMGUB_GUF_8_signedOperationDataBinding_rejectsChangedPendingGuardian() public {
+    /// @dev Verifies cancel signatures for pending guardian A fail after pending guardian changes to B.
+    function test_signedOperationDataBinding_rejectsChangedPendingGuardian() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3907);
@@ -244,8 +244,8 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         assertFalse(harness.getUsedNonce(nonceB), "mutated pending payload nonce should remain unused");
     }
 
-    /// @dev Verifies OGB-CGU-10: `NoPendingGuardianUpdate` downstream revert rolls back nonce usage.
-    function test_OGB_CGU_10__NMGUB_GUF_10_noPendingRevert_rollsBackNonce() public {
+    /// @dev Verifies `NoPendingGuardianUpdate` downstream revert rolls back nonce usage.
+    function test_noPendingRevert_rollsBackNonce() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationData) = _buildCancelGuardianUpdateAuth({
@@ -268,7 +268,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
 
     /// @dev Verifies `OrganizationGuardianBase.cancelGuardianUpdate` can cancel the same pending guardian twice with
     /// different salts when the pending value is recreated in between.
-    function test_NMGUB_GUF_6_cancelGuardianUpdate_samePendingGuardianDifferentSalts_canCancelTwiceAcrossReinitiation()
+    function test_cancelGuardianUpdate_samePendingGuardianDifferentSalts_canCancelTwiceAcrossReinitiation()
         public
     {
         // Setup: create one pending guardian update, prepare two cancel salts for the same guardian, and prepare a
@@ -319,8 +319,8 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
     }
 
     /// @dev Verifies `OrganizationGuardianBase.cancelGuardianUpdate` can cancel a guardian update after finalize but
-    /// before accept, restoring the lifecycle to a fresh re-initiable state. [OGU-GU-4]
-    function test_OGU_GU_4__GUARD_INV_8_B_cancelAfterFinalizeBeforeAccept_clearsReadyStateAndAllowsFreshUpdate()
+    /// before accept, restoring the lifecycle to a fresh re-initiable state.
+    function test_cancelAfterFinalizeBeforeAccept_clearsReadyStateAndAllowsFreshUpdate()
         public
     {
         // Setup: stage a normal guardian update through finalize so the pending guardian is ready for acceptance.

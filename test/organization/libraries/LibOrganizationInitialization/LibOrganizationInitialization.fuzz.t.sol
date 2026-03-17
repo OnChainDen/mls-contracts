@@ -19,7 +19,7 @@ import {GroupModification, GroupModificationType, InitializationParams} from "ty
  */
 contract LibOrganizationInitializationFuzzTest is InitializationSuiteBase {
     /// @dev Verifies valid randomized initialization params establish core organization invariants in one call.
-    function testFuzz_FLOI_INIT_26_initialize_validRandomizedParamsEstablishCoreInvariants(
+    function testFuzz_initialize_validRandomizedParamsEstablishCoreInvariants(
         uint256 seed,
         uint8 memberCountRaw,
         uint8 adminCountRaw,
@@ -134,7 +134,7 @@ contract LibOrganizationInitializationFuzzTest is InitializationSuiteBase {
 
     /// @dev Verifies failing member, admin, group, or recovery validation branches revert atomically with no partial
     /// persisted organization state.
-    function testFuzz_FLOI_INIT_27_initialize_failingSubStepsRevertAtomically(
+    function testFuzz_initialize_failingSubStepsRevertAtomically(
         uint256 seed,
         uint8 failureModeRaw,
         bool belowMinTimelock

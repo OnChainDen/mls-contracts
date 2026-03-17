@@ -14,8 +14,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeRecoveryGuardianUpdateTest is
     OrganizationGuardianRecoveryBaseSuiteBase
 {
     /// @dev Verifies recovery-only guardian entrypoints reject unauthorized callers before readiness flags can change.
-    /// [OREC-GRF-2]
-    function test_OGRB_FRGU_1__OREC_GRF_2__GREC_INV_6_B_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress()
+    function test_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress()
         public
     {
         // Setup: seed pending recovery-guardian update.
@@ -34,7 +33,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeRecoveryGuardianUpdateTest is
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeRecoveryGuardianUpdate` recovery address caller
     /// delegates to library and marks update ready.
-    function test_OGRB_FRGU_2_recoveryAddressCaller_delegatesToLibrary() public {
+    function test_recoveryAddressCaller_delegatesToLibrary() public {
         // Setup: seed pending recovery-guardian update.
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp, false);
 
@@ -52,8 +51,8 @@ contract OrganizationGuardianRecoveryBaseFinalizeRecoveryGuardianUpdateTest is
     }
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeRecoveryGuardianUpdate` reverts before the configured
-    /// recovery timelock expires and succeeds at the exact boundary. [OREC-GRF-3]
-    function test_OREC_GRF_3_finalizeRecoveryGuardianUpdate_beforeTimelockReverts_andBoundarySucceeds() public {
+    /// recovery timelock expires and succeeds at the exact boundary.
+    function test_finalizeRecoveryGuardianUpdate_beforeTimelockReverts_andBoundarySucceeds() public {
         // Setup: stage a recovery-only guardian update whose finalize timestamp is one recovery timelock in the
         // future.
         vm.prank(GUARDIAN_RECOVERY_ADDRESS);

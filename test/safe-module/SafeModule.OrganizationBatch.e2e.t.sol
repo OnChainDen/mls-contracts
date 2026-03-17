@@ -108,9 +108,8 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
         _setMembersAndAdmins(buildArray(admin1), buildArray(admin1), 1);
     }
 
-    // ISEM-EOB-7
     /// @dev Verifies the authorized executor can call a guardian-only organization function through the module.
-    function test_SMI_ETE_5__ISEM_EOB_7_authorizedExecutorCanExecuteGuardianOnlyOrganizationFunctionViaModule() public {
+    function test_authorizedExecutorCanExecuteGuardianOnlyOrganizationFunctionViaModule() public {
         // Setup: build a signed `modifyMembers` call that adds one new member.
         bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA), 101);
 
@@ -123,9 +122,8 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
         assertTrue(organization.getMemberStatus(memberToAddA), "member should be added by the organization call");
     }
 
-    // ISEM-EOB-7
     /// @dev Verifies non-authorized callers cannot execute guardian-only organization functions through the module.
-    function test_SMI_ETE_6__ISEM_EOB_7_unauthorizedCallerCannotExecuteGuardianOnlyOrganizationFunctionViaModule()
+    function test_unauthorizedCallerCannotExecuteGuardianOnlyOrganizationFunctionViaModule()
         public
     {
         // Setup: build a signed `modifyMembers` call that would add one new member.
@@ -145,7 +143,7 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
     }
 
     /// @dev Verifies a batched `modifyMembers` then `modifyGroups` flow succeeds with consistent final state.
-    function test_SMI_ETE_8_batchedModifyMembersThenGroups_succeedsWithConsistentState() public {
+    function test_batchedModifyMembersThenGroups_succeedsWithConsistentState() public {
         // Setup: encode member additions first, then a group creation that uses those newly added members.
         bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA, memberToAddB), 201);
         bytes memory modifyGroupsCall = _buildCreateGroupCall(GROUP_ID, buildArray(memberToAddA, memberToAddB), 202);
@@ -167,7 +165,7 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
     }
 
     /// @dev Verifies reversing the member/group order reverts atomically and preserves prior organization state.
-    function test_SMI_ETE_9_batchedModifyGroupsBeforeMembers_revertsAtomically() public {
+    function test_batchedModifyGroupsBeforeMembers_revertsAtomically() public {
         // Setup: encode the same logical work in the unsafe order, creating the group before members exist.
         bytes memory modifyGroupsCall = _buildCreateGroupCall(GROUP_ID, buildArray(memberToAddA, memberToAddB), 301);
         bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA, memberToAddB), 302);
@@ -189,7 +187,7 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
     }
 
     /// @dev Verifies replaying a batch with a consumed first sub-call nonce fails without additional state changes.
-    function test_SMI_ETE_10_A_replayingBatchWithConsumedFirstNonce_revertsWithoutStateChange() public {
+    function test_replayingBatchWithConsumedFirstNonce_revertsWithoutStateChange() public {
         // Setup: execute a successful member/group batch once to consume both nonces.
         bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA, memberToAddB), 401);
         bytes memory modifyGroupsCall = _buildCreateGroupCall(GROUP_ID, buildArray(memberToAddA, memberToAddB), 402);
@@ -214,7 +212,7 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
     }
 
     /// @dev Verifies a consumed second sub-call nonce rolls back a fresh first sub-call in the same batch.
-    function test_SMI_ETE_10_B_consumedSecondNonce_rollsBackFreshFirstSubcall() public {
+    function test_consumedSecondNonce_rollsBackFreshFirstSubcall() public {
         // Setup: execute an initial successful batch whose group-call nonce will be replayed later.
         bytes memory initialModifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA, memberToAddB), 501);
         bytes memory staleModifyGroupsCall =
@@ -246,7 +244,7 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
     }
 
     /// @dev Verifies disabled-module and wrong-executor gating both block batched admin execution with no state change.
-    function test_SMI_ETE_11_disabledModuleOrWrongExecutor_blockBatchAndPreserveOrganizationState() public {
+    function test_disabledModuleOrWrongExecutor_blockBatchAndPreserveOrganizationState() public {
         // Setup: build a valid member/group batch that would otherwise succeed.
         bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA, memberToAddB), 601);
         bytes memory modifyGroupsCall = _buildCreateGroupCall(GROUP_ID, buildArray(memberToAddA, memberToAddB), 602);
@@ -280,7 +278,7 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
 
     /// @dev Verifies that batching two identical admin operations in a single batch reverts atomically because the
     ///      second sub-call encounters a nonce already consumed by the first sub-call.
-    function test_SMI_ETE_12_duplicateAdminOperationsInSameBatch_revertsNonceAlreadyUsed() public {
+    function test_duplicateAdminOperationsInSameBatch_revertsNonceAlreadyUsed() public {
         // Setup: build the same modifyMembers call twice so both sub-calls derive the same nonce.
         bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA, memberToAddB), 701);
         bytes memory batchData = abi.encodeWithSelector(

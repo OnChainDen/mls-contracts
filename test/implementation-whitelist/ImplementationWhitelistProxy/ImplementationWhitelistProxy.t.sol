@@ -16,7 +16,7 @@ import {ContractType} from "types/CommonTypes.sol";
 contract WhitelistCodeAddressMock {}
 
 /**
- * @dev Constructor tests for `ImplementationWhitelistProxy` (IWP-CON-1 through IWP-CON-8).
+ * @dev Constructor tests for `ImplementationWhitelistProxy` ( through ).
  */
 contract ImplementationWhitelistProxyTest is Test {
     bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
@@ -81,7 +81,7 @@ contract ImplementationWhitelistProxyTest is Test {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// @dev Verifies deploying proxy with valid `initData` initializes owner and seed whitelists atomically.
-    function test_IWP_CON_1_constructor_validInitData_initializesAtomically() public {
+    function test_constructor_validInitData_initializesAtomically() public {
         // Setup: build initialization data with owner and seed arrays.
         address[] memory orgSeeds = _single(organizationImplementationA);
         address[] memory accSeeds = _single(accountImplementationA);
@@ -105,7 +105,7 @@ contract ImplementationWhitelistProxyTest is Test {
     }
 
     /// @dev Verifies deploying proxy with `implementation == address(0)` reverts.
-    function test_IWP_CON_2_constructor_zeroImplementation_reverts() public {
+    function test_constructor_zeroImplementation_reverts() public {
         // Setup: build valid initData but use zero implementation address.
         bytes memory initData = _buildInitData(OWNER, new address[](0), new address[](0));
 
@@ -117,7 +117,7 @@ contract ImplementationWhitelistProxyTest is Test {
     }
 
     /// @dev Verifies deploying proxy with no-code implementation address reverts.
-    function test_IWP_CON_3_constructor_noCodeImplementation_reverts() public {
+    function test_constructor_noCodeImplementation_reverts() public {
         // Setup: build valid initData but use an EOA (no-code) implementation address.
         address noCodeAddr = address(0xDEADCAFE);
         bytes memory initData = _buildInitData(OWNER, new address[](0), new address[](0));
@@ -130,7 +130,7 @@ contract ImplementationWhitelistProxyTest is Test {
     }
 
     /// @dev Verifies deploying proxy with malformed/garbage initData causes constructor revert.
-    function test_IWP_CON_4_constructor_malformedInitData_reverts() public {
+    function test_constructor_malformedInitData_reverts() public {
         // Setup: construct garbage initData that does not match any function selector.
         bytes memory malformedData = hex"DEADBEEF";
 
@@ -142,7 +142,7 @@ contract ImplementationWhitelistProxyTest is Test {
     }
 
     /// @dev Verifies if delegated initialize reverts, proxy deployment reverts atomically.
-    function test_IWP_CON_5_constructor_initializeReverts_proxyDeploymentRevertsAtomically() public {
+    function test_constructor_initializeReverts_proxyDeploymentRevertsAtomically() public {
         // Setup: build initData that calls initialize with zero owner (which reverts).
         bytes memory initData = _buildInitData(address(0), new address[](0), new address[](0));
 
@@ -154,7 +154,7 @@ contract ImplementationWhitelistProxyTest is Test {
     }
 
     /// @dev Verifies implementation slot points to provided implementation address after deploy.
-    function test_IWP_CON_6_constructor_implementationSlotPointsToProvidedAddress() public {
+    function test_constructor_implementationSlotPointsToProvidedAddress() public {
         // Setup: deploy proxy with valid initData.
         bytes memory initData = _buildInitData(OWNER, new address[](0), new address[](0));
         ImplementationWhitelistProxy proxy = new ImplementationWhitelistProxy(address(implementation), initData);
@@ -167,7 +167,7 @@ contract ImplementationWhitelistProxyTest is Test {
     }
 
     /// @dev Verifies proxy delegates calls to implementation correctly (read and write paths).
-    function test_IWP_CON_7_proxyDelegatesCallsCorrectly() public {
+    function test_proxyDelegatesCallsCorrectly() public {
         // Setup: deploy initialized proxy.
         bytes memory initData = _buildInitData(OWNER, new address[](0), new address[](0));
         ImplementationWhitelistProxy proxy = new ImplementationWhitelistProxy(address(implementation), initData);
@@ -192,7 +192,7 @@ contract ImplementationWhitelistProxyTest is Test {
     /// @dev Verifies [DESIRED] empty initData deployment should revert to prevent uninitialized proxy.
     ///      Current behavior: ERC1967Proxy allows empty initData, leaving the proxy uninitialized.
     ///      This test documents the desired behavior and will fail with the current implementation.
-    function test_IWP_CON_8_constructor_emptyInitData_shouldRevertDesiredBehavior() public {
+    function test_constructor_emptyInitData_shouldRevertDesiredBehavior() public {
         // Setup: empty initData bytes.
         bytes memory emptyData = bytes("");
 

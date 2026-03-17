@@ -16,7 +16,7 @@ contract LibPolicyDestinationFuzzTest is PolicyLibrariesFuzzTestBase {
     /// @param disallowedDestination A destination not included in the merkle tree.
     /// @param asTokenTransfer Whether to exercise the ERC-20-transfer destination path.
     /// @param amount The transfer amount encoded into the ERC-20 calldata.
-    function testFuzz_FLPD_DEST_65_isDestinationAllowed_customListAcceptsOnlyValidMerkleMembership(
+    function testFuzz_isDestinationAllowed_customListAcceptsOnlyValidMerkleMembership(
         address token,
         address allowedDestination,
         address siblingDestination,

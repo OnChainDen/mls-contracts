@@ -18,7 +18,7 @@ contract LibOrganizationEIP712FuzzTest is LibOrganizationEIP712TestBase {
     /// @dev Verifies `LibOrganizationEIP712.getDomainSeparator` stays deterministic for one organization and chain
     /// while typed-data wrapping remains deterministic for the same struct hash.
     /// @param structHash Fuzzed struct hash wrapped by the Organization EIP-712 helpers.
-    function testFuzz_E712_FUZ_1_getDomainSeparator_sameInputsRemainDeterministic(bytes32 structHash) public view {
+    function testFuzz_getDomainSeparator_sameInputsRemainDeterministic(bytes32 structHash) public view {
         // Setup: keep the current harness and chain id fixed while fuzzing the struct hash.
 
         // Call: compute the domain separator and typed-data hash twice with identical inputs.
@@ -35,7 +35,7 @@ contract LibOrganizationEIP712FuzzTest is LibOrganizationEIP712TestBase {
     /// @dev Verifies mutating exactly one bound EIP-712 input changes the final typed-data hash.
     /// @param structHash Fuzzed baseline struct hash.
     /// @param mutatedStructHash Fuzzed alternate struct hash constrained away from the baseline.
-    function testFuzz_E712_FUZ_2_singleBoundInputMutation_changesTypedDataHash(
+    function testFuzz_singleBoundInputMutation_changesTypedDataHash(
         bytes32 structHash,
         bytes32 mutatedStructHash
     ) public {
@@ -63,7 +63,7 @@ contract LibOrganizationEIP712FuzzTest is LibOrganizationEIP712TestBase {
     /// @param structHash Fuzzed struct hash shared across all domain computations.
     /// @param rawChainIdA Fuzzed first chain id constrained to a non-zero value.
     /// @param rawChainIdB Fuzzed second chain id constrained to a distinct non-zero value.
-    function testFuzz_E712_FUZ_3_randomChainAndOrganizationPairs_isolateDomains(
+    function testFuzz_randomChainAndOrganizationPairs_isolateDomains(
         bytes32 structHash,
         uint64 rawChainIdA,
         uint64 rawChainIdB
@@ -97,7 +97,7 @@ contract LibOrganizationEIP712FuzzTest is LibOrganizationEIP712TestBase {
     /// @dev Verifies `LibOrganizationEIP712.computeTypedDataHash` matches the independent EIP-712 reference formula.
     /// @param structHash Fuzzed struct hash wrapped by the Organization typed-data helper.
     /// @param rawChainId Fuzzed chain id constrained to a non-zero value.
-    function testFuzz_E712_FUZ_6__FLOEIP_HASH_36_randomVectors_matchIndependentReference(
+    function testFuzz_randomVectors_matchIndependentReference(
         bytes32 structHash,
         uint64 rawChainId
     ) public {

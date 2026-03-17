@@ -15,7 +15,7 @@ contract OrganizationGuardianBaseFuzzTest is OrganizationGuardianBaseSuiteBase {
     /// @dev Verifies guardian entry points enforce `onlyGuardian` and `onlyPendingGuardian` under random caller fuzz.
     /// @param caller The unauthorized caller used against the guardian entry points.
     /// @param saltSeed Entropy used to derive distinct auth salts.
-    function testFuzz_FOGUB_ENTRY_119_guardianEntryPoints_enforceOnlyGuardianAndOnlyPendingGuardian(
+    function testFuzz_guardianEntryPoints_enforceOnlyGuardianAndOnlyPendingGuardian(
         address caller,
         uint256 saltSeed
     ) public {

@@ -20,7 +20,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     bytes32 internal constant BASE_STRUCT_HASH = keccak256("eip712-base-struct");
 
     /// @dev Verifies `LibOrganizationEIP712.EIP712_DOMAIN_TYPEHASH` matches the documented EIP-712 domain string.
-    function test_LOEIP_THC_1_domainTypehash_matchesDocumentedTypeString() public pure {
+    function test_domainTypehash_matchesDocumentedTypeString() public pure {
         // Setup: keep the documented type string explicit in the test body.
         bytes32 expected =
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
@@ -33,7 +33,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     }
 
     /// @dev Verifies `LibOrganizationEIP712.ADMIN_OPERATION_TYPEHASH` matches the documented admin-operation schema.
-    function test_LOEIP_THC_2_adminOperationTypehash_matchesDocumentedTypeString() public pure {
+    function test_adminOperationTypehash_matchesDocumentedTypeString() public pure {
         // Setup: keep the documented type string explicit in the test body.
         bytes32 expected = keccak256(
             "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 expirationTimestamp,bool isApproval,uint256 chainId,address organization)"
@@ -48,7 +48,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
 
     /// @dev Verifies `LibOrganizationEIP712.INITIATE_ACCOUNT_TRANSACTION_TYPEHASH` matches the documented initiator
     /// schema.
-    function test_LOEIP_THC_3_initiateAccountTransactionTypehash_matchesDocumentedTypeString() public pure {
+    function test_initiateAccountTransactionTypehash_matchesDocumentedTypeString() public pure {
         // Setup: keep the documented type string explicit in the test body.
         bytes32 expected = keccak256(
             "InitiateAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId)"
@@ -63,7 +63,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
 
     /// @dev Verifies `LibOrganizationEIP712.REVIEW_ACCOUNT_TRANSACTION_TYPEHASH` matches the documented reviewer
     /// schema.
-    function test_LOEIP_THC_4_reviewAccountTransactionTypehash_matchesDocumentedTypeString() public pure {
+    function test_reviewAccountTransactionTypehash_matchesDocumentedTypeString() public pure {
         // Setup: keep the documented type string explicit in the test body.
         bytes32 expected = keccak256(
             "ReviewAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId,bytes initiatorSignature)"
@@ -78,7 +78,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
 
     /// @dev Verifies `LibOrganizationEIP712.INITIATE_SIGNATURE_VALIDATION_TYPEHASH` matches the documented initiator
     /// schema.
-    function test_LOEIP_THC_5_initiateSignatureValidationTypehash_matchesDocumentedTypeString() public pure {
+    function test_initiateSignatureValidationTypehash_matchesDocumentedTypeString() public pure {
         // Setup: keep the documented type string explicit in the test body.
         bytes32 expected = keccak256(
             "InitiateSignatureValidation(address organization,address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp,uint256 chainId)"
@@ -93,7 +93,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
 
     /// @dev Verifies `LibOrganizationEIP712.REVIEW_SIGNATURE_VALIDATION_TYPEHASH` matches the documented reviewer
     /// schema.
-    function test_LOEIP_THC_6_reviewSignatureValidationTypehash_matchesDocumentedTypeString() public pure {
+    function test_reviewSignatureValidationTypehash_matchesDocumentedTypeString() public pure {
         // Setup: keep the documented type string explicit in the test body.
         bytes32 expected = keccak256(
             "ReviewSignatureValidation(address organization,address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp,uint256 chainId,bytes initiatorSignature)"
@@ -107,7 +107,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     }
 
     /// @dev Verifies all Organization EIP-712 type hashes remain unique across system-defined message types.
-    function test_LOEIP_THC_7_allSystemTypehashes_areUnique() public pure {
+    function test_allSystemTypehashes_areUnique() public pure {
         // Setup: collect the six system-defined type hashes under test.
         bytes32[6] memory hashes = [
             LibOrganizationEIP712.EIP712_DOMAIN_TYPEHASH,
@@ -129,7 +129,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
 
     /// @dev Verifies `LibOrganizationEIP712.getDomainSeparator` uses the documented name, version, chain id, verifier,
     /// and field order.
-    function test_LOEIP_GDS_1_LOEIP_GDS_2_LOEIP_GDS_3_LOEIP_GDS_4_LOEIP_GDS_8_getDomainSeparator_matchesDocumentedReference()
+    function test_getDomainSeparator_matchesDocumentedReference()
         public
         view
     {
@@ -144,7 +144,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     }
 
     /// @dev Verifies `LibOrganizationEIP712.getDomainSeparator` is deterministic for a fixed chain and organization.
-    function test_E712_HASH_1_NMEIP_E712_1_LOEIP_GDS_5_getDomainSeparator_sameDomainIsDeterministic() public view {
+    function test_getDomainSeparator_sameDomainIsDeterministic() public view {
         // Setup: keep the harness address and chain id fixed for repeated calls.
 
         // Call: compute the same domain separator twice.
@@ -156,7 +156,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     }
 
     /// @dev Verifies `LibOrganizationEIP712.getDomainSeparator` changes when the chain id changes.
-    function test_E712_HASH_2_A_NMEIP_E712_2_LOEIP_GDS_6_getDomainSeparator_chainIdMutationChangesSeparator() public {
+    function test_getDomainSeparator_chainIdMutationChangesSeparator() public {
         // Setup: snapshot the baseline separator before mutating the chain id.
         bytes32 baseline = harness.getDomainSeparatorViaLibrary();
         uint256 originalChainId = block.chainid;
@@ -171,7 +171,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     }
 
     /// @dev Verifies `LibOrganizationEIP712.getDomainSeparator` changes when the verifying contract changes.
-    function test_E712_HASH_2_B_NMEIP_E712_3_LOEIP_GDS_7_getDomainSeparator_verifierMutationChangesSeparator() public {
+    function test_getDomainSeparator_verifierMutationChangesSeparator() public {
         // Setup: deploy a second harness with a different verifying-contract address.
         LibOrganizationEIP712Harness otherHarness = new LibOrganizationEIP712Harness();
 
@@ -185,7 +185,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
 
     /// @dev Verifies `LibOrganizationEIP712.computeTypedDataHash` matches both the documented prefix composition and
     /// the OpenZeppelin reference helper.
-    function test_NMEIP_E712_4_LOEIP_CTDH_1_LOEIP_CTDH_2_computeTypedDataHash_matchesPrefixAndOpenZeppelinReference()
+    function test_computeTypedDataHash_matchesPrefixAndOpenZeppelinReference()
         public
         view
     {
@@ -203,7 +203,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     }
 
     /// @dev Verifies `LibOrganizationEIP712.computeTypedDataHash` changes when the struct hash changes.
-    function test_LOEIP_CTDH_3_computeTypedDataHash_structHashMutationChangesOutput() public view {
+    function test_computeTypedDataHash_structHashMutationChangesOutput() public view {
         // Setup: derive two distinct struct hashes within the same domain.
         bytes32 structHashA = BASE_STRUCT_HASH;
         bytes32 structHashB = keccak256("eip712-mutated-struct");
@@ -217,7 +217,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     }
 
     /// @dev Verifies `LibOrganizationEIP712.computeTypedDataHash` binds the verifying-contract address.
-    function test_LOEIP_CTDH_4_computeTypedDataHash_sameStructHashDifferentOrganizations_changesOutput() public {
+    function test_computeTypedDataHash_sameStructHashDifferentOrganizations_changesOutput() public {
         // Setup: deploy a second harness with a different verifying-contract address.
         LibOrganizationEIP712Harness otherHarness = new LibOrganizationEIP712Harness();
 
@@ -230,7 +230,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     }
 
     /// @dev Verifies `LibOrganizationEIP712.computeTypedDataHash` binds the current chain id.
-    function test_LOEIP_CTDH_5_computeTypedDataHash_sameStructHashDifferentChains_changesOutput() public {
+    function test_computeTypedDataHash_sameStructHashDifferentChains_changesOutput() public {
         // Setup: snapshot the baseline typed-data hash before mutating the chain id.
         bytes32 baseline = harness.computeTypedDataHashViaLibrary(BASE_STRUCT_HASH);
         uint256 originalChainId = block.chainid;
@@ -246,7 +246,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
 
     /// @dev Verifies `LibOrganizationEIP712.computeTypedDataHash` handles `bytes32(0)` deterministically without
     /// reverting.
-    function test_LOEIP_CTDH_6_computeTypedDataHash_zeroStructHash_isDeterministicAndNonReverting() public view {
+    function test_computeTypedDataHash_zeroStructHash_isDeterministicAndNonReverting() public view {
         // Setup: keep the zero struct hash explicit.
         bytes32 zeroStructHash = bytes32(0);
         bytes32 expected = _manualTypedDataHash(address(harness), block.chainid, zeroStructHash);

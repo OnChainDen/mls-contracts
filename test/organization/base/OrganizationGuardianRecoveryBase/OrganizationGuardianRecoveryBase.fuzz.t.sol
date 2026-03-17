@@ -12,7 +12,7 @@ import {
 contract OrganizationGuardianRecoveryBaseFuzzTest is OrganizationGuardianRecoveryBaseSuiteBase {
     /// @dev Verifies `OrganizationGuardianRecoveryBase` recovery entry points always enforce the recovery-address
     /// caller gate.
-    function testFuzz_OGR_FZ_13__FOGRB_ENTRY_120_nonRecoveryCallers_failRecoveryEntryPoints(address caller) public {
+    function testFuzz_nonRecoveryCallers_failRecoveryEntryPoints(address caller) public {
         // Setup: reuse suite baseline where guardian-recovery is configured.
         vm.assume(caller != GUARDIAN_RECOVERY_ADDRESS);
 

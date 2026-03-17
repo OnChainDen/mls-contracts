@@ -139,9 +139,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         harness.initializeTxRecovery(recoveryAddress, TX_TIMELOCK);
     }
 
-    /// @dev Verifies LOTR-ITR-1, LOTR-ITR-2, LOTR-ITR-3, and LOTR-ITR-4: initialization writes config and leaves
+    /// @dev Verifies initialization writes config and leaves
     /// pending fields cleared.
-    function test_LOTR_ITR_1__LOTR_ITR_2__LOTR_ITR_3__LOTR_ITR_4_initialize_setsConfigAndClearsPending() public {
+    function test_initialize_setsConfigAndClearsPending() public {
         // Setup
 
         // Call
@@ -157,9 +157,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertEq(state.pendingInit.pendingTimestamp, 0, "pending init timestamp should be zero");
     }
 
-    /// @dev Verifies LOTR-ITR-5, LOTR-ITR-6, and LOTR-ITR-7: initialize rejects zero recovery or out-of-range
+    /// @dev Verifies initialize rejects zero recovery or out-of-range
     /// timelocks.
-    function test_LOTR_ITR_5__LOTR_ITR_6__LOTR_ITR_7_initialize_rejectsInvalidRecoveryParams() public {
+    function test_initialize_rejectsInvalidRecoveryParams() public {
         // Setup
         harness.resetTxRecoveryState();
 
@@ -193,8 +193,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         );
     }
 
-    /// @dev Verifies LOTR-ITR-8 and LOTR-ITR-9: initialize accepts min/max timelock boundaries.
-    function test_LOTR_ITR_8__LOTR_ITR_9_initialize_acceptsMinAndMaxTimelockBoundaries() public {
+    /// @dev Verifies initialize accepts min/max timelock boundaries.
+    function test_initialize_acceptsMinAndMaxTimelockBoundaries() public {
         // Setup
         harness.resetTxRecoveryState();
 
@@ -217,8 +217,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         );
     }
 
-    /// @dev Verifies LOTR-ITR-10: initialize reverts when any pre-existing config field is already set.
-    function test_LOTR_ITR_10_initialize_preconfiguredState_revertsTransactionRecoveryAlreadyConfigured() public {
+    /// @dev Verifies initialize reverts when any pre-existing config field is already set.
+    function test_initialize_preconfiguredState_revertsTransactionRecoveryAlreadyConfigured() public {
         // Setup
 
         // Call
@@ -244,9 +244,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify
     }
 
-    /// @dev Verifies LOTR-IETR-1, LOTR-IETR-2, and LOTR-IETR-7: initiate-enable sets pending timestamp, emits event,
+    /// @dev Verifies initiate-enable sets pending timestamp, emits event
     /// and keeps recovery disabled.
-    function test_LOTR_IETR_1__LOTR_IETR_2__LOTR_IETR_7_initiateEnable_setsPendingAndEmitsWhileRemainingDisabled()
+    function test_initiateEnable_setsPendingAndEmitsWhileRemainingDisabled()
         public
     {
         // Setup
@@ -264,8 +264,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertFalse(state.isEnabled, "initiate should not enable recovery");
     }
 
-    /// @dev Verifies LOTR-IETR-3 and LOTR-IETR-8: not-configured check reverts and takes precedence.
-    function test_LOTR_IETR_3__LOTR_IETR_8_initiateEnable_notConfiguredCheck_precedesOtherChecks() public {
+    /// @dev Verifies not-configured check reverts and takes precedence.
+    function test_initiateEnable_notConfiguredCheck_precedesOtherChecks() public {
         // Setup
         harness.setTxRecoveryState(
             TxRecoveryState({
@@ -286,9 +286,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify
     }
 
-    /// @dev Verifies LOTR-IETR-4: initiate-enable validates timelock range first and reverts for out-of-range values
+    /// @dev Verifies initiate-enable validates timelock range first and reverts for out-of-range values
     /// regardless of other configuration fields.
-    function test_LOTR_IETR_4_initiateEnable_outOfRangeTimelock_revertsInvalidTimelockDuration() public {
+    function test_initiateEnable_outOfRangeTimelock_revertsInvalidTimelockDuration() public {
         // Setup
         harness.setTxRecoveryState(
             TxRecoveryState({
@@ -337,8 +337,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify
     }
 
-    /// @dev Verifies LOTR-IETR-5 and LOTR-IETR-6: initiate-enable rejects already-enabled and already-pending states.
-    function test_LOTR_IETR_5__LOTR_IETR_6_initiateEnable_alreadyEnabledOrPending_reverts() public {
+    /// @dev Verifies initiate-enable rejects already-enabled and already-pending states.
+    function test_initiateEnable_alreadyEnabledOrPending_reverts() public {
         // Setup
         harness.setTxRecoveryState(
             TxRecoveryState({
@@ -373,8 +373,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify
     }
 
-    /// @dev Verifies LOTR-FETR-1 and LOTR-FETR-2: finalize-enable reverts on no-pending and pre-expiry calls.
-    function test_LOTR_FETR_1__LOTR_FETR_2_finalizeEnable_noPendingOrPreExpiry_reverts() public {
+    /// @dev Verifies finalize-enable reverts on no-pending and pre-expiry calls.
+    function test_finalizeEnable_noPendingOrPreExpiry_reverts() public {
         // Setup
 
         // Call
@@ -395,9 +395,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertFalse(harness.getTxRecoveryState().isEnabled, "state should remain disabled");
     }
 
-    /// @dev Verifies LOTR-FETR-3, LOTR-FETR-5, LOTR-FETR-6, LOTR-FETR-7, and LOTR-FETR-8: finalize-enable succeeds at
+    /// @dev Verifies finalize-enable succeeds at
     /// exact pending timestamp, enables recovery, clears pending, emits event, and preserves config.
-    function test_LOTR_FETR_3__LOTR_FETR_5__LOTR_FETR_6__LOTR_FETR_7__LOTR_FETR_8_finalizeEnable_atExactTimestamp()
+    function test_finalizeEnable_atExactTimestamp()
         public
     {
         // Setup
@@ -423,8 +423,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         );
     }
 
-    /// @dev Verifies LOTR-FETR-4: finalize-enable succeeds after the pending timestamp has passed.
-    function test_LOTR_FETR_4_finalizeEnable_afterExpiry() public {
+    /// @dev Verifies finalize-enable succeeds after the pending timestamp has passed.
+    function test_finalizeEnable_afterExpiry() public {
         // Setup
         harness.initiateEnableTxRecovery();
         TxRecoveryState memory beforeState = harness.getTxRecoveryState();
@@ -442,8 +442,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertEq(afterState.pendingEnableTimestamp, 0, "pending timestamp must clear");
     }
 
-    /// @dev Verifies LOTR-CETR-1: cancel-enable reverts when no pending enable exists.
-    function test_LOTR_CETR_1_cancelEnable_withoutPending_revertsNoTxRecoveryEnablePending() public {
+    /// @dev Verifies cancel-enable reverts when no pending enable exists.
+    function test_cancelEnable_withoutPending_revertsNoTxRecoveryEnablePending() public {
         // Setup
 
         // Call
@@ -453,9 +453,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify
     }
 
-    /// @dev Verifies LOTR-CETR-2, LOTR-CETR-3, LOTR-CETR-4, LOTR-CETR-5, and LOTR-CETR-6: cancel-enable clears pending,
+    /// @dev Verifies cancel-enable clears pending
     /// emits, does not enable, works after expiry, and keeps config stable.
-    function test_LOTR_CETR_2__LOTR_CETR_3__LOTR_CETR_4__LOTR_CETR_5__LOTR_CETR_6_cancelEnable_successSemantics()
+    function test_cancelEnable_successSemantics()
         public
     {
         // Setup
@@ -481,16 +481,16 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         );
     }
 
-    /// @dev Verifies LOTR-DTR-1, LOTR-DTR-2, LOTR-DTR-3, LOTR-DTR-4, LOTR-DTR-5, LOTR-DTR-6, and LOTR-DTR-7: disable
+    /// @dev Verifies disable
     /// clears enabled/pending state, emits, is idempotent, and keeps config immutable across pending cases.
-    function test_LOTR_DTR_1__LOTR_DTR_2__LOTR_DTR_3__LOTR_DTR_4__LOTR_DTR_5__LOTR_DTR_6__LOTR_DTR_7_disable_semantics()
+    function test_disable_semantics()
         public
     {
         // Setup
         harness.initiateEnableTxRecovery();
         uint256 pending = harness.getTxRecoveryState().pendingEnableTimestamp;
 
-        // LOTR-DTR-5: disable during pending enable BEFORE expiry
+        // disable during pending enable BEFORE expiry
         harness.setTxRecoveryState(
             TxRecoveryState({
                 recoveryAddress: recoveryAddress,
@@ -516,7 +516,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertEq(state.recoveryAddress, recoveryAddress, "disable before expiry should not alter recovery address");
         assertEq(state.timelockDurationSeconds, TX_TIMELOCK, "disable before expiry should not alter timelock");
 
-        // LOTR-DTR-6: disable during pending enable AFTER expiry (before finalize)
+        // disable during pending enable AFTER expiry (before finalize)
         vm.warp(pending + 1);
 
         harness.setTxRecoveryState(
@@ -544,13 +544,13 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertEq(state.recoveryAddress, recoveryAddress, "disable after expiry should not alter recovery address");
         assertEq(state.timelockDurationSeconds, TX_TIMELOCK, "disable after expiry should not alter timelock");
 
-        // LOTR-DTR-4: idempotent
+        // idempotent
         harness.disableTxRecovery();
         assertFalse(harness.getTxRecoveryState().isEnabled, "second disable should remain idempotent");
     }
 
-    /// @dev Verifies LOTR-DTR-8: post-disable validation rejects recovery account transactions.
-    function test_LOTR_DTR_8_disable_thenValidateAllowed_revertsTxRecoveryNotEnabled() public {
+    /// @dev Verifies post-disable validation rejects recovery account transactions.
+    function test_disable_thenValidateAllowed_revertsTxRecoveryNotEnabled() public {
         // Setup
         harness.initiateEnableTxRecovery();
         vm.warp(harness.getTxRecoveryState().pendingEnableTimestamp);
@@ -564,8 +564,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify
     }
 
-    /// @dev Verifies LOTR-DTR-9: recovery signature validation result is independent of `isEnabled`.
-    function test_LOTR_DTR_9_isValidRecoverySignature_independentOfIsEnabled() public {
+    /// @dev Verifies recovery signature validation result is independent of `isEnabled`.
+    function test_isValidRecoverySignature_independentOfIsEnabled() public {
         // Setup
         bytes memory validSignature = _signHash(RECOVERY_PK, MESSAGE_HASH);
 
@@ -601,10 +601,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertEq(disabledResult, enabledResult, "signature validity should not depend on enabled flag");
     }
 
-    /// @dev Verifies LOTR-IITR-1, LOTR-IITR-2, LOTR-IITR-3, and LOTR-IITR-4: deferred-init initiation writes pending
+    /// @dev Verifies deferred-init initiation writes pending
     /// fields and emits expected event tuple.
-    /// Plan rows: LOTR-AOTIITR-1, LOTR-AOTIITR-2, LOTR-AOTIITR-3, LOTR-AOTIITR-4.
-    function test_LOTR_IITR_1__LOTR_IITR_2__LOTR_IITR_3__LOTR_IITR_4__LOTR_AOTIITR_1__LOTR_AOTIITR_2__LOTR_AOTIITR_3__LOTR_AOTIITR_4_initiateInitialize_writesPendingAndEmits()
+    function test_initiateInitialize_writesPendingAndEmits()
         public
     {
         // Setup
@@ -626,8 +625,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies `LibOrganizationTxRecovery.finalizeInitializeTxRecovery` reverts in the same block the deferred
     /// initialization was initiated.
-    /// Plan rows: LOTR-AOTIITR-5.
-    function test_LOTR_AOTIITR_5_finalizeInitializeTxRecovery_sameBlockRevertsTimelockNotExpired() public {
+    function test_finalizeInitializeTxRecovery_sameBlockRevertsTimelockNotExpired() public {
         // Setup: reset to an unconfigured state and stage a deferred initialization in the current block.
         harness.resetTxRecoveryState();
         harness.initiateInitializeTxRecovery(recoveryAddress, TX_TIMELOCK);
@@ -660,9 +658,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         );
     }
 
-    /// @dev Verifies LOTR-IITR-5, LOTR-IITR-6, LOTR-IITR-7, LOTR-IITR-8, and LOTR-IITR-9: deferred-init initiation
+    /// @dev Verifies deferred-init initiation
     /// rejects configured/pending/invalid params.
-    function test_LOTR_IITR_5__LOTR_IITR_6__LOTR_IITR_7__LOTR_IITR_8__LOTR_IITR_9_initiateInitialize_rejectsInvalidStatesAndParams()
+    function test_initiateInitialize_rejectsInvalidStatesAndParams()
         public
     {
         // Setup
@@ -703,9 +701,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify
     }
 
-    /// @dev Verifies LOTR-IITR-10 and LOTR-IITR-11: min/max timelock boundaries are accepted in deferred-init
+    /// @dev Verifies min/max timelock boundaries are accepted in deferred-init
     /// initiation.
-    function test_LOTR_IITR_10__LOTR_IITR_11_initiateInitialize_minAndMaxBoundaryAccepted() public {
+    function test_initiateInitialize_minAndMaxBoundaryAccepted() public {
         // Setup
         harness.resetTxRecoveryState();
 
@@ -728,8 +726,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         );
     }
 
-    /// @dev Verifies LOTR-IITR-12: active config and enabled state are unchanged while deferred-init is pending.
-    function test_LOTR_IITR_12_initiateInitialize_doesNotMutateActiveConfigWhilePending() public {
+    /// @dev Verifies active config and enabled state are unchanged while deferred-init is pending.
+    function test_initiateInitialize_doesNotMutateActiveConfigWhilePending() public {
         // Setup
         harness.setTxRecoveryState(
             TxRecoveryState({
@@ -754,10 +752,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertEq(state.timelockDurationSeconds, 0, "active timelock should remain unchanged");
     }
 
-    /// @dev Verifies LOTR-FITR-1 and LOTR-FITR-2: finalize-deferred-init reverts when no pending init exists or
+    /// @dev Verifies finalize-deferred-init reverts when no pending init exists or
     /// timelock has not expired.
-    /// Plan rows: LOTR-AOTFITR-1.
-    function test_LOTR_FITR_1__LOTR_FITR_2__LOTR_AOTFITR_1_finalizeInitialize_noPendingOrPreExpiry_reverts() public {
+    function test_finalizeInitialize_noPendingOrPreExpiry_reverts() public {
         // Setup
         harness.resetTxRecoveryState();
 
@@ -778,10 +775,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify
     }
 
-    /// @dev Verifies LOTR-FITR-3, LOTR-FITR-4, LOTR-FITR-5, LOTR-FITR-6, and LOTR-FITR-7: finalize-deferred-init
+    /// @dev Verifies finalize-deferred-init
     /// succeeds at boundary, writes config, clears pending, emits event, and leaves recovery disabled.
-    /// Plan rows: LOTR-AOTFITR-2, LOTR-AOTFITR-4, LOTR-AOTFITR-5.
-    function test_LOTR_FITR_3__LOTR_FITR_4__LOTR_FITR_5__LOTR_FITR_6__LOTR_FITR_7__LOTR_AOTFITR_2__LOTR_AOTFITR_4__LOTR_AOTFITR_5_finalizeInitialize_successSemantics()
+    function test_finalizeInitialize_successSemantics()
         public
     {
         // Setup
@@ -806,8 +802,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertEq(state.pendingInit.pendingTimestamp, 0, "pending timestamp should clear");
     }
 
-    /// @dev Verifies LOTR-FITR-8: after deferred-init finalize, normal enable flow can be initiated and finalized.
-    function test_LOTR_FITR_8_finalizeInitialize_thenEnableFlow_executesNormally() public {
+    /// @dev Verifies after deferred-init finalize, normal enable flow can be initiated and finalized.
+    function test_finalizeInitialize_thenEnableFlow_executesNormally() public {
         // Setup
         harness.resetTxRecoveryState();
         harness.initiateInitializeTxRecovery(recoveryAddress, TX_TIMELOCK);
@@ -823,10 +819,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertTrue(harness.getTxRecoveryState().isEnabled, "recovery should become enabled after finalize-enable");
     }
 
-    /// @dev Verifies LOTR-FITR-9 and LOTR-FITR-10: if downstream initialize reverts, pending init remains unchanged and
+    /// @dev Verifies if downstream initialize reverts, pending init remains unchanged and
     /// finalization event is not emitted.
-    /// Plan rows: LOTR-AOTFITR-7.
-    function test_LOTR_FITR_9__LOTR_FITR_10__LOTR_AOTFITR_7_finalizeInitialize_downstreamRevert_keepsPendingAndNoEvent()
+    function test_finalizeInitialize_downstreamRevert_keepsPendingAndNoEvent()
         public
     {
         // Setup
@@ -875,9 +870,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         }
     }
 
-    /// @dev Verifies LOTR-CITR-1: cancel-deferred-init reverts when no pending init exists.
-    /// Plan rows: LOTR-AOTCITR-3.
-    function test_LOTR_CITR_1__LOTR_AOTCITR_3_cancelInitialize_withoutPending_revertsNoTxRecoveryInitializationPending()
+    /// @dev Verifies cancel-deferred-init reverts when no pending init exists.
+    function test_cancelInitialize_withoutPending_revertsNoTxRecoveryInitializationPending()
         public
     {
         // Setup
@@ -889,10 +883,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify
     }
 
-    /// @dev Verifies LOTR-CITR-2, LOTR-CITR-3, LOTR-CITR-4, LOTR-CITR-5, LOTR-CITR-6, and LOTR-CITR-7:
+    /// @dev Verifies
     /// cancel-deferred-init clears pending fields, emits event, preserves active config, and allows re-initiation.
-    /// Plan rows: LOTR-AOTCITR-1.
-    function test_LOTR_CITR_2__LOTR_CITR_3__LOTR_CITR_4__LOTR_CITR_5__LOTR_CITR_6__LOTR_CITR_7__LOTR_AOTCITR_1_cancelInitialize_successSemantics()
+    function test_cancelInitialize_successSemantics()
         public
     {
         // Setup
@@ -919,9 +912,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         );
     }
 
-    /// @dev Verifies LOTR-VRATOR-1, LOTR-VRATOR-2, LOTR-VRATOR-3, LOTR-VRATOR-4, LOTR-VRATOR-5, and LOTR-VRATOR-6:
+    /// @dev Verifies
     /// validation success/failure and check precedence.
-    function test_LOTR_VRATOR_1__LOTR_VRATOR_2__LOTR_VRATOR_3__LOTR_VRATOR_4__LOTR_VRATOR_5__LOTR_VRATOR_6_validateRecoveryAccountTransactionAllowed_semantics()
+    function test_validateRecoveryAccountTransactionAllowed_semantics()
         public
     {
         // Setup
@@ -1000,10 +993,10 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify
     }
 
-    /// @dev Verifies LOTR-IVRS-1, LOTR-IVRS-2, LOTR-IVRS-3, LOTR-IVRS-4, LOTR-IVRS-5, LOTR-IVRS-6, LOTR-IVRS-7,
-    /// LOTR-IVRS-8, LOTR-IVRS-9, LOTR-IVRS-10, LOTR-IVRS-11, LOTR-IVRS-12, LOTR-IVRS-13, LOTR-IVRS-14, and LOTR-IVRS-15
+    /// @dev Verifies,
+    /// , and
     /// across EOA/ERC1271 and malformed-signature behaviors.
-    function test_LOTR_IVRS_1__LOTR_IVRS_2__LOTR_IVRS_3__LOTR_IVRS_4__LOTR_IVRS_5__LOTR_IVRS_6__LOTR_IVRS_7__LOTR_IVRS_8__LOTR_IVRS_9__LOTR_IVRS_10__LOTR_IVRS_11__LOTR_IVRS_12__LOTR_IVRS_13__LOTR_IVRS_14__LOTR_IVRS_15_isValidRecoverySignature_comprehensiveSemantics()
+    function test_isValidRecoverySignature_comprehensiveSemantics()
         public
     {
         // Setup
@@ -1155,9 +1148,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertEq(disabledResult, enabledResult, "isValidRecoverySignature should be independent of isEnabled state");
     }
 
-    /// @dev Verifies LOTR-EOTRA-1, LOTR-EOTRA-2, LOTR-EOTRA-3, and LOTR-EOTRA-4: caller enforcement accepts configured
+    /// @dev Verifies caller enforcement accepts configured
     /// recovery address and rejects mismatches/zero-config.
-    function test_LOTR_EOTRA_1__LOTR_EOTRA_2__LOTR_EOTRA_3__LOTR_EOTRA_4_enforceOnlyTxRecoveryAddress_semantics()
+    function test_enforceOnlyTxRecoveryAddress_semantics()
         public
     {
         // Setup
@@ -1197,9 +1190,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify
     }
 
-    /// @dev Verifies LOTR-IRET-1, LOTR-IRET-2, LOTR-IRET-3, LOTR-IRET-4, and LOTR-IRET-5: enabled-view helper tracks
+    /// @dev Verifies enabled-view helper tracks
     /// unconfigured/configured/pending/enabled/disabled transitions.
-    function test_LOTR_IRET_1__LOTR_IRET_2__LOTR_IRET_3__LOTR_IRET_4__LOTR_IRET_5_isRecoveryEnabledForTxAndERC1271_tracksStateTransitions()
+    function test_isRecoveryEnabledForTxAndERC1271_tracksStateTransitions()
         public
     {
         // Setup
@@ -1229,10 +1222,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertFalse(disabledAfterEnable, "disabled-after-enable should report false");
     }
 
-    /// @dev Verifies LOTR-CPTRI-1, LOTR-CPTRI-2, LOTR-CPTRI-3, and LOTR-CPTRI-4: internal clear-pending helper zeros
+    /// @dev Verifies internal clear-pending helper zeros
     /// all fields and is idempotent.
-    /// Plan rows: LOTR-CPTRIT-1, LOTR-CPTRIT-2.
-    function test_LOTR_CPTRI_1__LOTR_CPTRI_2__LOTR_CPTRI_3__LOTR_CPTRI_4__LOTR_CPTRIT_1__LOTR_CPTRIT_2_clearPendingTxRecoveryInitTimelock_internalHelper()
+    function test_clearPendingTxRecoveryInitTimelock_internalHelper()
         public
     {
         // Setup
@@ -1266,10 +1258,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertEq(state.pendingInit.pendingTimestamp, 0, "idempotent clear: timestamp should stay zero");
     }
 
-    /// @dev Verifies LOTR-VTNCR-1, LOTR-VTNCR-2, LOTR-VTNCR-3, and LOTR-VTNCR-4: helper reverts whenever either/both
+    /// @dev Verifies helper reverts whenever either/both
     /// config fields are non-zero.
-    /// Plan rows: LOTR-VTRNCOR-1, LOTR-VTRNCOR-2, LOTR-VTRNCOR-3, LOTR-VTRNCOR-4.
-    function test_LOTR_VTNCR_1__LOTR_VTNCR_2__LOTR_VTNCR_3__LOTR_VTNCR_4__LOTR_VTRNCOR_1__LOTR_VTRNCOR_2__LOTR_VTRNCOR_3__LOTR_VTRNCOR_4_validateNotConfigured_internalHelper()
+    function test_validateNotConfigured_internalHelper()
         public
     {
         // Setup
@@ -1323,10 +1314,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify
     }
 
-    /// @dev Verifies LOTR-VTPR-1, LOTR-VTPR-2, LOTR-VTPR-3, LOTR-VTPR-4, LOTR-VTPR-5, and LOTR-VTPR-6: internal param
+    /// @dev Verifies internal param
     /// helper accepts valid boundaries and rejects zero-address/out-of-range timelocks.
-    /// Plan rows: LOTR-VTRPOR-1, LOTR-VTRPOR-2, LOTR-VTRPOR-3, LOTR-VTRPOR-4, LOTR-VTRPOR-5, LOTR-VTRPOR-6.
-    function test_LOTR_VTPR_1__LOTR_VTPR_2__LOTR_VTPR_3__LOTR_VTPR_4__LOTR_VTPR_5__LOTR_VTPR_6__LOTR_VTRPOR_1__LOTR_VTRPOR_2__LOTR_VTRPOR_3__LOTR_VTRPOR_4__LOTR_VTRPOR_5__LOTR_VTRPOR_6_validateParams_internalHelper()
+    function test_validateParams_internalHelper()
         public
     {
         // Setup
@@ -1367,9 +1357,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify
     }
 
-    /// @dev Verifies TXR-FZ-1: fuzz valid non-zero recovery addresses and in-range timelocks always initialize
+    /// @dev Verifies fuzz valid non-zero recovery addresses and in-range timelocks always initialize
     /// successfully.
-    function testFuzz_TXR_FZ_1_initialize_validInputs_alwaysSucceed(address randomRecovery, uint256 rawTimelock)
+    function testFuzz_initialize_validInputs_alwaysSucceed(address randomRecovery, uint256 rawTimelock)
         public
     {
         // Setup
@@ -1389,9 +1379,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertFalse(state.isEnabled, "initialization should not auto-enable recovery");
     }
 
-    /// @dev Verifies TXR-FZ-2: fuzz out-of-range timelocks always revert for direct initialize and deferred-init
+    /// @dev Verifies fuzz out-of-range timelocks always revert for direct initialize and deferred-init
     /// initiate paths.
-    function testFuzz_TXR_FZ_2_invalidTimelocks_initializeAndDeferredInitiate_revert(uint256 rawTimelock) public {
+    function testFuzz_invalidTimelocks_initializeAndDeferredInitiate_revert(uint256 rawTimelock) public {
         // Setup
         vm.assume(
             rawTimelock < TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS
@@ -1423,8 +1413,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify
     }
 
-    /// @dev Verifies TXR-FZ-3: fuzz timestamps before pending-enable finalization always fail.
-    function testFuzz_TXR_FZ_3_finalizeEnable_beforePendingTimestamp_alwaysReverts(uint256 rawSecondsBefore) public {
+    /// @dev Verifies fuzz timestamps before pending-enable finalization always fail.
+    function testFuzz_finalizeEnable_beforePendingTimestamp_alwaysReverts(uint256 rawSecondsBefore) public {
         // Setup
         harness.initiateEnableTxRecovery();
         uint256 pending = harness.getTxRecoveryState().pendingEnableTimestamp;
@@ -1443,10 +1433,10 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertFalse(harness.getTxRecoveryState().isEnabled, "pre-expiry finalize should keep disabled state");
     }
 
-    /// @dev Verifies TXR-FZ-4: fuzz timestamps at/after pending-enable timestamp succeed when pending exists.
+    /// @dev Verifies fuzz timestamps at/after pending-enable timestamp succeed when pending exists.
     ///      Explicitly tests both the exact boundary (pending) and pending + 1 to verify GTE, then fuzzes
     ///      strictly-after offsets.
-    function testFuzz_TXR_FZ_4_finalizeEnable_atOrAfterPendingTimestamp_succeeds(uint256 rawSecondsAfter) public {
+    function testFuzz_finalizeEnable_atOrAfterPendingTimestamp_succeeds(uint256 rawSecondsAfter) public {
         // Setup — exact boundary: warp to `pending` (the "at" case)
         harness.initiateEnableTxRecovery();
         uint256 pending = harness.getTxRecoveryState().pendingEnableTimestamp;
@@ -1490,8 +1480,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertEq(state.pendingEnableTimestamp, 0, "successful finalize should clear pending timestamp");
     }
 
-    /// @dev Verifies TXR-FZ-5: fuzz arbitrary hashes/signature bytes for `isValidRecoverySignature` never reverts.
-    function testFuzz_TXR_FZ_5_isValidRecoverySignature_arbitraryInputs_neverRevert(bytes32 hash, bytes calldata sig)
+    /// @dev Verifies fuzz arbitrary hashes/signature bytes for `isValidRecoverySignature` never reverts.
+    function testFuzz_isValidRecoverySignature_arbitraryInputs_neverRevert(bytes32 hash, bytes calldata sig)
         public
         view
     {
@@ -1509,7 +1499,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
     /// @param firstTimelock The first configured tx-recovery timelock.
     /// @param secondRecovery The second attempted tx-recovery address.
     /// @param secondTimelock The second attempted tx-recovery timelock.
-    function testFuzz_FLOTR_INIT_110_initializeTxRecovery_canOnlyBeConfiguredOnce(
+    function testFuzz_initializeTxRecovery_canOnlyBeConfiguredOnce(
         address firstRecovery,
         uint256 firstTimelock,
         address secondRecovery,
@@ -1547,7 +1537,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
     /// @param pendingRecovery The recovery address proposed through deferred initialization.
     /// @param pendingTimelock The tx-recovery timelock proposed through deferred initialization.
     /// @param cancelAfterInitiate Whether to cancel immediately instead of finalizing after the timelock.
-    function testFuzz_FLOTR_DINIT_112_deferredTxRecoveryInit_obeysAdminOperationTimelock(
+    function testFuzz_deferredTxRecoveryInit_obeysAdminOperationTimelock(
         address pendingRecovery,
         uint256 pendingTimelock,
         bool cancelAfterInitiate
@@ -1609,7 +1599,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
     /// @dev Verifies `LibOrganizationTxRecovery` requires the enable timelock to expire and makes disable immediate
     /// while clearing stale pending-enable state.
     /// @param rawSecondsBefore The offset used to land strictly before the pending-enable timestamp.
-    function testFuzz_FLOTR_TOGGLE_114_enableRequiresTimelock_disableClearsPending(uint256 rawSecondsBefore) public {
+    function testFuzz_enableRequiresTimelock_disableClearsPending(uint256 rawSecondsBefore) public {
         // Setup: initiate enable to seed a pending timestamp, then warp strictly before it.
         harness.initiateEnableTxRecovery();
         uint256 pendingTimestamp = harness.getTxRecoveryState().pendingEnableTimestamp;
@@ -1640,7 +1630,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
     /// recovery transaction path when tx recovery is both configured and enabled.
     /// @param configuredRecoveryAddress Fuzzed non-zero recovery address used for the configured states.
     /// @param timelockDurationRaw Fuzzed entropy bounded into the valid recovery timelock range.
-    function testFuzz_FLOTR_GATE_115_validateRecoveryAccountTransactionAllowed_requiresConfiguredAndEnabled(
+    function testFuzz_validateRecoveryAccountTransactionAllowed_requiresConfiguredAndEnabled(
         address configuredRecoveryAddress,
         uint256 timelockDurationRaw
     ) public {
@@ -1696,7 +1686,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
     /// @dev Verifies `LibOrganizationTxRecovery.isValidRecoverySignature` accepts both EOA and ERC-1271 recovery
     /// signers, rejects wrong signers for both paths, and does not depend on the enabled flag.
     /// @param startEnabled The initial enabled flag used for the first validation branch.
-    function testFuzz_FLOTR_SIG_116_isValidRecoverySignature_supportsEOAAndERC1271IndependentOfEnabledFlag(bool startEnabled)
+    function testFuzz_isValidRecoverySignature_supportsEOAAndERC1271IndependentOfEnabledFlag(bool startEnabled)
         public
     {
         // Setup: build valid EOA and ERC-1271 recovery signers plus wrong EOA and wrong contract signers for the
@@ -1778,7 +1768,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
     /// configured.
     /// @param originalHash The hash actually signed by the configured recovery signer.
     /// @param replayHash The distinct hash used for the replay attempt.
-    function testFuzz_FLOTR_SIG_116__FCF_SIGSYS_161_isValidRecoverySignature_sameSignatureCannotReplayAcrossDifferentHashes(
+    function testFuzz_isValidRecoverySignature_sameSignatureCannotReplayAcrossDifferentHashes(
         bytes32 originalHash,
         bytes32 replayHash
     ) public {
@@ -1809,7 +1799,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies `LibOrganizationTxRecovery.finalizeInitializeTxRecovery` succeeds when `block.timestamp` is
     /// strictly greater than the pending initialization timestamp.
-    function test_LOTR_AOTFITR_3_finalizeInitializeTxRecovery_afterPendingTimestampSucceeds() public {
+    function test_finalizeInitializeTxRecovery_afterPendingTimestampSucceeds() public {
         // Setup: reset to an unconfigured state, stage a deferred tx-recovery initialization, and advance past expiry.
         harness.resetTxRecoveryState();
         harness.initiateInitializeTxRecovery(otherSigner, 5 days);
@@ -1827,7 +1817,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies `LibOrganizationTxRecovery.finalizeInitializeTxRecovery` reverts with
     /// `NoTxRecoveryInitializationPending` after cancellation even once the cancelled timestamp has passed.
-    function test_LOTR_AOTFITR_6_finalizeInitializeTxRecovery_afterCancellationAndExpiryRevertsNoPending() public {
+    function test_finalizeInitializeTxRecovery_afterCancellationAndExpiryRevertsNoPending() public {
         // Setup: reset to an unconfigured state, stage and cancel a deferred init, then advance past the old expiry.
         harness.resetTxRecoveryState();
         harness.initiateInitializeTxRecovery(otherSigner, 5 days);
@@ -1847,7 +1837,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies `LibOrganizationTxRecovery.cancelInitializeTxRecovery` succeeds after the admin-op timelock has
     /// expired as long as finalization has not occurred yet.
-    function test_LOTR_AOTCITR_2_cancelInitializeTxRecovery_afterPendingTimestampStillSucceeds() public {
+    function test_cancelInitializeTxRecovery_afterPendingTimestampStillSucceeds() public {
         // Setup: reset to an unconfigured state, stage a deferred init, and advance one second past its expiry.
         harness.resetTxRecoveryState();
         harness.initiateInitializeTxRecovery(otherSigner, 5 days);
@@ -1865,7 +1855,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies `LibOrganizationTxRecovery.cancelInitializeTxRecovery` allows a later re-initiation to compute a
     /// fresh admin-operation timelock timestamp from the new start time.
-    function test_LOTR_AOTCITR_4_cancelInitializeTxRecovery_reinitiationComputesFreshPendingTimestamp() public {
+    function test_cancelInitializeTxRecovery_reinitiationComputesFreshPendingTimestamp() public {
         // Setup: reset to an unconfigured state, stage and cancel one deferred init, then move time forward.
         harness.resetTxRecoveryState();
         harness.initiateInitializeTxRecovery(otherSigner, 5 days);
@@ -1892,7 +1882,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies `LibOrganizationTxRecovery._validateTxRecoveryParamsOrRevert` accepts non-boundary in-range
     /// timelock durations for non-zero recovery addresses.
-    function test_LOTR_VTRPOR_5_validateTxRecoveryParams_nonBoundaryInRangeTimelockSucceeds() public view {
+    function test_validateTxRecoveryParams_nonBoundaryInRangeTimelockSucceeds() public view {
         // Setup: choose a non-zero recovery address and an in-range timelock strictly between the min and max bounds.
         uint256 inRangeTimelock = 7 days;
 

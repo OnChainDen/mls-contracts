@@ -54,7 +54,7 @@ contract LibOrganizationMembersFuzzTest is LibOrganizationMembersSuiteBase {
     /**
      * @dev Verifies that adding the same address twice is idempotent.
      */
-    function testFuzz_FLOM_MEMBER_46_modifyMembers_addingSameAddressTwiceIsIdempotent(address candidate) public {
+    function testFuzz_modifyMembers_addingSameAddressTwiceIsIdempotent(address candidate) public {
         // Setup: constrain fuzz inputs for valid preconditions.
         vm.assume(candidate != address(0));
         // Setup: configure members/admins for a valid baseline state.
@@ -104,7 +104,7 @@ contract LibOrganizationMembersFuzzTest is LibOrganizationMembersSuiteBase {
     /**
      * @dev Verifies that any add array containing `address(0)` reverts with `InvalidMemberAddress`.
      */
-    function testFuzz_FLOM_MEMBER_47_modifyMembers_randomZeroAddressInputAlwaysRevertsInvalidMemberAddress(
+    function testFuzz_modifyMembers_randomZeroAddressInputAlwaysRevertsInvalidMemberAddress(
         uint256 seed,
         uint8 rawCount,
         uint8 rawZeroIndex
@@ -126,7 +126,7 @@ contract LibOrganizationMembersFuzzTest is LibOrganizationMembersSuiteBase {
     /**
      * @dev Verifies that attempting to remove a member who is an admin always reverts with `MemberIsAdmin`.
      */
-    function testFuzz_FLOM_MEMBER_47_modifyMembers_removingAdminMemberAlwaysRevertsMemberIsAdmin(address adminMember)
+    function testFuzz_modifyMembers_removingAdminMemberAlwaysRevertsMemberIsAdmin(address adminMember)
         public
     {
         // Setup: constrain fuzz inputs for valid preconditions.

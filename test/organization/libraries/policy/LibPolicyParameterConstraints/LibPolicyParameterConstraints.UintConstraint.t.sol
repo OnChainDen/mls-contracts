@@ -28,7 +28,7 @@ contract LibPolicyParameterConstraintsUintConstraintTest is LibPolicyParameterCo
     }
 
     /// @dev Verifies that range bounds are inclusive.
-    function test_LPPC_ATYPE_9_isUintParameterAllowedByConstraint_rangeInclusiveAtBounds() public view {
+    function test_isUintParameterAllowedByConstraint_rangeInclusiveAtBounds() public view {
         // Setup: configure a valid fixture for range bounds are inclusive.
         bytes memory rangeData = abi.encode(uint256(10), uint256(20));
 
@@ -101,7 +101,7 @@ contract LibPolicyParameterConstraintsUintConstraintTest is LibPolicyParameterCo
     }
 
     /// @dev Verifies that malformed range payload lengths fail closed.
-    function test_POL_INV_14_isUintParameterAllowedByConstraint_malformedRangeComparisonData_returnsFalse()
+    function test_isUintParameterAllowedByConstraint_malformedRangeComparisonData_returnsFalse()
         public
         view
     {
@@ -160,7 +160,7 @@ contract LibPolicyParameterConstraintsUintConstraintTest is LibPolicyParameterCo
     }
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
-    function test_POL_INV_14_isUintParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
+    function test_isUintParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
         public
     {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails

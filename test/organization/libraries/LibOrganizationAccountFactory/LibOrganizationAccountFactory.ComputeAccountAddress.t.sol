@@ -13,7 +13,7 @@ import {
  */
 contract LibOrganizationAccountFactoryComputeAccountAddressTest is LibOrganizationAccountFactorySuiteBase {
     /// @dev Verifies same salt always computes the same address.
-    function test_ACCF_INV_1_LOAF_CAA_1_computeAccountAddress_sameSalt_isDeterministic() public view {
+    function test_computeAccountAddress_sameSalt_isDeterministic() public view {
         bytes32 salt = bytes32(uint256(9030));
 
         // Setup: choose one deterministic salt for repeated computation checks.
@@ -26,7 +26,7 @@ contract LibOrganizationAccountFactoryComputeAccountAddressTest is LibOrganizati
     }
 
     /// @dev Verifies different salts produce different computed addresses.
-    function test_LOAF_CAA_2_computeAccountAddress_differentSalts_produceDifferentAddresses() public view {
+    function test_computeAccountAddress_differentSalts_produceDifferentAddresses() public view {
         bytes32 saltA = bytes32(uint256(9031));
         bytes32 saltB = bytes32(uint256(9032));
 
@@ -40,7 +40,7 @@ contract LibOrganizationAccountFactoryComputeAccountAddressTest is LibOrganizati
     }
 
     /// @dev Verifies address derivation uses `keccak256(_getAccountProxyBytecode())` as init code hash.
-    function test_LOAF_CAA_3_computeAccountAddress_usesAccountProxyBytecodeHash() public view {
+    function test_computeAccountAddress_usesAccountProxyBytecodeHash() public view {
         bytes32 salt = bytes32(uint256(9032));
 
         // Setup: fetch library-produced proxy creation bytecode.
@@ -56,7 +56,7 @@ contract LibOrganizationAccountFactoryComputeAccountAddressTest is LibOrganizati
     }
 
     /// @dev Verifies deployer address in CREATE2 derivation is the organization (`address(this)` in harness context).
-    function test_LOAF_CAA_4_computeAccountAddress_deployerIsOrganizationAddress() public view {
+    function test_computeAccountAddress_deployerIsOrganizationAddress() public view {
         bytes32 salt = bytes32(uint256(9033));
 
         // Setup: derive expected address for organization-deployer and non-organization-deployer.
@@ -73,7 +73,7 @@ contract LibOrganizationAccountFactoryComputeAccountAddressTest is LibOrganizati
     }
 
     /// @dev Verifies computed address matches actual deployed address.
-    function test_LOAF_CAA_5_computeAccountAddress_matchesActualDeploymentAddress() public {
+    function test_computeAccountAddress_matchesActualDeploymentAddress() public {
         bytes32 salt = bytes32(uint256(9034));
 
         // Setup: seed valid implementation for deployment.
@@ -88,7 +88,7 @@ contract LibOrganizationAccountFactoryComputeAccountAddressTest is LibOrganizati
     }
 
     /// @dev Verifies computed address does not depend on current account implementation version.
-    function test_LOAF_CAA_6_computeAccountAddress_independentOfAccountImplementationVersion() public {
+    function test_computeAccountAddress_independentOfAccountImplementationVersion() public {
         bytes32 salt = bytes32(uint256(9071));
 
         // Setup: set first implementation and compute address.
@@ -104,7 +104,7 @@ contract LibOrganizationAccountFactoryComputeAccountAddressTest is LibOrganizati
     }
 
     /// @dev Verifies chain ID changes do not affect CREATE2 computed address derivation.
-    function test_LOAF_CAA_7_computeAccountAddress_chainIdChanges_doNotAffectResult() public {
+    function test_computeAccountAddress_chainIdChanges_doNotAffectResult() public {
         bytes32 salt = bytes32(uint256(9072));
 
         // Setup: capture computed address on current chain id.

@@ -11,8 +11,8 @@ import {
  */
 contract OrganizationGuardianRecoveryBaseCancelRecoveryGuardianUpdateTest is OrganizationGuardianRecoveryBaseSuiteBase {
     /// @dev Verifies recovery-only guardian entrypoints reject unauthorized callers before clearing staged recovery
-    /// updates. [OREC-GRF-2]
-    function test_OGRB_CRGU_1__OREC_GRF_2__GREC_INV_6_C_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress()
+    /// updates.
+    function test_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress()
         public
     {
         // Setup: seed pending recovery-guardian update.
@@ -35,7 +35,7 @@ contract OrganizationGuardianRecoveryBaseCancelRecoveryGuardianUpdateTest is Org
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.cancelRecoveryGuardianUpdate` recovery address caller delegates
     /// to library and clears pending state.
-    function test_OGRB_CRGU_2_GREC_INV_9_recoveryAddressCaller_delegatesToLibrary() public {
+    function test_recoveryAddressCaller_delegatesToLibrary() public {
         // Setup: seed pending recovery-guardian update.
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(
             NEW_GUARDIAN_A, block.timestamp + GUARDIAN_RECOVERY_TIMELOCK, true

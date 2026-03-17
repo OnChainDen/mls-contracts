@@ -14,7 +14,7 @@ contract LibPolicyContractInteractionFuzzTest is PolicyLibrariesFuzzTestBase {
     /// @param data Arbitrary calldata supplied to the function filter.
     /// @param functionProof Arbitrary merkle proof bytes.
     /// @param constraints Arbitrary constraints payload.
-    function testFuzz_FLPCI_FUNC_69_isFunctionAllowed_anyFunctionBypassesProofRequirements(
+    function testFuzz_isFunctionAllowed_anyFunctionBypassesProofRequirements(
         bytes memory data,
         bytes32[] memory functionProof,
         bytes memory constraints
@@ -36,7 +36,7 @@ contract LibPolicyContractInteractionFuzzTest is PolicyLibrariesFuzzTestBase {
     /// @param differentSelector A selector used for the mutation branch.
     /// @param constraints The allowed constraints payload inserted into the merkle tree.
     /// @param differentConstraints The mutated constraints payload used for the negative branch.
-    function testFuzz_FLPCI_FUNC_70_isFunctionAllowed_bindsSelectorAndConstraintsHashExactly(
+    function testFuzz_isFunctionAllowed_bindsSelectorAndConstraintsHashExactly(
         bytes4 selector,
         bytes4 differentSelector,
         bytes memory constraints,

@@ -31,7 +31,7 @@ contract LibOrganizationGuardianFuzzTest is LibOrganizationGuardianSuiteBase {
 
     /// @dev Verifies `LibOrganizationGuardian.finalizeGuardianUpdate` reverts before the admin-operation timelock
     /// expires and succeeds once it has expired.
-    function testFuzz_GFZ_2__FLOGU_FINAL_106_randomBeforeAfterTimelock_finalizePassFail(
+    function testFuzz_GFZ_2_randomBeforeAfterTimelock_finalizePassFail(
         address newGuardian,
         bool beforeTimelock,
         uint256 delta
@@ -165,7 +165,7 @@ contract LibOrganizationGuardianFuzzTest is LibOrganizationGuardianSuiteBase {
     /// @param newGuardian The pending guardian used for the update flow.
     /// @param caller The caller tested against the pending-guardian gate.
     /// @param finalizeUpdate Whether to finalize the pending guardian update before acceptance.
-    function testFuzz_FLOGU_ACCEPT_107_acceptGuardian_requiresFinalizedStateAndPendingGuardianCaller(
+    function testFuzz_acceptGuardian_requiresFinalizedStateAndPendingGuardianCaller(
         address newGuardian,
         address caller,
         bool finalizeUpdate
@@ -224,7 +224,7 @@ contract LibOrganizationGuardianFuzzTest is LibOrganizationGuardianSuiteBase {
 
     /// @dev Verifies `LibOrganizationGuardian.cancelGuardianUpdate` clears all pending guardian-update state.
     /// @param newGuardian The pending guardian cleared by the cancel path.
-    function testFuzz_FLOGU_CANCEL_108_cancelGuardianUpdate_clearsAllPendingState(address newGuardian) public {
+    function testFuzz_cancelGuardianUpdate_clearsAllPendingState(address newGuardian) public {
         // Setup: seed one pending guardian update and mark it as finalized to ensure cancel clears every pending field.
         vm.assume(newGuardian != address(0));
         _clearPendingGuardianState();

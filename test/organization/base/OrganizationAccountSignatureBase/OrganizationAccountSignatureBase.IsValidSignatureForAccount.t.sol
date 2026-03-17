@@ -43,8 +43,8 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         libHarness.setMemberStatus(reviewer1, true);
     }
 
-    /// @dev Verifies that calls where `msg.sender != account` revert with `SenderIsNotAccount`. [ASIG-INV-11]
-    function test_ASIG_INV_11_A_OASB_ISFA_1__OAS_VSFA_1__OASB_AISFA_1_isValidSignatureForAccount_senderNotAccount_revertsSenderIsNotAccount()
+    /// @dev Verifies that calls where `msg.sender != account` revert with `SenderIsNotAccount`.
+    function test_isValidSignatureForAccount_senderNotAccount_revertsSenderIsNotAccount()
         public
     {
         // Setup: mark the account as deployed to isolate the sender gate.
@@ -57,8 +57,8 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         harness.isValidSignatureForAccount(ACCOUNT, MESSAGE_HASH, bytes(""));
     }
 
-    /// @dev Verifies that undeployed accounts revert even when `msg.sender == account`. [ASIG-INV-11]
-    function test_ASIG_INV_11_B_OASB_ISFA_2__OAS_VSFA_1__OASB_AISFA_2_isValidSignatureForAccount_accountNotDeployed_revertsAccountNotDeployedByOrganization()
+    /// @dev Verifies that undeployed accounts revert even when `msg.sender == account`.
+    function test_isValidSignatureForAccount_accountNotDeployed_revertsAccountNotDeployedByOrganization()
         public
     {
         // Setup: leave deployed-account mapping unset for the target account.
@@ -73,7 +73,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies that policy `anySourceAccount=true` does not bypass org-account deployment gating.
-    function test_OASB_ISFA_3_isValidSignatureForAccount_anySourceAccountPolicyStillRequiresOrgDeployedAccount()
+    function test_isValidSignatureForAccount_anySourceAccountPolicyStillRequiresOrgDeployedAccount()
         public
     {
         // Setup: build a policy payload with `anySourceAccount=true` but do not mark the account as deployed.
@@ -88,8 +88,8 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         harness.isValidSignatureForAccount(ACCOUNT, MESSAGE_HASH, policySignature);
     }
 
-    /// @dev Verifies that valid account callers receive the same result as direct library validation. [ASIG-INV-11]
-    function test_ASIG_INV_11_C_OASB_ISFA_4__OASB_AISFA_3_isValidSignatureForAccount_deployedAccountDelegatesToLibraryResult()
+    /// @dev Verifies that valid account callers receive the same result as direct library validation.
+    function test_isValidSignatureForAccount_deployedAccountDelegatesToLibraryResult()
         public
     {
         // Setup: align storage fixtures for both harnesses and build a valid recovery payload.
@@ -109,7 +109,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies that the base entry point returns the ERC-1271 magic value when validation succeeds.
-    function test_OASB_ISFA_5__OAS_VSFA_3_isValidSignatureForAccount_libraryMagicResult_returnsMagicValue() public {
+    function test_isValidSignatureForAccount_libraryMagicResult_returnsMagicValue() public {
         // Setup: configure deployed-account + enabled recovery signer and build a valid recovery payload.
         harness.setDeployedAccount(ACCOUNT, true);
         _setRecoveryState(harness, guardianSigner, true);
@@ -124,8 +124,8 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies `isValidSignatureForAccount` accepts valid ERC-1271 recovery encodings through the base entry
-    /// point. [OAS-SU-1]
-    function test_OAS_SU_1_isValidSignatureForAccount_validERC1271RecoveryEncoding_returnsMagicValue() public {
+    /// point.
+    function test_isValidSignatureForAccount_validERC1271RecoveryEncoding_returnsMagicValue() public {
         // Setup: mark the account as deployed and configure a contract-based recovery signer.
         harness.setDeployedAccount(ACCOUNT, true);
         MockERC1271ValidSigner contractRecovery = new MockERC1271ValidSigner();
@@ -143,7 +143,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies that the base entry point returns the ERC-1271 invalid value when validation fails.
-    function test_OASB_ISFA_6_isValidSignatureForAccount_libraryInvalidResult_returnsInvalidValue() public {
+    function test_isValidSignatureForAccount_libraryInvalidResult_returnsInvalidValue() public {
         // Setup: mark account as deployed and pass a payload that the library rejects.
         harness.setDeployedAccount(ACCOUNT, true);
 
@@ -156,8 +156,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies `isValidSignatureForAccount` rejects malformed EOA recovery encodings and high-`s` signatures.
-    ///      [OAS-SU-1]
-    function test_OAS_SU_1_isValidSignatureForAccount_malformedOrHighSRecoveryEOA_returnsInvalidValue() public {
+    function test_isValidSignatureForAccount_malformedOrHighSRecoveryEOA_returnsInvalidValue() public {
         // Setup: configure a deployed account with enabled EOA recovery.
         harness.setDeployedAccount(ACCOUNT, true);
         _setRecoveryState(harness, guardianSigner, true);
@@ -182,8 +181,8 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies `isValidSignatureForAccount` rejects malformed ERC-1271 recovery headers and oversized declared
-    ///      inner lengths. [OAS-SU-1]
-    function test_OAS_SU_1_isValidSignatureForAccount_malformedERC1271RecoveryEncoding_returnsInvalidValue() public {
+    ///  inner lengths.
+    function test_isValidSignatureForAccount_malformedERC1271RecoveryEncoding_returnsInvalidValue() public {
         // Setup: configure a deployed account with a valid ERC-1271 recovery signer.
         harness.setDeployedAccount(ACCOUNT, true);
         MockERC1271ValidSigner contractRecovery = new MockERC1271ValidSigner();
@@ -206,7 +205,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies that `isValidSignatureForAccount` is view-only and does not mutate organization state.
-    function test_OASB_ISFA_7__OAS_VSFA_8_isValidSignatureForAccount_isView_noStateMutation() public {
+    function test_isValidSignatureForAccount_isView_noStateMutation() public {
         // Setup: configure deterministic state snapshots and a valid recovery signature payload.
         harness.setDeployedAccount(ACCOUNT, true);
         _setRecoveryState(harness, guardianSigner, true);
@@ -243,8 +242,8 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies a policy with a specific source-account Merkle subtree accepts the listed account and rejects a
-    ///      different deployed account. [OPB-SAF-3]
-    function test_OPB_SAF_3_isValidSignatureForAccount_specificSourceAccountPolicyAcceptsOnlyListedAccount() public {
+    ///  different deployed account.
+    function test_isValidSignatureForAccount_specificSourceAccountPolicyAcceptsOnlyListedAccount() public {
         // Setup: mark two deployed accounts, constrain the policy to `ACCOUNT`, and build a valid policy signature.
         address otherAccount = address(0xAA7703);
         harness.setDeployedAccount(ACCOUNT, true);
@@ -282,8 +281,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies `anyInitiator=true` still rejects a non-member initiator on the external signature path.
-    ///      [OPB-AIA-3]
-    function test_OPB_AIA_3_isValidSignatureForAccount_anyInitiatorStillRejectsNonMemberInitiator() public {
+    function test_isValidSignatureForAccount_anyInitiatorStillRejectsNonMemberInitiator() public {
         // Setup: deploy the account, configure guardian-backed policy validation, and leave the chosen initiator
         // outside organization membership.
         harness.setDeployedAccount(ACCOUNT, true);
@@ -306,8 +304,8 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies disabling tx/ERC-1271 recovery immediately invalidates recovery signatures on the external
-    ///      account-signature path. [OREC-TRF-7]
-    function test_OREC_TRF_7_isValidSignatureForAccount_disabledRecoveryImmediatelyRejectsOldRecoverySignature()
+    ///  account-signature path.
+    function test_isValidSignatureForAccount_disabledRecoveryImmediatelyRejectsOldRecoverySignature()
         public
     {
         // Setup: deploy the account, enable EOA recovery, and confirm the current recovery signature is valid.

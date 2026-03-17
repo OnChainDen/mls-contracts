@@ -13,7 +13,7 @@ import {
  */
 contract LibOrganizationGroupsRemoveGroupMembersTest is LibOrganizationGroupsSuiteBase {
     /// @dev Verifies removing an existing member sets membership to false.
-    function test_removeGroupMembers__OGB_PH_1_existingMember_setsMembershipFalse() public {
+    function test_removeGroupMembers_existingMember_setsMembershipFalse() public {
         uint256 groupId = 7801;
         groupsStateHarness.setGroupStatus(groupId, true);
         groupsStateHarness.setGroupMemberStatus(groupId, admin1, true);

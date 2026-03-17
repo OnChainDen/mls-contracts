@@ -24,8 +24,8 @@ import {GroupModification, GroupModificationType, InitializationParams} from "ty
 contract LibOrganizationInitializationTest is InitializationSuiteBase {
     /// @dev Verifies `LibOrganizationInitialization.initialize` happy path configures
     /// members/admins/groups/guardian/recovery state, emits `OrganizationInitialized`, and accepts the min-boundary
-    /// guardian recovery timelock. [OI-INIT-8]
-    function test_LOI_HPS_1__LOI_HPS_2__LOI_HPS_3__LOI_HPS_4__LOI_HPS_5__LOI_HPS_6__LOI_HPS_7__LOI_HPS_9__LOI_REC_1__LOI_REC_2__LOI_REC_3__LOI_REC_4__LOI_REC_5__OI_INIT_8__LOI_AOTINIT_2_initializeLibrary_happyPathConfiguresState()
+    /// guardian recovery timelock.
+    function test_initializeLibrary_happyPathConfiguresState()
         public
     {
         // Setup: Deploy a library harness, build valid params, and set the expected initialization event payload.
@@ -98,8 +98,8 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` handles max-boundary timelocks, duplicate members,
-    /// empty groups, and deferred recovery configuration. [OI-INIT-7]
-    function test_LOI_HPS_8__LOI_HPS_10__LOI_HPS_11__LOI_REC_6__LOI_REC_8__LOI_REC_9__LOI_REC_10__LOI_REC_11__OI_INIT_7_initializeLibrary_boundaryAndDeferredRecoveryBehaviors()
+    /// empty groups, and deferred recovery configuration.
+    function test_initializeLibrary_boundaryAndDeferredRecoveryBehaviors()
         public
     {
         // Setup: Build one params set with duplicate members/max timelocks/empty groups and one deferred-recovery
@@ -164,8 +164,8 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` reverts for invalid
-    /// member/admin/guardian/implementation/timelock inputs. [OI-INIT-6]
-    function test_LOI_VAL_1__LOI_VAL_2__LOI_VAL_3__LOI_VAL_4__LOI_VAL_5__LOI_VAL_6__LOI_VAL_7__LOI_VAL_8__LOI_VAL_9__LOI_VAL_10__LOI_VAL_11__LOI_VAL_12__LOI_VAL_13__LOI_VAL_14__OI_INIT_6__LOI_AOTINIT_3__LOI_AOTINIT_4_initializeLibrary_validationReverts()
+    /// member/admin/guardian/implementation/timelock inputs.
+    function test_initializeLibrary_validationReverts()
         public
     {
         // Setup: Prepare reusable params and instantiate a fresh harness per validation failure branch.
@@ -292,7 +292,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` reverts for invalid group create/update/delete and
     /// membership operations.
-    function test_LOI_VAL_15__LOI_VAL_16__LOI_VAL_17__LOI_VAL_18__LOI_VAL_20__LOI_VAL_21__LOI_VAL_22_initializeLibrary_groupValidationReverts()
+    function test_initializeLibrary_groupValidationReverts()
         public
     {
         // Setup: Prepare reusable initialization params and group operation batches for each group-validation failure
@@ -409,7 +409,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` treats deleting a non-existent group as a no-op.
-    function test_LOI_VAL_16_deleteNonExistentGroup_currentBehavior_isNoOp() public {
+    function test_deleteNonExistentGroup_currentBehavior_isNoOp() public {
         // Setup: Build initialization params containing a delete operation for an undefined group id.
         LibOrganizationInitializationHarness harness = _newLibraryHarness();
         InitializationParams memory params = _defaultInitializationParams();
@@ -437,7 +437,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` treats removing a non-member during group update as a
     /// no-op.
-    function test_LOI_VAL_19_updateRemovingMissingGroupMember_currentBehavior_isNoOp() public {
+    function test_updateRemovingMissingGroupMember_currentBehavior_isNoOp() public {
         // Setup: Build initialization params that create a group, then attempt to remove an address never added to that
         // group.
         LibOrganizationInitializationHarness harness = _newLibraryHarness();
@@ -470,8 +470,8 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies library deployer/view helpers plus guardian-revert atomicity, event suppression on revert, and
-    /// one-way initialization transition. [OI-INIT-6, OI-INIT-9]
-    function test_LOI_AOG_1__LOI_AOG_4__LOI_AOG_5__LOI_AOG_6__LOI_VIEW_1__LOI_VIEW_2__LOI_VIEW_3__LOI_VIEW_4__LOI_VIEW_5__OI_INIT_6__OI_INIT_9__LOI_AOTINIT_7_initializeLibrary_atomicityAndViewGuards()
+    /// one-way initialization transition.
+    function test_initializeLibrary_atomicityAndViewGuards()
         public
     {
         // Setup: Deploy a harness and seed deployer storage for enforce-only-deployer checks.
@@ -527,7 +527,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` fully rolls back organization state when the
     /// admin-operation timelock is invalid.
-    function test_LOI_AOTINIT_5_initialize_invalidAdminOperationTimelock_rollsBackAllInitializationState() public {
+    function test_initialize_invalidAdminOperationTimelock_rollsBackAllInitializationState() public {
         // Setup: build otherwise-valid initialization params with an out-of-range admin-operation timelock.
         LibOrganizationInitializationHarness harness = _newLibraryHarness();
         InitializationParams memory params = _defaultInitializationParams();
@@ -566,7 +566,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` rolls back member/admin writes when the groups step
     /// reverts, leaving no partial initialization state.
-    function test_LOI_AOG_2_initializeLibrary_revertInGroupsStep_rollsBackMembersAndAdmins() public {
+    function test_initializeLibrary_revertInGroupsStep_rollsBackMembersAndAdmins() public {
         // Setup: Build params with valid members/admins but a group containing a non-member address to trigger
         // `MemberDoesNotExist` during group processing (step 3 of initialize).
         LibOrganizationInitializationHarness harness = _newLibraryHarness();
@@ -597,7 +597,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` rolls back all prior writes (members, admins, groups,
     /// guardian, timelock) when recovery setup reverts.
-    function test_INIT_STATE_6_B__LOI_AOG_3__LOI_AOTINIT_6_initializeLibrary_revertInRecoverySetup_rollsBackAllPriorWrites()
+    function test_initializeLibrary_revertInRecoverySetup_rollsBackAllPriorWrites()
         public
     {
         // Setup: Build params with valid members/admins/groups/guardian but an invalid guardian recovery timelock to

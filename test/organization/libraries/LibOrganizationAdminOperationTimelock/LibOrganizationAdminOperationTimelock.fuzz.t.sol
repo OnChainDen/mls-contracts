@@ -76,7 +76,7 @@ contract LibOrganizationAdminOperationTimelockFuzzTest is Test {
 
     /// @dev Verifies `LibOrganizationAdminOperationTimelock.initializeAdminOperationTimelock` accepts the minimum
     /// boundary and persists it exactly.
-    function test_LOAT_IAOT_1__LOAT_IAOT_5_initializeAdminOperationTimelock_minBoundaryAcceptedAndStoredExactly()
+    function test_initializeAdminOperationTimelock_minBoundaryAcceptedAndStoredExactly()
         public
     {
         // Setup: start from a fresh harness with zeroed timelock storage.
@@ -94,7 +94,7 @@ contract LibOrganizationAdminOperationTimelockFuzzTest is Test {
 
     /// @dev Verifies `LibOrganizationAdminOperationTimelock.initializeAdminOperationTimelock` accepts the maximum
     /// boundary and persists it exactly.
-    function test_LOAT_IAOT_2_initializeAdminOperationTimelock_maxBoundaryAcceptedAndStoredExactly() public {
+    function test_initializeAdminOperationTimelock_maxBoundaryAcceptedAndStoredExactly() public {
         // Setup: start from a fresh harness with zeroed timelock storage.
 
         // Call: initialize the library harness with the maximum valid admin-operation timelock.
@@ -110,7 +110,7 @@ contract LibOrganizationAdminOperationTimelockFuzzTest is Test {
 
     /// @dev Verifies `LibOrganizationAdminOperationTimelock.initializeAdminOperationTimelock` rejects durations below
     /// the minimum boundary.
-    function test_LOAT_IAOT_3_initializeAdminOperationTimelock_belowMinimumRevertsInvalidTimelockDuration() public {
+    function test_initializeAdminOperationTimelock_belowMinimumRevertsInvalidTimelockDuration() public {
         // Setup: choose a duration one second below the allowed minimum.
         uint256 invalidDuration = TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1;
 
@@ -124,7 +124,7 @@ contract LibOrganizationAdminOperationTimelockFuzzTest is Test {
 
     /// @dev Verifies `LibOrganizationAdminOperationTimelock.initializeAdminOperationTimelock` rejects durations above
     /// the maximum boundary.
-    function test_LOAT_IAOT_4_initializeAdminOperationTimelock_aboveMaximumRevertsInvalidTimelockDuration() public {
+    function test_initializeAdminOperationTimelock_aboveMaximumRevertsInvalidTimelockDuration() public {
         // Setup: choose a duration one second above the allowed maximum.
         uint256 invalidDuration = TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS + 1;
 
@@ -138,7 +138,7 @@ contract LibOrganizationAdminOperationTimelockFuzzTest is Test {
 
     /// @dev Verifies `LibOrganizationAdminOperationTimelock.initializeAdminOperationTimelock` overwrites the stored
     /// duration on repeated harness calls.
-    function test_LOAT_IAOT_6__LOAT_GAOTDS_3_initializeAdminOperationTimelock_repeatedCallsOverwriteStoredDuration()
+    function test_initializeAdminOperationTimelock_repeatedCallsOverwriteStoredDuration()
         public
     {
         // Setup: seed one valid duration before exercising the raw repeated-initialize behavior.
@@ -157,7 +157,7 @@ contract LibOrganizationAdminOperationTimelockFuzzTest is Test {
 
     /// @dev Verifies `LibOrganizationAdminOperationTimelock.getAdminOperationTimelockDurationSeconds` returns zero in
     /// uninitialized harness storage.
-    function test_LOAT_GAOTDS_1_getAdminOperationTimelockDurationSeconds_uninitializedStateReturnsZero() public view {
+    function test_getAdminOperationTimelockDurationSeconds_uninitializedStateReturnsZero() public view {
         // Setup: use a fresh harness with zeroed timelock storage.
 
         // Call: read the admin-operation timelock duration before initialization.
@@ -169,7 +169,7 @@ contract LibOrganizationAdminOperationTimelockFuzzTest is Test {
 
     /// @dev Verifies `LibOrganizationAdminOperationTimelock.getAdminOperationTimelockDurationSeconds` returns the
     /// configured duration after initialization.
-    function test_LOAT_GAOTDS_2_getAdminOperationTimelockDurationSeconds_returnsConfiguredDuration() public {
+    function test_getAdminOperationTimelockDurationSeconds_returnsConfiguredDuration() public {
         // Setup: initialize the harness with a valid non-boundary duration.
         uint256 configuredDuration = 7 days;
         harness.initializeViaLibrary(configuredDuration);
@@ -183,7 +183,7 @@ contract LibOrganizationAdminOperationTimelockFuzzTest is Test {
 
     /// @dev Verifies `LibOrganizationAdminOperationTimelock.validateTimelockExpiredOrRevert` reverts before expiry
     /// with the expected revert payload values.
-    function test_LOAT_VTEOR_1__LOAT_VTEOR_2_validateTimelockExpiredOrRevert_beforeExpiryRevertsWithExactPayload()
+    function test_validateTimelockExpiredOrRevert_beforeExpiryRevertsWithExactPayload()
         public
     {
         // Setup: choose a future finalize timestamp one second ahead of the current block timestamp.
@@ -202,7 +202,7 @@ contract LibOrganizationAdminOperationTimelockFuzzTest is Test {
 
     /// @dev Verifies `LibOrganizationAdminOperationTimelock.validateTimelockExpiredOrRevert` succeeds when
     /// `block.timestamp` equals the pending finalize timestamp.
-    function test_LOAT_VTEOR_3_validateTimelockExpiredOrRevert_exactExpirySucceeds() public {
+    function test_validateTimelockExpiredOrRevert_exactExpirySucceeds() public {
         // Setup: choose a finalize timestamp equal to the current block timestamp.
         uint256 canFinalizeAtTimestamp = block.timestamp;
 
@@ -214,7 +214,7 @@ contract LibOrganizationAdminOperationTimelockFuzzTest is Test {
     }
 
     /// @dev Verifies `LibOrganizationAdminOperationTimelock.validateTimelockExpiredOrRevert` succeeds after expiry.
-    function test_LOAT_VTEOR_4_validateTimelockExpiredOrRevert_afterExpirySucceeds() public {
+    function test_validateTimelockExpiredOrRevert_afterExpirySucceeds() public {
         // Setup: choose a finalize timestamp strictly before the current block timestamp.
         uint256 canFinalizeAtTimestamp = block.timestamp - 1;
 
@@ -227,7 +227,7 @@ contract LibOrganizationAdminOperationTimelockFuzzTest is Test {
 
     /// @dev Verifies `LibOrganizationAdminOperationTimelock.validateTimelockExpiredOrRevert` treats a zero timestamp
     /// as already expired.
-    function test_LOAT_VTEOR_5_validateTimelockExpiredOrRevert_zeroTimestampSucceeds() public {
+    function test_validateTimelockExpiredOrRevert_zeroTimestampSucceeds() public {
         // Setup: use the documented zero-timestamp helper case.
 
         // Call: validate a zero finalize timestamp.
@@ -239,7 +239,7 @@ contract LibOrganizationAdminOperationTimelockFuzzTest is Test {
 
     /// @dev Verifies `LibOrganizationAdminOperationTimelock.computeCanFinalizeAtTimestamp` returns `block.timestamp +
     /// duration` for a configured non-boundary timelock.
-    function test_LOAT_CCFAT_1_computeCanFinalizeAtTimestamp_returnsBlockTimestampPlusConfiguredDuration() public {
+    function test_computeCanFinalizeAtTimestamp_returnsBlockTimestampPlusConfiguredDuration() public {
         // Setup: configure a valid non-boundary duration and precompute the expected finalize timestamp.
         uint256 configuredDuration = 9 days;
         uint256 expectedCanFinalizeAtTimestamp = block.timestamp + configuredDuration;
@@ -258,7 +258,7 @@ contract LibOrganizationAdminOperationTimelockFuzzTest is Test {
 
     /// @dev Verifies `LibOrganizationAdminOperationTimelock.computeCanFinalizeAtTimestamp` uses the minimum boundary
     /// duration exactly.
-    function test_LOAT_CCFAT_2_computeCanFinalizeAtTimestamp_minBoundaryReturnsExactTimestamp() public {
+    function test_computeCanFinalizeAtTimestamp_minBoundaryReturnsExactTimestamp() public {
         // Setup: configure the minimum valid timelock duration and precompute the expected finalize timestamp.
         uint256 expectedCanFinalizeAtTimestamp = block.timestamp + TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS;
         harness.initializeViaLibrary(TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS);
@@ -276,7 +276,7 @@ contract LibOrganizationAdminOperationTimelockFuzzTest is Test {
 
     /// @dev Verifies `LibOrganizationAdminOperationTimelock.computeCanFinalizeAtTimestamp` uses the maximum boundary
     /// duration exactly.
-    function test_LOAT_CCFAT_3_computeCanFinalizeAtTimestamp_maxBoundaryReturnsExactTimestamp() public {
+    function test_computeCanFinalizeAtTimestamp_maxBoundaryReturnsExactTimestamp() public {
         // Setup: configure the maximum valid timelock duration and precompute the expected finalize timestamp.
         uint256 expectedCanFinalizeAtTimestamp = block.timestamp + TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS;
         harness.initializeViaLibrary(TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS);
@@ -294,7 +294,7 @@ contract LibOrganizationAdminOperationTimelockFuzzTest is Test {
 
     /// @dev Verifies `LibOrganizationAdminOperationTimelock.computeCanFinalizeAtTimestamp` returns the current block
     /// timestamp when the stored duration is zero.
-    function test_LOAT_CCFAT_4_computeCanFinalizeAtTimestamp_uninitializedStateReturnsCurrentTimestamp() public {
+    function test_computeCanFinalizeAtTimestamp_uninitializedStateReturnsCurrentTimestamp() public {
         // Setup: use a fresh harness where the stored admin-operation timelock remains zero.
 
         // Call: compute the finalize timestamp without prior initialization.

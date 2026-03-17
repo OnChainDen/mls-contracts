@@ -238,7 +238,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
     /// @dev Verifies `OrganizationMembersBase.modifyMembers` rejects removing a member whose admin role is still
     /// active.
-    function test_ADMIN_INV_5_OMB_MM_2_modifyMembers_removeAdminMember_revertsMemberIsAdmin() public {
+    function test_modifyMembers_removeAdminMember_revertsMemberIsAdmin() public {
         address adminMember = address(0x40B);
         // Setup: configure members/admins for a valid baseline state.
         _setMembersAndAdmins({
@@ -348,7 +348,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
     /// @dev Verifies `OrganizationMembersBase.modifyMembers` succeeds once the target address is demoted from admin
     /// status first.
-    function test_OMB_MM_2_modifyMembers_afterDemotion_memberCanBeRemoved() public {
+    function test_modifyMembers_afterDemotion_memberCanBeRemoved() public {
         address adminMember = address(0x410);
         // Setup: configure members/admins for a valid baseline state.
         _setMembersAndAdmins({
@@ -406,7 +406,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
     /// @dev Verifies `OrganizationMembersBase.modifyMembers` adds and removes members in one guardian-authorized
     /// execution.
-    function test_OMB_MM_1_modifyMembers_guardianWithValidAuth_addsAndRemovesMembers_endToEnd() public {
+    function test_modifyMembers_guardianWithValidAuth_addsAndRemovesMembers_endToEnd() public {
         address memberToAdd = address(0x412);
         address memberToRemove = address(0x413);
         // Setup: configure members/admins for a valid baseline state.
@@ -562,7 +562,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
     }
 
     /// @dev Verifies `OrganizationMembersBase.modifyMembers` reverts on replay after one successful execution.
-    function test_NMMB_MM_1_modifyMembers_replaySameSignedParams_revertsNonceAlreadyUsed() public {
+    function test_modifyMembers_replaySameSignedParams_revertsNonceAlreadyUsed() public {
         address memberToAdd = address(0x420);
 
         // Setup: configure a valid one-admin member mutation and precompute the nonce for its exact signed payload.
@@ -597,7 +597,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
     }
 
     /// @dev Verifies `OrganizationMembersBase.modifyMembers` binds member-array ordering into the nonce domain.
-    function test_NMMB_MM_2_modifyMembers_sameMemberSetDifferentOrder_producesDifferentNonce() public view {
+    function test_modifyMembers_sameMemberSetDifferentOrder_producesDifferentNonce() public view {
         address memberA = address(0x421);
         address memberB = address(0x422);
 
@@ -621,7 +621,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
     /// @dev Verifies `OrganizationMembersBase.modifyMembers` can reapply the same add/remove tuple after a state reset
     /// when the admin-auth salt changes.
-    function test_NMMB_MM_3_modifyMembers_sameTupleDifferentAdminAuthSalts_canBothSucceed() public {
+    function test_modifyMembers_sameTupleDifferentAdminAuthSalts_canBothSucceed() public {
         address memberToAdd = address(0x423);
         address memberToRemove = address(0x424);
 
@@ -688,7 +688,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
     /// @dev Verifies `OrganizationMembersBase.modifyMembers` rolls back nonce consumption when the downstream member
     /// mutation reverts.
-    function test_NMMB_MM_4_modifyMembers_downstreamRevert_rollsBackNonceAndAllowsRetry() public {
+    function test_modifyMembers_downstreamRevert_rollsBackNonceAndAllowsRetry() public {
         address adminMember = address(0x425);
 
         // Setup: prepare a signed removal for an address that is still an admin member so the first call reverts, and

@@ -35,7 +35,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies that a non-guardian caller is rejected by the `onlyGuardian` modifier.
      */
-    function test_OATB_EAT_1_executeAccountTransaction_nonGuardianCaller_revertsOnlyGuardian() public {
+    function test_executeAccountTransaction_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup: configure a deployed account fixture and valid payload.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0x01020304), uint256(1));
@@ -63,7 +63,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies that an account not deployed by this organization reverts.
      */
-    function test_OATB_EAT_2__OAT_EAT_8_executeAccountTransaction_accountNotDeployed_revertsAccountNotDeployedByOrganization()
+    function test_executeAccountTransaction_accountNotDeployed_revertsAccountNotDeployedByOrganization()
         public
     {
         // Setup: use a random non-deployed account address.
@@ -97,8 +97,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies cross-organization accounts are rejected by both execute and reject entrypoints.
      */
-    /// OATB-AXACT-1
-    function test_OATB_AXACT_1_crossOrganizationAccount_revertsAccountNotDeployedByOrganization() public {
+    function test_crossOrganizationAccount_revertsAccountNotDeployedByOrganization() public {
         // Setup: deploy an account bound to a different organization and mark it as deployed only there.
         OrganizationAccountTransactionBaseHarness otherHarness = new OrganizationAccountTransactionBaseHarness();
         MockAccountForOrganizationTransaction foreignAccount =
@@ -162,7 +161,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies nonce computation is deterministic for `(account,to,value,keccak256(data),policyId,salt)`.
      */
-    function test_OATB_EAT_3__OAT_EAT_4_executeAccountTransaction_nonceComputedDeterministicallyFromParams()
+    function test_executeAccountTransaction_nonceComputedDeterministicallyFromParams()
         public
         view
     {
@@ -189,7 +188,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
      * @dev Verifies execute-path nonce derivation depends only on the tuple fields and ignores
      * expiration/signatures/proofs.
      */
-    function test_NMATB_EAT_1__NMATB_EAT_2__NMATB_EAT_3_executeAccountTransaction_nonceDependsOnlyOnTupleFields()
+    function test_executeAccountTransaction_nonceDependsOnlyOnTupleFields()
         public
     {
         // Setup: build one baseline tuple plus field mutations, and prepare two distinct auth/proof payloads.
@@ -259,8 +258,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies nonce is consumed before entering the account external call (CEI ordering).
      */
-    /// OATB-AXACT-2
-    function test_OATB_AXACT_2__OATB_EAT_4_executeAccountTransaction_nonceConsumedBeforeAccountCall() public {
+    function test_executeAccountTransaction_nonceConsumedBeforeAccountCall() public {
         // Setup: deploy account fixture configured to assert nonce usage at entry.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         account.setAssertNonceConsumedOnEntry(true);
@@ -291,7 +289,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies nonce is consumed before approval validation starts.
      */
-    function test_OATB_EAT_4_executeAccountTransaction_nonceConsumedBeforeApprovalValidation() public {
+    function test_executeAccountTransaction_nonceConsumedBeforeApprovalValidation() public {
         // Setup: deploy account and configure nonce-aware ERC-1271 initiator signer.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0x89898989), uint256(31));
@@ -331,7 +329,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies replay with a previously used nonce reverts with `NonceAlreadyUsed`.
      */
-    function test_OATB_EAT_5_NMATB_EAT_5_executeAccountTransaction_usedNonce_revertsNonceAlreadyUsed() public {
+    function test_executeAccountTransaction_usedNonce_revertsNonceAlreadyUsed() public {
         // Setup: deploy account and execute once with deterministic tuple.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0xAABBCCDD), uint256(4));
@@ -374,7 +372,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
      * @dev Verifies `OrganizationAccountTransactionBase.executeAccountTransaction` blocks same-tuple reentry after
      * nonce consumption.
      */
-    function test_OATB_AXACT_3__NMATB_EAT_6__OAT_EAT_5_executeAccountTransaction_reentrantSameNonceAttemptInSameTransaction_revertsNonceAlreadyUsed()
+    function test_executeAccountTransaction_reentrantSameNonceAttemptInSameTransaction_revertsNonceAlreadyUsed()
         public
     {
         // Setup: make the account itself the guardian, then configure a nested replay call with the exact same tuple.
@@ -431,9 +429,9 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
 
     /**
      * @dev Verifies `OrganizationAccountTransactionBase.executeAccountTransaction` cannot re-enter privileged
-     * organization entrypoints from the account context. [TXRL-INV-12]
+     * organization entrypoints from the account context.
      */
-    function test_TXRL_INV_12_executeAccountTransaction_accountReentryCannotCallPrivilegedOrganizationFunctions()
+    function test_executeAccountTransaction_accountReentryCannotCallPrivilegedOrganizationFunctions()
         public
     {
         // Setup: deploy an account plus downstream target, configure one valid auto-approve transaction, and stage a
@@ -506,7 +504,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies execution delegates policy validation to `validateTransactionApprovalOrRevert`.
      */
-    function test_OATB_EAT_6_executeAccountTransaction_invalidPolicyRevertsPolicyDoesNotApply() public {
+    function test_executeAccountTransaction_invalidPolicyRevertsPolicyDoesNotApply() public {
         // Setup: build payload where policy proof is intentionally invalid.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
@@ -549,7 +547,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies success emits `AccountTransactionExecuted` with expected payload.
      */
-    function test_OATB_EAT_7_NMATB_EAT_4_executeAccountTransaction_success_emitsAccountTransactionExecuted() public {
+    function test_executeAccountTransaction_success_emitsAccountTransactionExecuted() public {
         // Setup: deploy account and build valid payload.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0xB0B0B0B0), uint256(6));
@@ -581,7 +579,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies `AccountTransactionExecuted` is emitted before the account execution event.
      */
-    function test_OATB_EAT_8_executeAccountTransaction_emitsBeforeAccountExecuteTransactionCall() public {
+    function test_executeAccountTransaction_emitsBeforeAccountExecuteTransactionCall() public {
         // Setup: deploy account and valid payload.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0xC0C0C0C0), uint256(7));
@@ -629,7 +627,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies account `executeTransaction` receives the expected argument tuple.
      */
-    function test_OATB_EAT_9_executeAccountTransaction_callsAccountExecuteTransactionWithExpectedArguments() public {
+    function test_executeAccountTransaction_callsAccountExecuteTransactionWithExpectedArguments() public {
         // Setup: deploy account and build valid payload.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0xD0D0D0D0), uint256(8));
@@ -665,7 +663,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies account execution revert bubbles and nonce usage is rolled back.
      */
-    function test_OATB_AXACT_4__OATB_EAT_10__OAT_EAT_6__NMATB_EAT_8__OAT_AI_2_executeAccountTransaction_accountExecutionReverts_rollsBackNonceUsage()
+    function test_executeAccountTransaction_accountExecutionReverts_rollsBackNonceUsage()
         public
     {
         // Setup: deploy account configured to revert on execute.
@@ -700,7 +698,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies successful native ETH transfer through account execution path.
      */
-    function test_OATB_EAT_11_executeAccountTransaction_successfulNativeTransfer_endToEnd() public {
+    function test_executeAccountTransaction_successfulNativeTransfer_endToEnd() public {
         // Setup: deploy account + receiver and fund account balance.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         MockNativeReceiver receiver = new MockNativeReceiver();
@@ -733,7 +731,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies successful ERC-20 transfer through account execution path.
      */
-    function test_OATB_EAT_12_executeAccountTransaction_successfulERC20Transfer_endToEnd() public {
+    function test_executeAccountTransaction_successfulERC20Transfer_endToEnd() public {
         // Setup: deploy account + token and fund account token balance.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         MockERC20ForAccountTransaction token = new MockERC20ForAccountTransaction();
@@ -765,7 +763,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies successful contract interaction through account execution path.
      */
-    function test_OATB_EAT_13_executeAccountTransaction_successfulContractInteraction_endToEnd() public {
+    function test_executeAccountTransaction_successfulContractInteraction_endToEnd() public {
         // Setup: deploy account + interaction target.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         MockInteractionTarget target = new MockInteractionTarget();
@@ -798,7 +796,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies contract interaction with non-zero value forwards native token + calldata.
      */
-    function test_OATB_EAT_14_executeAccountTransaction_successfulContractInteractionWithValue_endToEnd() public {
+    function test_executeAccountTransaction_successfulContractInteractionWithValue_endToEnd() public {
         // Setup: deploy account + interaction target and fund account balance.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         MockInteractionTarget target = new MockInteractionTarget();
@@ -835,7 +833,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
      *      policy. A transaction with both calldata and `value > 0` is NOT a token transfer, so the
      *      `ContractInteractions` policy type should match it.
      */
-    function test_OATB_EAT_14_executeAccountTransaction_contractInteractionWithValue_contractInteractionsPolicy_endToEnd()
+    function test_executeAccountTransaction_contractInteractionWithValue_contractInteractionsPolicy_endToEnd()
         public
     {
         // Setup: deploy account + interaction target and fund account balance.
@@ -885,7 +883,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies expired transactions revert in the base execution path.
      */
-    function test_OATB_EAT_15__NMATB_EAT_9_executeAccountTransaction_expiredTransaction_revertsTransactionExpired()
+    function test_executeAccountTransaction_expiredTransaction_revertsTransactionExpired()
         public
     {
         // Setup: deploy account and sign payload with past expiration.
@@ -936,7 +934,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies manual-approval policy with insufficient reviewers reverts.
      */
-    function test_OATB_EAT_16__LOAT_VTAOR_12_executeAccountTransaction_manualApprovalInsufficientReviewers_revertsInsufficientApprovals()
+    function test_executeAccountTransaction_manualApprovalInsufficientReviewers_revertsInsufficientApprovals()
         public
     {
         // Setup: deploy account and manual-approval policy payload with no review signatures.
@@ -980,7 +978,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
      * @dev Verifies manual-approval review signatures are bound to the exact initiator signature bytes used during
      * execution.
      */
-    function test_OAT_EAT_7_executeAccountTransaction_manualApprovalReviewSignaturesBindInitiatorSignature() public {
+    function test_executeAccountTransaction_manualApprovalReviewSignaturesBindInitiatorSignature() public {
         // Setup: deploy an account, authorize one ERC-1271 initiator member, and prepare two different valid
         // initiator-signature byte arrays for the same transaction tuple.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
@@ -1070,7 +1068,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies failed pre-validation does not permanently burn nonce; fixed retry can succeed.
      */
-    function test_OATB_AXACT_7__OATB_EAT_17__OAT_EAT_6__LOAT_VTAOR_14__NMATB_EAT_7_executeAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed()
+    function test_executeAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed()
         public
     {
         // Setup: deploy account and build payload with first attempt signed by unauthorized initiator.
@@ -1150,8 +1148,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies execute-path validation reverts cannot leave partial rate-limit usage behind.
      */
-    /// OATB-AXACT-8
-    function test_OATB_AXACT_8_executeAccountTransaction_validationRevert_rollsBackRateLimitUsage() public {
+    function test_executeAccountTransaction_validationRevert_rollsBackRateLimitUsage() public {
         // Setup: deploy an account and configure a manual-approval policy with active time-interval rate limiting.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0x1616A8A8), uint256(168));
@@ -1203,7 +1200,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies external-call failure rolls back prior rate-limit usage updates.
      */
-    function test_OATB_AXACT_4_B__OATB_EAT_18__OAT_EAT_10_executeAccountTransaction_executionFailure_rollsBackRateLimitUsage()
+    function test_executeAccountTransaction_executionFailure_rollsBackRateLimitUsage()
         public
     {
         // Setup: deploy account configured to revert after validation and use rate-limited policy.
@@ -1258,7 +1255,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
      * @dev Verifies expired execute-path signatures fail closed without burning the nonce, so the same tuple can be
      * retried successfully with a fresh expiration.
      */
-    function test_OAT_EAT_9_executeAccountTransaction_expiredSignatureRejectsAndFreshRetrySucceeds() public {
+    function test_executeAccountTransaction_expiredSignatureRejectsAndFreshRetrySucceeds() public {
         // Setup: deploy an account and prepare one transaction tuple with both expired and fresh initiator
         // signatures.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
@@ -1340,7 +1337,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies same transaction tuple can execute multiple times using distinct salts/signatures.
      */
-    function test_OATB_EAT_19_executeAccountTransaction_sameTupleDifferentSalt_executesMultipleTimes() public {
+    function test_executeAccountTransaction_sameTupleDifferentSalt_executesMultipleTimes() public {
         // Setup: deploy account and build shared transaction tuple.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0x18181818), uint256(18));

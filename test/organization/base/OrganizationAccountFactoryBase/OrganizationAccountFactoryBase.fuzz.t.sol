@@ -17,7 +17,7 @@ contract OrganizationAccountFactoryBaseFuzzTest is OrganizationAccountFactoryBas
     /// @param caller Fuzzed caller used for the unauthorized branch.
     /// @param create2Salt Fuzzed CREATE2 salt authorized for deployment.
     /// @param adminSaltRaw Fuzzed admin-auth salt seed.
-    function testFuzz_FOAFB_AUTH_122_deployAccount_enforcesGuardianAndExactCreate2Salt(
+    function testFuzz_deployAccount_enforcesGuardianAndExactCreate2Salt(
         address caller,
         bytes32 create2Salt,
         uint256 adminSaltRaw
@@ -64,7 +64,7 @@ contract OrganizationAccountFactoryBaseFuzzTest is OrganizationAccountFactoryBas
     /// @param caller Fuzzed caller used for the unauthorized branch.
     /// @param useFirstImplementation Selects which runtime-code implementation is authorized.
     /// @param adminSaltRaw Fuzzed admin-auth salt seed.
-    function testFuzz_FOAFB_AUTH_122_setAccountImplementation_enforcesGuardianWhitelistAndExactImplementation(
+    function testFuzz_setAccountImplementation_enforcesGuardianWhitelistAndExactImplementation(
         address caller,
         bool useFirstImplementation,
         uint256 adminSaltRaw

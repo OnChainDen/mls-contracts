@@ -45,7 +45,7 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
     }
 
     /// @dev Verifies that unsupported constraint type for a parameter kind returns false.
-    function test_isParameterAllowedByConstraint__OPB_PH_5_unsupportedConstraintForType_returnsFalse() public view {
+    function test_isParameterAllowedByConstraint_unsupportedConstraintForType_returnsFalse() public view {
         // Setup: build fixture inputs where unsupported constraint type for a parameter kind returns false should be
         // denied.
         ParameterConstraint memory invalidConstraint = ParameterConstraint({
@@ -120,7 +120,7 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
     }
 
     /// @dev Verifies that `ParamType.Array` with non-Any constraint returns false.
-    function test_LPPC_ATYPE_4_isParameterAllowedByConstraint_arrayWithNonAnyConstraint_returnsFalse() public view {
+    function test_isParameterAllowedByConstraint_arrayWithNonAnyConstraint_returnsFalse() public view {
         // Setup: build fixture inputs where `ParamType.Array` with non-Any constraint returns false should be denied.
         ParameterConstraint memory constraint = ParameterConstraint({
             paramType: ParamType.Array,
@@ -160,7 +160,7 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
     }
 
     /// @dev Verifies that unknown `ParamType` values revert during parameter-constraint dispatch.
-    function test_LPPC_ATYPE_5_isParameterAllowedByConstraint_unknownParamType_reverts() public {
+    function test_isParameterAllowedByConstraint_unknownParamType_reverts() public {
         // Setup: build fixture inputs where unknown `ParamType` values revert during parameter-constraint dispatch.
         ParameterConstraint memory constraint = ParameterConstraint({
             paramType: ParamType.Uint,
@@ -182,9 +182,8 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
         assertFalse(success, "unknown param type should revert");
     }
 
-    // LPPC-ATYPE-7
     /// @dev Verifies malformed typed `comparisonData` decodes fail closed with `false` inside dispatcher routing.
-    function test_LPPC_ATYPE_7_isParameterAllowedByConstraint_malformedTypedComparisonData_returnsFalse_desired()
+    function test_isParameterAllowedByConstraint_malformedTypedComparisonData_returnsFalse_desired()
         public
     {
         // Setup: route through the dispatcher into the bool exact-decoder using intentionally malformed comparison
@@ -253,7 +252,7 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
     }
 
     /// @dev Verifies bytes/string parameter dispatch follows the dynamic offset and hashes the pointed-to payload.
-    function test_POL_INV_13__OPB_PH_5_isParameterAllowedByConstraint_bytesAndString_dispatchPath_usesOffsetAndHash()
+    function test_isParameterAllowedByConstraint_bytesAndString_dispatchPath_usesOffsetAndHash()
         public
         view
     {

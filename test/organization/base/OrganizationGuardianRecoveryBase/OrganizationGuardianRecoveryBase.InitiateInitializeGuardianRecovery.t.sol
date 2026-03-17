@@ -20,7 +20,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
 {
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` reverts when called by a
     /// non-guardian.
-    function test_OGRB_IIGR_1_nonGuardianCaller_revertsOnlyGuardian() public {
+    function test_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -49,7 +49,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` insufficient admin
     /// signatures revert.
-    function test_OGRB_IIGR_2_insufficientAdminSignatures_reverts() public {
+    function test_insufficientAdminSignatures_reverts() public {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
@@ -78,7 +78,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` successful nonce replay
     /// reverts with `NonceAlreadyUsed`.
-    function test_OGRB_IIGR_3__NMGRB_IGR_1_replaySameNonce_revertsNonceAlreadyUsed() public {
+    function test_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -104,8 +104,8 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
     }
 
     /// @dev Verifies deferred guardian-recovery initialization consumes the correct initiate nonce and stages the
-    /// pending tuple that later finalization will commit. [OREC-DRI-1]
-    function test_OGRB_IIGR_4__OGRB_IIGR_5__OGRB_IIGR_6__OGRB_IIGR_7__OREC_DRI_1_approvalFlowBindsOpDataAndDelegates()
+    /// pending tuple that later finalization will commit.
+    function test_approvalFlowBindsOpDataAndDelegates()
         public
     {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
@@ -156,8 +156,8 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
     }
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` fails closed once guardian
-    /// recovery is already configured and does not burn the signed nonce. [OREC-DRI-5]
-    function test_OGRB_IIGR_8__OREC_DRI_5_downstreamRevert_rollsBackNonceAndRetrySucceeds() public {
+    /// recovery is already configured and does not burn the signed nonce.
+    function test_downstreamRevert_rollsBackNonceAndRetrySucceeds() public {
         // Setup: set admin/member threshold and prepare signed admin auth.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationData) = _buildInitiateInitializeGuardianRecoveryAuth({
@@ -189,7 +189,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` signed operationData is
     /// bound to recoveryAddress and timelock tuple.
-    function test_OGRB_IIGR_9__OGRB_IIGR_10_signedOperationDataBoundToAddressAndTimelock_rejectsMutations() public {
+    function test_signedOperationDataBoundToAddressAndTimelock_rejectsMutations() public {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -227,7 +227,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` expired auth reverts, nonce
     /// is not burned, and fresh signatures can reuse same nonce.
-    function test_OGRB_IIGR_11_expiredAuth_revertsWithoutBurningNonce_andFreshSignaturesSucceed() public {
+    function test_expiredAuth_revertsWithoutBurningNonce_andFreshSignaturesSucceed() public {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -273,7 +273,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` rejection signatures cannot
     /// execute initiate-initialize.
-    function test_OGRB_IIGR_12_rejectionSignatures_cannotExecuteInitiateInitialize() public {
+    function test_rejectionSignatures_cannotExecuteInitiateInitialize() public {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -301,7 +301,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` signatures for different
     /// operation type cannot authorize initiation.
-    function test_OGRB_IIGR_13__NMGRB_IGR_7_signaturesForDifferentOperationType_cannotAuthorizeInitiation() public {
+    function test_signaturesForDifferentOperationType_cannotAuthorizeInitiation() public {
         // Setup: start from clean recovery state and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -328,7 +328,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` timelock range for initiate
     /// flow is enforced to [2 days, 30 days].
-    function test_OGRB_IIGR_14_timelockOutOfRange_revertsInvalidTimelockDuration() public {
+    function test_timelockOutOfRange_revertsInvalidTimelockDuration() public {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -384,8 +384,8 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
     }
 
     /// @dev Verifies cancelled deferred guardian-recovery initialization leaves the mechanism re-initiable with a new
-    /// auth salt for the same tuple. [OREC-DRI-2]
-    function test_NMGRB_IGR_2__OREC_DRI_2_initiateInitializeGuardianRecovery_sameParamsDifferentSalts_canSucceedAcrossReinitiation()
+    /// auth salt for the same tuple.
+    function test_initiateInitializeGuardianRecovery_sameParamsDifferentSalts_canSucceedAcrossReinitiation()
         public
     {
         // Setup: reset storage, configure one-admin auth, and prepare two initiate salts around an intermediate
@@ -454,7 +454,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` invalid params and
     /// already-pending branches both roll back nonce usage.
-    function test_NMGRB_IGR_9_initiateInitializeGuardianRecovery_invalidParamsAndPendingState_rollBackNonce() public {
+    function test_initiateInitializeGuardianRecovery_invalidParamsAndPendingState_rollBackNonce() public {
         // Setup: reset storage, configure one-admin auth, and prepare one invalid-address payload plus one
         // already-pending payload.
         recoveryStateHarness.resetGuardianRecoveryStorage();

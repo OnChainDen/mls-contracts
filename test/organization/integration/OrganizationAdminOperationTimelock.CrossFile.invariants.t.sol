@@ -288,7 +288,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariants is Test {
     /**
      * @dev Verifies initialized admin-operation timelocks remain within the documented `[2 days, 30 days]` range.
      */
-    function invariant_AOT_INV_1_initializedAdminOperationTimelockAlwaysRemainsInRange() public view {
+    function invariant_initializedAdminOperationTimelockAlwaysRemainsInRange() public view {
         // Setup: use the shared cross-file harness and its current admin-operation timelock snapshot.
         uint256 durationSeconds = harness.getAdminOperationTimelockDurationSeconds();
 
@@ -310,7 +310,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariants is Test {
     /**
      * @dev Verifies guardian and recovery operations never mutate the configured admin-operation timelock.
      */
-    function invariant_AOT_INV_2_guardianAndRecoveryFlowsCannotMutateAdminOperationTimelock() public view {
+    function invariant_guardianAndRecoveryFlowsCannotMutateAdminOperationTimelock() public view {
         // Setup: use the shared cross-file harness and its current admin-operation timelock snapshot.
         uint256 durationSeconds = harness.getAdminOperationTimelockDurationSeconds();
 
@@ -327,7 +327,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariants is Test {
     /**
      * @dev Verifies no admin-operation-timelocked flow can be finalized in the same block it is initiated.
      */
-    function invariant_AOT_INV_3_sameBlockFinalizationNeverSucceedsForAdminTimelockedFlows() public view {
+    function invariant_sameBlockFinalizationNeverSucceedsForAdminTimelockedFlows() public view {
         // Setup: use the handler's sticky violation flags recorded across same-block finalize attempts.
 
         // Call: read the accumulated violation flags.
@@ -351,7 +351,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariants is Test {
      * @dev Verifies zero deferred-init timestamps imply zero pending addresses and pending timelocks for both
      * guardian recovery and tx recovery.
      */
-    function invariant_AOT_INV_4_zeroPendingTimestampImpliesZeroDeferredInitTupleForBothRecoveryModules() public view {
+    function invariant_zeroPendingTimestampImpliesZeroDeferredInitTupleForBothRecoveryModules() public view {
         // Setup: read the current guardian-recovery and tx-recovery deferred-init snapshots.
         GuardianRecoveryState memory guardianRecoveryState = harness.getGuardianRecoveryStateViaStorage();
         TxRecoveryState memory txRecoveryState = harness.getTxRecoveryStateViaStorage();
@@ -390,7 +390,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariants is Test {
      * @dev Verifies non-zero deferred-init timestamps imply non-zero pending addresses and in-range pending
      * timelocks for both guardian recovery and tx recovery.
      */
-    function invariant_AOT_INV_5_nonZeroPendingTimestampImpliesWellFormedDeferredInitTupleForBothRecoveryModules()
+    function invariant_nonZeroPendingTimestampImpliesWellFormedDeferredInitTupleForBothRecoveryModules()
         public
         view
     {

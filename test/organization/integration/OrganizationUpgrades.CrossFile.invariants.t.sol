@@ -18,7 +18,7 @@ import {OperationType} from "types/CommonTypes.sol";
  */
 contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFileSuiteBase {
     /// @dev Verifies invariant that authorized upgrade target is unset outside authorized upgrade execution.
-    function test_UPG_CTRL_1__UPG_INV_1__IWC_INV_1__IWC_INV_4_upgradeAuthorizedFlagFalseOutsideExecution() public {
+    function test_upgradeAuthorizedFlagFalseOutsideExecution() public {
         // Setup: perform successful upgrade with migration helper that requires temporary auth flag.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -44,7 +44,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
     }
 
     /// @dev Verifies invariant that Organization upgrades only target whitelisted Organization implementations.
-    function test_UPG_CTRL_3__UPG_INV_2__IWC_INV_2_organizationUpgrades_onlyTargetWhitelistedOrganizationImplementations()
+    function test_organizationUpgrades_onlyTargetWhitelistedOrganizationImplementations()
         public
     {
         // Setup: valid admin auth for unwhitelisted Organization target.
@@ -68,7 +68,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
     }
 
     /// @dev Verifies invariant that Account upgrades only target whitelisted Account implementations.
-    function test_UPG_CTRL_4__UPG_INV_3__IWC_INV_3_accountUpgrades_onlyTargetWhitelistedAccountImplementations()
+    function test_accountUpgrades_onlyTargetWhitelistedAccountImplementations()
         public
     {
         // Setup: whitelist target under Organization type only.
@@ -92,7 +92,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
     }
 
     /// @dev Verifies invariant that all accounts under one organization resolve the same beacon implementation.
-    function test_UPG_INV_4_allAccountsUnderOrganizationResolveSameImplementation() public {
+    function test_allAccountsUnderOrganizationResolveSameImplementation() public {
         // Setup: configure account implementation and deploy two organization-managed accounts.
         _setSingleAdminThresholdOne();
         address accountImplV1 = address(new AccountImplementationVersion1());
@@ -139,7 +139,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
     }
 
     /// @dev Verifies invariant that Organization implementation pointer and Account beacon pointer are independent.
-    function test_UPG_INV_5_organizationAndAccountImplementationPointersAreIndependent() public {
+    function test_organizationAndAccountImplementationPointersAreIndependent() public {
         // Setup: seed account implementation pointer and whitelist Organization V2 for upgrade.
         _setSingleAdminThresholdOne();
         address accountImplV1 = address(new AccountImplementationVersion1());
@@ -180,7 +180,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
     }
 
     /// @dev Verifies the stored whitelist address remains immutable across successful Organization upgrades.
-    function test_ACCF_INV_8__UPG_INV_6__IWC_INV_5__IWC_INV_6_whitelistAddressRemainsImmutableAcrossUpgrades() public {
+    function test_whitelistAddressRemainsImmutableAcrossUpgrades() public {
         // Setup: set whitelist address and execute successful Organization upgrade.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -203,7 +203,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
     }
 
     /// @dev Verifies direct UUPS upgrade selectors never mutate implementation without authorized wrapper flow.
-    function test_UPG_CTRL_2__UPG_INV_7_directUUPSSelectorsCannotChangeImplementationWithoutWrapperAuthorization()
+    function test_directUUPSSelectorsCannotChangeImplementationWithoutWrapperAuthorization()
         public
     {
         // Setup: whitelist target for isolation and capture baseline implementation pointer.

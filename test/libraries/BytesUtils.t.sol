@@ -158,14 +158,14 @@ contract BytesUtilsTest is Test {
         assertEq(result, input, "Content should match original");
     }
 
-    function test_BYTE_SLICE_2_A_sliceFrom_startBeyondLength_returnsEmpty() public view {
+    function test_sliceFrom_startBeyondLength_returnsEmpty() public view {
         bytes memory input = _createPattern(50);
         bytes memory result = harness.sliceFrom(input, 100);
 
         assertEq(result.length, 0, "Start beyond length should return empty");
     }
 
-    function test_BYTE_SLICE_2_B_sliceFrom_startAtLength_returnsEmpty() public view {
+    function test_sliceFrom_startAtLength_returnsEmpty() public view {
         bytes memory input = _createPattern(50);
         bytes memory result = harness.sliceFrom(input, 50);
 
@@ -317,7 +317,7 @@ contract BytesUtilsTest is Test {
         _verifySliceFromCorrectness(fourSignatures, result, SIGNATURE_LENGTH);
     }
 
-    function testFuzz_BYTE_SLICE_3_A__FBU_SLICE_22_sliceFrom_lengthCorrectness(uint8 signatureCount) public view {
+    function testFuzz_sliceFrom_lengthCorrectness(uint8 signatureCount) public view {
         // Bound to reasonable range (1-10 signatures)
         signatureCount = uint8(bound(signatureCount, 1, 10));
 
@@ -332,7 +332,7 @@ contract BytesUtilsTest is Test {
         }
     }
 
-    function testFuzz_BYTE_SLICE_1_A__FBU_SLICE_22_sliceFrom_dataIntegrity(uint8 signatureCount) public view {
+    function testFuzz_sliceFrom_dataIntegrity(uint8 signatureCount) public view {
         // Bound to 2-10 signatures (need at least 2 for meaningful test)
         signatureCount = uint8(bound(signatureCount, 2, 10));
 
@@ -343,7 +343,7 @@ contract BytesUtilsTest is Test {
         _verifySliceFromCorrectness(data, result, SIGNATURE_LENGTH);
     }
 
-    function testFuzz_FBU_SLICE_22_sliceFrom_arbitraryLength(uint16 totalLength, uint16 startIndex) public view {
+    function testFuzz_sliceFrom_arbitraryLength(uint16 totalLength, uint16 startIndex) public view {
         totalLength = uint16(bound(totalLength, 0, 1000));
         startIndex = uint16(bound(startIndex, 0, 1000));
 
@@ -400,14 +400,14 @@ contract BytesUtilsTest is Test {
         assertEq(result, expected, "Content should match expected slice");
     }
 
-    function test_BYTE_SLICE_2_C_sliceRange_startBeyondLength_returnsEmpty() public view {
+    function test_sliceRange_startBeyondLength_returnsEmpty() public view {
         bytes memory input = _createPattern(50);
         bytes memory result = harness.sliceRange(input, 100, 10);
 
         assertEq(result.length, 0, "Start beyond length should return empty");
     }
 
-    function test_BYTE_SLICE_2_D_sliceRange_lengthExceedsBuffer_returnsEmpty() public view {
+    function test_sliceRange_lengthExceedsBuffer_returnsEmpty() public view {
         bytes memory input = _createPattern(50);
         bytes memory result = harness.sliceRange(input, 40, 20);
 
@@ -482,7 +482,7 @@ contract BytesUtilsTest is Test {
         }
     }
 
-    function test_BYTE_SLICE_4_A_sliceRange_dataIntegrity_lastByte() public view {
+    function test_sliceRange_dataIntegrity_lastByte() public view {
         bytes memory input = _createPattern(200);
         bytes memory result = harness.sliceRange(input, 50, 65);
 
@@ -493,7 +493,7 @@ contract BytesUtilsTest is Test {
         assertEq(uint8(result[lastIndex]), uint8(input[originalLastIndex]), "Last byte should match (partial word)");
     }
 
-    function test_BYTE_SLICE_4_B_sliceRange_variousRemainderValues() public view {
+    function test_sliceRange_variousRemainderValues() public view {
         bytes memory input = _createPattern(200);
 
         // Test all possible remainder values (0 to 31)
@@ -508,8 +508,8 @@ contract BytesUtilsTest is Test {
     }
 
     /// @dev Verifies `sliceRange` zero-pads the trailing bytes in the last output word for non-word-aligned
-    ///      lengths so adjacent source memory cannot leak. [BYTE-SLICE-4]
-    function testFuzz_BYTE_SLICE_4_C__FBU_SLICE_22_sliceRange_nonAlignedLastWordZeroPadsTrailingBytes(
+    ///  lengths so adjacent source memory cannot leak.
+    function testFuzz_sliceRange_nonAlignedLastWordZeroPadsTrailingBytes(
         uint16 bufferLength,
         uint16 startIndex,
         uint16 sliceLength
@@ -539,7 +539,7 @@ contract BytesUtilsTest is Test {
         assertEq(uint256(lastWord) & trailingMask, 0, "Trailing bytes in the last word should be zero-padded");
     }
 
-    function testFuzz_BYTE_SLICE_1_B__BYTE_SLICE_3_B__FBU_SLICE_22_sliceRange_arbitraryInputs(
+    function testFuzz_sliceRange_arbitraryInputs(
         uint16 bufferLength,
         uint16 startIndex,
         uint16 sliceLength
@@ -569,7 +569,7 @@ contract BytesUtilsTest is Test {
         }
     }
 
-    function testFuzz_FBU_SLICE_22_sliceRange_matchesSliceFrom(uint16 bufferLength, uint16 startIndex) public view {
+    function testFuzz_sliceRange_matchesSliceFrom(uint16 bufferLength, uint16 startIndex) public view {
         bufferLength = uint16(bound(bufferLength, 0, 500));
         startIndex = uint16(bound(startIndex, 0, 600));
 

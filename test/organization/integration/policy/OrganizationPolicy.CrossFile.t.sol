@@ -50,7 +50,7 @@ contract OrganizationPolicyCrossFileTest is LibOrganizationPolicySuiteBase {
     }
 
     /// @dev Verifies policy authorization fails after removing the designated initiator and reviewer from membership.
-    function test_OMB_MM_3_removedMemberStopsQualifyingAsPolicyInitiatorAndReviewer() public {
+    function test_removedMemberStopsQualifyingAsPolicyInitiatorAndReviewer() public {
         // Setup: configure a member-scoped policy and seed the designated initiator/reviewer as active members.
         Policy memory policy = _buildMemberScopedPolicy(initiator1, reviewer1);
         policyStateHarness.setMemberStatus(initiator1, true);
@@ -84,7 +84,7 @@ contract OrganizationPolicyCrossFileTest is LibOrganizationPolicySuiteBase {
     }
 
     /// @dev Verifies deleted groups stop authorizing policies even when stale group-member bits still remain set.
-    function test_OGB_MG_3_OGB_MG_5_GROUP_INV_4_deletedGroupWithGhostMembershipStopsAuthorizingPolicies() public {
+    function test_deletedGroupWithGhostMembershipStopsAuthorizingPolicies() public {
         // Setup: configure a shared group-based policy and seed live organization membership plus group membership.
         Policy memory policy = _buildSharedGroupPolicy(AUTHORIZATION_GROUP_ID);
         policyStateHarness.setGroupStatus(AUTHORIZATION_GROUP_ID, true);

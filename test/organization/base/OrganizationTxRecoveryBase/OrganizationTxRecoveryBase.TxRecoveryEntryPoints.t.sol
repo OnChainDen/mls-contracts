@@ -33,9 +33,9 @@ import {PendingRecoveryInitTimelock, TxRecoveryState} from "types/RecoveryTypes.
 contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRecoveryBaseSuiteBase {
     address internal constant ALT_TX_RECOVERY = address(0x710AA);
 
-    /// @dev Verifies OTRB-IETR-1 and OTRB-IETR-2: non-recovery callers (including guardian) revert via
+    /// @dev Verifies non-recovery callers (including guardian) revert via
     /// `onlyTxRecoveryAddress`.
-    function test_OTRB_IETR_1__OTRB_IETR_2_nonRecoveryCallerAndGuardian_revertUnauthorizedTxRecoveryAddress() public {
+    function test_nonRecoveryCallerAndGuardian_revertUnauthorizedTxRecoveryAddress() public {
         // Setup
 
         // Call
@@ -51,8 +51,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(harness.getTxRecoveryState().pendingEnableTimestamp, 0, "pending enable must stay unset");
     }
 
-    /// @dev Verifies OTRB-IETR-3: authorized tx-recovery caller reaches library initiate-enable flow.
-    function test_OTRB_IETR_3_authorizedRecoveryCaller_initiatesEnableFlow() public {
+    /// @dev Verifies authorized tx-recovery caller reaches library initiate-enable flow.
+    function test_authorizedRecoveryCaller_initiatesEnableFlow() public {
         // Setup
         uint256 expectedPending = block.timestamp + TX_RECOVERY_TIMELOCK;
 
@@ -66,8 +66,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         );
     }
 
-    /// @dev Verifies OTRB-IETR-4: with zero timelock configuration, initiate bubbles invalid timelock validation.
-    function test_OTRB_IETR_4_initiateEnable_zeroTimelock_bubblesInvalidTimelockDuration() public {
+    /// @dev Verifies with zero timelock configuration, initiate bubbles invalid timelock validation.
+    function test_initiateEnable_zeroTimelock_bubblesInvalidTimelockDuration() public {
         // Setup
         _setTxRecoveryState(TX_RECOVERY, false, 0, 0, address(0), 0, 0);
 
@@ -89,7 +89,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.initiateEnableTransactionAndERC1271Recovery` bubbles
     /// `TxRecoveryNotConfigured` when storage has a zero recovery address with an in-range timelock.
-    function test_OTRB_IETR_4_A__OREC_TRF_2_initiateEnable_zeroRecoveryAddress_bubblesTxRecoveryNotConfigured() public {
+    function test_initiateEnable_zeroRecoveryAddress_bubblesTxRecoveryNotConfigured() public {
         // Setup: seed unconfigured recovery state with a valid timelock and use zero-address caller to satisfy
         // `onlyTxRecoveryAddress` so execution reaches library-level configuration checks.
         _setTxRecoveryState(address(0), false, TX_RECOVERY_TIMELOCK, 0, address(0), 0, 0);
@@ -103,8 +103,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(harness.getTxRecoveryState().pendingEnableTimestamp, 0, "pending enable should remain zero");
     }
 
-    /// @dev Verifies OTRB-IETR-5 and OTRB-IETR-6: initiate bubbles `already-enabled` and `already-pending` guards.
-    function test_OTRB_IETR_5__OTRB_IETR_6_initiateEnable_alreadyEnabledOrPending_reverts() public {
+    /// @dev Verifies initiate bubbles `already-enabled` and `already-pending` guards.
+    function test_initiateEnable_alreadyEnabledOrPending_reverts() public {
         // Setup
         _setTxRecoveryState(TX_RECOVERY, true, TX_RECOVERY_TIMELOCK, 0, address(0), 0, 0);
 
@@ -126,8 +126,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         );
     }
 
-    /// @dev Verifies OTRB-FETR-1, OTRB-FETR-2, and OTRB-FETR-3: finalize access and timelock guards.
-    function test_OTRB_FETR_1__OTRB_FETR_2__OTRB_FETR_3__OREC_TRF_1__TXRC_INV_2_A_finalizeEnable_accessAndTimelockGuards_revert()
+    /// @dev Verifies finalize access and timelock guards.
+    function test_finalizeEnable_accessAndTimelockGuards_revert()
         public
     {
         // Setup
@@ -156,9 +156,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertFalse(harness.getTxRecoveryState().isEnabled, "recovery should remain disabled");
     }
 
-    /// @dev Verifies OTRB-FETR-4, OTRB-FETR-5, and OTRB-FETR-6: finalize succeeds at boundary, clears pending, and
+    /// @dev Verifies finalize succeeds at boundary, clears pending, and
     /// cannot be replayed.
-    function test_OTRB_FETR_4__OTRB_FETR_5__OTRB_FETR_6__TXRC_INV_2_B_finalizeEnable_boundarySuccessAndReplayGuard()
+    function test_finalizeEnable_boundarySuccessAndReplayGuard()
         public
     {
         // Setup
@@ -182,8 +182,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         harness.finalizeEnableTransactionAndERC1271Recovery();
     }
 
-    /// @dev Verifies OTRB-CETR-1 and OTRB-CETR-2: cancel-enable access/no-pending guards.
-    function test_OTRB_CETR_1__OTRB_CETR_2_cancelEnable_accessAndNoPendingGuards_revert() public {
+    /// @dev Verifies cancel-enable access/no-pending guards.
+    function test_cancelEnable_accessAndNoPendingGuards_revert() public {
         // Setup
 
         // Call
@@ -199,9 +199,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(harness.getTxRecoveryState().pendingEnableTimestamp, 0, "pending must remain zero");
     }
 
-    /// @dev Verifies OTRB-CETR-3, OTRB-CETR-4, and OTRB-CETR-5: cancel clears pending, works after expiry, and never
+    /// @dev Verifies cancel clears pending, works after expiry, and never
     /// enables recovery.
-    function test_OTRB_CETR_3__OTRB_CETR_4__OTRB_CETR_5_cancelEnable_clearsPendingAndDoesNotEnable() public {
+    function test_cancelEnable_clearsPendingAndDoesNotEnable() public {
         // Setup
         vm.prank(TX_RECOVERY);
         harness.initiateEnableTransactionAndERC1271Recovery();
@@ -219,8 +219,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertFalse(state.isEnabled, "cancel should never enable recovery");
     }
 
-    /// @dev Verifies OTRB-DTER-1: disable is protected by `onlyTxRecoveryAddress`.
-    function test_OTRB_DTER_1_disable_nonRecoveryCaller_revertsUnauthorizedTxRecoveryAddress() public {
+    /// @dev Verifies disable is protected by `onlyTxRecoveryAddress`.
+    function test_disable_nonRecoveryCaller_revertsUnauthorizedTxRecoveryAddress() public {
         // Setup
 
         // Call
@@ -232,9 +232,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertFalse(harness.getTxRecoveryState().isEnabled, "state should remain unchanged");
     }
 
-    /// @dev Verifies OTRB-DTER-2, OTRB-DTER-3, OTRB-DTER-4, and OTRB-DTER-5: disable clears enabled/pending state, is
+    /// @dev Verifies disable clears enabled/pending state, is
     /// idempotent, and blocks recovery execution.
-    function test_OTRB_DTER_2__OTRB_DTER_3__OTRB_DTER_4__OTRB_DTER_5__TXRC_INV_3_disable_clearsStateAndBlocksExecution()
+    function test_disable_clearsStateAndBlocksExecution()
         public
     {
         // Setup
@@ -262,8 +262,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         harness.executeRecoveryAccountTransaction(address(account), DESTINATION, 0, bytes(""));
     }
 
-    /// @dev Verifies OTRB-ERAT-1, OTRB-ERAT-2, and OTRB-ERAT-3: execute-recovery access/config/enabled guards.
-    function test_OTRB_ERAT_1__OTRB_ERAT_2__OTRB_ERAT_3__TXRC_INV_5_A_executeRecovery_accessAndEnableGuards_revert()
+    /// @dev Verifies execute-recovery access/config/enabled guards.
+    function test_executeRecovery_accessAndEnableGuards_revert()
         public
     {
         // Setup
@@ -289,8 +289,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(account.executionCount(), 0, "account execution should never be reached");
     }
 
-    /// @dev Verifies OTRB-ERAT-4 and OTRB-ERAT-5: pending enable (pre/post-expiry) is not sufficient before finalize.
-    function test_OTRB_ERAT_4__OTRB_ERAT_5__TXRC_INV_5_B_executeRecovery_pendingEnableNotFinalized_revertsTxRecoveryNotEnabled()
+    /// @dev Verifies pending enable (pre/post-expiry) is not sufficient before finalize.
+    function test_executeRecovery_pendingEnableNotFinalized_revertsTxRecoveryNotEnabled()
         public
     {
         // Setup
@@ -314,8 +314,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(account.executionCount(), 0, "account execution should remain blocked");
     }
 
-    /// @dev Verifies OTRB-ERAT-6 and OTRB-ERAT-13: deployed-account check occurs after recovery-enabled validation.
-    function test_OTRB_ERAT_6__OTRB_ERAT_13_executeRecovery_validationOrder_preserved() public {
+    /// @dev Verifies deployed-account check occurs after recovery-enabled validation.
+    function test_executeRecovery_validationOrder_preserved() public {
         // Setup
         _setTxRecoveryState(TX_RECOVERY, false, TX_RECOVERY_TIMELOCK, 0, address(0), 0, 0);
 
@@ -336,9 +336,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         // Verify
     }
 
-    /// @dev Verifies OTRB-ERAT-7, OTRB-ERAT-8, and OTRB-ERAT-9: successful execution emits event and forwards exact
+    /// @dev Verifies successful execution emits event and forwards exact
     /// tuple with nonce/policy fixed to zero.
-    function test_OTRB_ERAT_7__OTRB_ERAT_8__OTRB_ERAT_9__TXRC_INV_6_executeRecovery_success_emitsAndForwardsExpectedTuple()
+    function test_executeRecovery_success_emitsAndForwardsExpectedTuple()
         public
     {
         // Setup
@@ -365,7 +365,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies the real `AccountImplementation` emits `IAccount.TransactionExecuted` with nonce=0 and policyId=0
     /// when invoked through the recovery execution path.
-    function test_OTRB_ERAT_7__OTRB_ERAT_8__OTRB_ERAT_9__OREC_TRF_5_executeRecovery_realAccount_emitsAccountTransactionExecuted()
+    function test_executeRecovery_realAccount_emitsAccountTransactionExecuted()
         public
     {
         // Setup: deploy real AccountImplementation behind a BeaconProxy pointing to the harness as beacon.
@@ -393,9 +393,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(target.total(), 11, "calldata should be processed by target");
     }
 
-    /// @dev Verifies OTRB-ERAT-10 and OTRB-ERAT-11: native transfer and contract-call recovery execution succeed
+    /// @dev Verifies native transfer and contract-call recovery execution succeed
     /// end-to-end.
-    function test_OTRB_ERAT_10__OTRB_ERAT_11_executeRecovery_nativeTransferAndContractCall_succeed() public {
+    function test_executeRecovery_nativeTransferAndContractCall_succeed() public {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
@@ -421,8 +421,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(target.total(), 21, "calldata should be processed by target");
     }
 
-    /// @dev Verifies OTRB-ERAT-12 and OTRB-ERAT-20: downstream account revert bubbles and no recovery event persists.
-    function test_OTRB_ERAT_12__OTRB_ERAT_20__OREC_TRF_6_executeRecovery_downstreamRevert_bubblesAndNoRecoveryEventPersists()
+    /// @dev Verifies downstream account revert bubbles and no recovery event persists.
+    function test_executeRecovery_downstreamRevert_bubblesAndNoRecoveryEventPersists()
         public
     {
         // Setup
@@ -440,8 +440,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(account.executionCount(), 0, "full revert should rollback account execution count");
     }
 
-    /// @dev Verifies OTRB-ERAT-14: executing recovery tx does not mutate tx-recovery configuration fields.
-    function test_OTRB_ERAT_14_executeRecovery_doesNotMutateTxRecoveryConfigFields() public {
+    /// @dev Verifies executing recovery tx does not mutate tx-recovery configuration fields.
+    function test_executeRecovery_doesNotMutateTxRecoveryConfigFields() public {
         // Setup
         _setTxRecoveryState(TX_RECOVERY, true, TX_RECOVERY_TIMELOCK, 0, address(0), 0, 0);
         TxRecoveryState memory beforeState = harness.getTxRecoveryState();
@@ -479,7 +479,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     }
 
     /// @dev Verifies recovery execution succeeds without consuming any Organization nonce slot.
-    function test_TXRC_INV_8_executeRecoveryDoesNotConsumeOrganizationNonceMapping() public {
+    function test_executeRecoveryDoesNotConsumeOrganizationNonceMapping() public {
         // Setup: enable recovery, deploy a recovery target account, and precompute one unused Organization nonce plus
         // one unrelated pre-used nonce as a control snapshot.
         _enableTxRecovery();
@@ -502,7 +502,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     }
 
     /// @dev Verifies recovery-signature validation depends on signer/config only, not on the enabled flag.
-    function test_TXRC_INV_9_isValidRecoverySignature_independentOfEnabledFlag() public {
+    function test_isValidRecoverySignature_independentOfEnabledFlag() public {
         // Setup: bind tx recovery to a signer with a known private key and build one valid signature for a fixed hash.
         uint256 recoveryPk = 0x71009;
         address recoverySigner = vm.addr(recoveryPk);
@@ -522,7 +522,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     }
 
     /// @dev Verifies tx-recovery setup rejects zero recovery addresses and out-of-range timelock values.
-    function test_TXRC_INV_11_validateTxRecoveryParams_rejectsZeroAddressAndOutOfRangeTimelocks() public {
+    function test_validateTxRecoveryParams_rejectsZeroAddressAndOutOfRangeTimelocks() public {
         // Setup: choose a valid recovery address and exercise the helper directly so each rejection is tied to the
         // exact parameter pair under test.
         address validRecoveryAddress = address(0x71011);
@@ -564,9 +564,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         );
     }
 
-    /// @dev Verifies OTRB-ERAT-15: recovery execution targeting organization state-changing selectors fails closed.
+    /// @dev Verifies recovery execution targeting organization state-changing selectors fails closed.
     ///      Sweeps every non-view Organization function selector to ensure none can be invoked via recovery execution.
-    function test_OTRB_ERAT_15_executeRecovery_targetingOrganization_revertsTransactionExecutionFailed() public {
+    function test_executeRecovery_targetingOrganization_revertsTransactionExecutionFailed() public {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
@@ -588,12 +588,12 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(account.executionCount(), 0, "organization target failure should fully revert account execution");
     }
 
-    /// @dev Verifies OTRB-ERAT-16: recovery execution targeting account state-changing selectors fails closed.
+    /// @dev Verifies recovery execution targeting account state-changing selectors fails closed.
     ///      `IAccount.executeTransaction` is the only state-changing Account function; sweep varies nested call
     /// arguments (to external, to organization, to self) and also attempts every Organization state-changing selector
     /// on the
     ///      account address to confirm the account rejects unknown selectors.
-    function test_AI_INV_5__OTRB_ERAT_16_executeRecovery_targetingAccount_revertsTransactionExecutionFailedForSelectorSweep()
+    function test_executeRecovery_targetingAccount_revertsTransactionExecutionFailedForSelectorSweep()
         public
     {
         // Setup
@@ -656,9 +656,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(account.executionCount(), 0, "account self-target failure should fully revert account execution");
     }
 
-    /// @dev Verifies OTRB-IITR-1 and OTRB-IITR-2: initiate-initialize is guardian-gated and enforces sufficient admin
+    /// @dev Verifies initiate-initialize is guardian-gated and enforces sufficient admin
     /// authorization.
-    function test_OTRB_IITR_1__OTRB_IITR_2_initiateInitialize_nonGuardianOrInsufficientAuth_reverts() public {
+    function test_initiateInitialize_nonGuardianOrInsufficientAuth_reverts() public {
         // Setup
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
 
@@ -690,9 +690,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         );
     }
 
-    /// @dev Verifies OTRB-IITR-3, OTRB-IITR-4, OTRB-IITR-5, OTRB-IITR-6, OTRB-IITR-7, OTRB-IITR-8, and OTRB-IITR-9
+    /// @dev Verifies, and
     /// across auth binding/replay and successful initiation.
-    function test_OTRB_IITR_3__OTRB_IITR_4__OTRB_IITR_5__OTRB_IITR_6__OTRB_IITR_7__OTRB_IITR_8__OTRB_IITR_9__NMTRB_ITR_1__NMTRB_ITR_7_initiateInitialize_authBindingReplayAndSuccess()
+    function test_initiateInitialize_authBindingReplayAndSuccess()
         public
     {
         // Setup
@@ -764,9 +764,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, validAuth);
     }
 
-    /// @dev Verifies OTRB-IITR-10, OTRB-IITR-11, and OTRB-IITR-12: initiate-initialize bubbles downstream
+    /// @dev Verifies initiate-initialize bubbles downstream
     /// already-configured/pending/invalid-param errors.
-    function test_OTRB_IITR_10__OTRB_IITR_11__OTRB_IITR_12__NMTRB_ITR_9__OREC_DRI_5_initiateInitialize_downstreamErrorsBubble()
+    function test_initiateInitialize_downstreamErrorsBubble()
         public
     {
         // Setup
@@ -850,7 +850,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.initiateInitializeTransactionAndERC1271Recovery` can re-initiate the
     /// same params with a different salt after cancellation.
-    function test_NMTRB_ITR_2__OREC_DRI_2_initiateInitialize_sameParamsDifferentSalts_canSucceedAcrossCancel() public {
+    function test_initiateInitialize_sameParamsDifferentSalts_canSucceedAcrossCancel() public {
         // Setup: start from zeroed tx-recovery config and build two initiate auth payloads around an intermediate
         // cancel for the same deferred-init tuple.
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
@@ -915,7 +915,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.initiateInitializeTransactionAndERC1271Recovery` rolls back nonce
     /// usage when downstream init validation fails.
-    function test_NMTRB_ITR_9_initiateInitialize_downstreamFailures_rollBackNonce() public {
+    function test_initiateInitialize_downstreamFailures_rollBackNonce() public {
         // Setup: prepare four initiate auth payloads that will each reach a distinct downstream failure branch:
         // already-configured, already-pending, invalid zero recovery address, and invalid timelock duration.
         (AdminAuthParams memory configuredAuth, bytes memory configuredOperationData) = _buildTxRecoveryAuth({
@@ -1001,7 +1001,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.finalizeInitializeTransactionAndERC1271Recovery` reverts when admin
     /// signatures do not satisfy the current admin threshold.
-    function test_OTRB_FITR_2_finalizeInitialize_insufficientAdminAuthorization_reverts() public {
+    function test_finalizeInitialize_insufficientAdminAuthorization_reverts() public {
         // Setup: require two admin signatures and seed a pending deferred-init tuple for finalize.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
         _setTxRecoveryState(
@@ -1031,7 +1031,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.finalizeInitializeTransactionAndERC1271Recovery` rejects stale admin
     /// signatures when current pending values differ from signed operation data.
-    function test_OTRB_FITR_6__NMTRB_ITR_8_finalizeInitialize_stalePendingValues_revert() public {
+    function test_finalizeInitialize_stalePendingValues_revert() public {
         // Setup: build finalize auth for an initial pending tuple, then mutate the stored pending recovery address.
         _setTxRecoveryState(
             address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
@@ -1070,7 +1070,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         );
     }
 
-    /// @dev Verifies OTRB-FITR-1 through OTRB-FITR-12: the full auth, timelock, and state lifecycle of
+    /// @dev Verifies through : the full auth, timelock, and state lifecycle of
     /// `finalizeInitializeTransactionAndERC1271Recovery`. Walks through every guard in sequence:
     ///   - FITR-1:  Non-guardian caller reverts via `onlyGuardian`.
     ///   - FITR-7:  Guardian with valid auth but no pending init reverts `NoTxRecoveryInitializationPending`.
@@ -1085,7 +1085,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     ///   - FITR-11: `isEnabled` remains false after finalize (enable flow still required).
     ///   - FITR-12: Second finalize reverts `NoTxRecoveryInitializationPending` (pending already cleared).
     ///   - FITR-2:  Insufficient admin threshold variant tested in dedicated `test_OTRB_FITR_2_*`.
-    function test_OTRB_FITR_1__OTRB_FITR_2__OTRB_FITR_3__OTRB_FITR_4__OTRB_FITR_5__OTRB_FITR_6__OTRB_FITR_7__OTRB_FITR_8__OTRB_FITR_9__OTRB_FITR_10__OTRB_FITR_11__OTRB_FITR_12__NMTRB_ITR_7__OREC_DRI_3__OREC_PH_1_finalizeInitialize_authAndStateSemantics()
+    function test_finalizeInitialize_authAndStateSemantics()
         public
     {
         // Setup: start from a fully zeroed recovery state (no config, no pending init).
@@ -1200,7 +1200,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.finalizeInitializeTransactionAndERC1271Recovery` reusing the same
     /// signed params and salt reverts once the nonce has been consumed.
-    function test_NMTRB_ITR_3_finalizeInitialize_replaySameNonce_revertsNonceAlreadyUsed() public {
+    function test_finalizeInitialize_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup: stage one pending deferred-init tuple and build a single finalize auth payload for it.
         _setTxRecoveryState(address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp);
         (AdminAuthParams memory auth, bytes memory operationData) = _buildTxRecoveryAuth({
@@ -1229,7 +1229,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.finalizeInitializeTransactionAndERC1271Recovery` can finalize the
     /// same pending tuple on fresh organization instances with different salts.
-    function test_NMTRB_ITR_4_finalizeInitialize_samePendingTupleDifferentSalts_succeedsPerFreshOrg() public {
+    function test_finalizeInitialize_samePendingTupleDifferentSalts_succeedsPerFreshOrg() public {
         // Setup: deploy two fresh harnesses with the same pending deferred-init tuple and distinct finalize salts.
         OrganizationTxRecoveryBaseHarness secondHarness = new OrganizationTxRecoveryBaseHarness();
         secondHarness.setGuardian(GUARDIAN);
@@ -1306,7 +1306,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     }
 
     /// @dev Verifies finalize and cancel downstream check failures roll back nonce usage.
-    function test_NMTRB_ITR_10_finalizeAndCancelFailures_rollBackNonce() public {
+    function test_finalizeAndCancelFailures_rollBackNonce() public {
         // Setup: stage one pending tuple that is still timelocked for finalize, then prepare a zero-pending cancel
         // auth for the no-pending branch.
         _setTxRecoveryState(
@@ -1357,7 +1357,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` replaying the same
     /// signed pending tuple and salt reverts once the cancel nonce has been consumed.
-    function test_NMTRB_ITR_5_cancelInitialize_replaySameNonce_revertsNonceAlreadyUsed() public {
+    function test_cancelInitialize_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup: stage one pending deferred-init tuple and build a single cancel auth payload for it.
         _setTxRecoveryState(
             address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
@@ -1396,7 +1396,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` reverts for
     /// insufficient admin authorization, `isApproval=false` signatures, and wrong operation type signatures.
-    function test_OTRB_CITR_2__OTRB_CITR_3__OTRB_CITR_4__NMTRB_ITR_7_cancelInitialize_authValidation_reverts() public {
+    function test_cancelInitialize_authValidation_reverts() public {
         // Setup: seed pending deferred-init state, then require two admin signatures for the insufficient-auth branch.
         _setTxRecoveryState(
             address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
@@ -1451,7 +1451,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` rejects stale admin
     /// signatures when pending values change after signature creation.
-    function test_OTRB_CITR_6__NMTRB_ITR_8_cancelInitialize_stalePendingValues_revert() public {
+    function test_cancelInitialize_stalePendingValues_revert() public {
         // Setup: sign cancel auth for initial pending values, then mutate pending recovery address in storage.
         _setTxRecoveryState(
             address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
@@ -1490,7 +1490,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` reverts with
     /// `NoTxRecoveryInitializationPending` when no deferred-init tuple is staged.
-    function test_OTRB_CITR_7_cancelInitialize_noPendingInit_revertsNoTxRecoveryInitializationPending() public {
+    function test_cancelInitialize_noPendingInit_revertsNoTxRecoveryInitializationPending() public {
         // Setup: clear pending-init storage and build valid cancel auth bound to zero pending values.
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
         (AdminAuthParams memory noPendingAuth,) = _buildTxRecoveryAuth({
@@ -1516,7 +1516,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` succeeds before pending
     /// timestamp expiry and does not require waiting for admin-op timelock.
-    function test_OTRB_CITR_9_cancelInitialize_beforePendingTimestamp_succeeds() public {
+    function test_cancelInitialize_beforePendingTimestamp_succeeds() public {
         // Setup: stage pending deferred-init values with a future pending timestamp.
         uint256 pendingTimestamp = block.timestamp + ADMIN_OPERATION_TIMELOCK;
         _setTxRecoveryState(address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, pendingTimestamp);
@@ -1542,7 +1542,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` can cancel the same
     /// pending deferred-init tuple twice when fresh auth salts are used and the tuple is re-initiated in between.
-    function test_NMTRB_ITR_6_cancelInitialize_samePendingTupleDifferentSalts_canCancelTwiceAcrossReinitiation()
+    function test_cancelInitialize_samePendingTupleDifferentSalts_canCancelTwiceAcrossReinitiation()
         public
     {
         // Setup: build two initiate auth payloads and two cancel auth payloads around the same deferred-init tuple.
@@ -1611,9 +1611,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(state.pendingInit.pendingTimestamp, 0, "second cancel should clear pending timestamp");
     }
 
-    /// @dev Verifies OTRB-CITR-1, OTRB-CITR-2, OTRB-CITR-3, OTRB-CITR-4, OTRB-CITR-5, OTRB-CITR-6, OTRB-CITR-7,
-    /// OTRB-CITR-8, OTRB-CITR-9, OTRB-CITR-10, and OTRB-CITR-11 across cancel auth/state semantics.
-    function test_OTRB_CITR_1__OTRB_CITR_2__OTRB_CITR_3__OTRB_CITR_4__OTRB_CITR_5__OTRB_CITR_6__OTRB_CITR_7__OTRB_CITR_8__OTRB_CITR_9__OTRB_CITR_10__OTRB_CITR_11_cancelInitialize_authAndStateSemantics()
+    /// @dev Verifies,
+    /// , and across cancel auth/state semantics.
+    function test_cancelInitialize_authAndStateSemantics()
         public
     {
         // Setup
@@ -1666,9 +1666,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         );
     }
 
-    /// @dev Verifies OTRB-GTRS-1, OTRB-GTRS-2, OTRB-GTRS-3, OTRB-GTRS-4, OTRB-GTRS-5, and OTRB-GTRS-6:
+    /// @dev Verifies
     /// `getTxRecoveryState` returns full snapshots across lifecycle transitions and is callable by anyone.
-    function test_OTRB_GTRS_1__OTRB_GTRS_2__OTRB_GTRS_3__OTRB_GTRS_4__OTRB_GTRS_5__OTRB_GTRS_6_getTxRecoveryState_reflectsLifecycleAndIsPermissionless()
+    function test_getTxRecoveryState_reflectsLifecycleAndIsPermissionless()
         public
     {
         // Setup

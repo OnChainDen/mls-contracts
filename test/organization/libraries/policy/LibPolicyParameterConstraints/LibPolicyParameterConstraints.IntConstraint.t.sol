@@ -12,7 +12,7 @@ import {ConstraintType} from "types/PolicyTypes.sol";
  */
 contract LibPolicyParameterConstraintsIntConstraintTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that exact matches for positive and negative values pass.
-    function test_LPPC_ATYPE_10_isIntParameterAllowedByConstraint_exactPositiveAndNegativeMatch_returnsTrue()
+    function test_isIntParameterAllowedByConstraint_exactPositiveAndNegativeMatch_returnsTrue()
         public
         view
     {
@@ -116,7 +116,7 @@ contract LibPolicyParameterConstraintsIntConstraintTest is LibPolicyParameterCon
     }
 
     /// @dev Verifies that malformed range payload lengths fail closed for int constraints.
-    function test_POL_INV_14_isIntParameterAllowedByConstraint_malformedRangeComparisonData_returnsFalse() public view {
+    function test_isIntParameterAllowedByConstraint_malformedRangeComparisonData_returnsFalse() public view {
         // Setup: build short and oversized range payloads for signed range decoding.
         bytes memory shortRangeData = abi.encode(int256(-5));
         bytes memory oversizedRangeData = bytes.concat(abi.encode(int256(-5), int256(5)), bytes32(uint256(1)));
@@ -163,7 +163,7 @@ contract LibPolicyParameterConstraintsIntConstraintTest is LibPolicyParameterCon
     }
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
-    function test_POL_INV_14_isIntParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
+    function test_isIntParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
         public
     {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails

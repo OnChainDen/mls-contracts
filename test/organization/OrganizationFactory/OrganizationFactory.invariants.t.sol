@@ -31,8 +31,8 @@ contract OrganizationFactoryInvariantsTest is Test {
         targetContract(address(handler));
     }
 
-    /// @dev Verifies INIT-INV-1: `isInitialized()` only transitions false -> true and never back.
-    function invariant_INIT_STATE_1_INIT_INV_1_isInitialized_canOnlyTransitionFalseToTrue() public view {
+    /// @dev Verifies `isInitialized()` only transitions false -> true and never back.
+    function invariant_isInitialized_canOnlyTransitionFalseToTrue() public view {
         assertFalse(handler.reinitializeSucceeded(), "reinitialize unexpectedly succeeded");
 
         uint256 successfulLength = handler.deploymentRecordsLength();
@@ -53,8 +53,8 @@ contract OrganizationFactoryInvariantsTest is Test {
         }
     }
 
-    /// @dev Verifies INIT-INV-2: initialized organizations keep admin/member consistency invariants.
-    function invariant_INIT_STATE_2_INIT_INV_2_initializedAdminMemberConsistency_holds() public view {
+    /// @dev Verifies initialized organizations keep admin/member consistency invariants.
+    function invariant_initializedAdminMemberConsistency_holds() public view {
         uint256 length = handler.deploymentRecordsLength();
         for (uint256 i = 0; i < length; ++i) {
             OrganizationFactoryInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
@@ -75,8 +75,8 @@ contract OrganizationFactoryInvariantsTest is Test {
         }
     }
 
-    /// @dev Verifies INIT-INV-3: successful factory deployments always match CREATE2 precompute.
-    function invariant_INIT_INV_3_factoryDeployments_alwaysMatchComputedAddress() public view {
+    /// @dev Verifies successful factory deployments always match CREATE2 precompute.
+    function invariant_factoryDeployments_alwaysMatchComputedAddress() public view {
         OrganizationFactoryHarness factory = OrganizationFactoryHarness(handler.factoryAddress());
         address implementation = handler.implementationAddress();
         address whitelist = handler.whitelistAddress();
@@ -93,8 +93,8 @@ contract OrganizationFactoryInvariantsTest is Test {
         }
     }
 
-    /// @dev Verifies INIT-INV-4: reverting direct initialization leaves no partial persisted init state.
-    function invariant_INIT_INV_4_failedDirectInitialization_leavesNoPartialState() public view {
+    /// @dev Verifies reverting direct initialization leaves no partial persisted init state.
+    function invariant_failedDirectInitialization_leavesNoPartialState() public view {
         assertFalse(handler.unexpectedFailedDirectInitSuccess(), "invalid direct initialize unexpectedly succeeded");
 
         uint256 length = handler.failedDirectInitRecordsLength();
@@ -125,8 +125,8 @@ contract OrganizationFactoryInvariantsTest is Test {
         }
     }
 
-    /// @dev Verifies INIT-INV-5: deployer written by proxy constructor stays immutable.
-    function invariant_INIT_INV_5_proxyDeployerAddress_remainsImmutable() public view {
+    /// @dev Verifies deployer written by proxy constructor stays immutable.
+    function invariant_proxyDeployerAddress_remainsImmutable() public view {
         uint256 successfulLength = handler.deploymentRecordsLength();
         for (uint256 i = 0; i < successfulLength; ++i) {
             OrganizationFactoryInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
@@ -149,8 +149,8 @@ contract OrganizationFactoryInvariantsTest is Test {
         }
     }
 
-    /// @dev Verifies INIT-INV-6: tx recovery is never initialized as enabled.
-    function invariant_INIT_INV_6_txRecoveryDefaultSafety_startsDisabled() public view {
+    /// @dev Verifies tx recovery is never initialized as enabled.
+    function invariant_txRecoveryDefaultSafety_startsDisabled() public view {
         uint256 length = handler.deploymentRecordsLength();
         for (uint256 i = 0; i < length; ++i) {
             OrganizationFactoryInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
@@ -159,8 +159,8 @@ contract OrganizationFactoryInvariantsTest is Test {
         }
     }
 
-    /// @dev Verifies INIT-INV-7: active group members are always organization members.
-    function invariant_INIT_INV_7_groupMembers_areOrganizationMembers() public view {
+    /// @dev Verifies active group members are always organization members.
+    function invariant_groupMembers_areOrganizationMembers() public view {
         uint256 length = handler.deploymentRecordsLength();
         for (uint256 i = 0; i < length; ++i) {
             OrganizationFactoryInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
@@ -184,8 +184,8 @@ contract OrganizationFactoryInvariantsTest is Test {
         }
     }
 
-    /// @dev Verifies INIT-INV-8: failed factory deployment during init revert leaves no deployed proxy code.
-    function invariant_INIT_INV_8_failedFactoryInitialization_keepsComputedAddressEmpty() public view {
+    /// @dev Verifies failed factory deployment during init revert leaves no deployed proxy code.
+    function invariant_failedFactoryInitialization_keepsComputedAddressEmpty() public view {
         assertFalse(handler.unexpectedFailedFactorySuccess(), "invalid factory deployment unexpectedly succeeded");
         assertFalse(handler.failedFactoryRevertLeftCode(), "failed factory initialize left deployed code");
     }

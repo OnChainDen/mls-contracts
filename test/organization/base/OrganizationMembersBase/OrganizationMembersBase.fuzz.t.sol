@@ -17,7 +17,7 @@ contract OrganizationMembersBaseFuzzTest is OrganizationMembersBaseSuiteBase {
      * @dev Verifies `OrganizationMembersBase.modifyMembers` remains guardian-only.
      * @param saltRaw Raw salt used to derive a bounded nonce salt
      */
-    function testFuzz_FOMB_MEMBER_48_modifyMembersIsGuardianOnly(uint256 saltRaw) public {
+    function testFuzz_modifyMembersIsGuardianOnly(uint256 saltRaw) public {
         address candidate = address(0x5201);
 
         // Setup: configure one valid admin signer and build the matching member-modification auth payload.
@@ -54,7 +54,7 @@ contract OrganizationMembersBaseFuzzTest is OrganizationMembersBaseSuiteBase {
      * @param mutationSelector Chooses which member batch component to mutate after signing
      * @param saltRaw Raw salt used to derive a bounded nonce salt
      */
-    function testFuzz_FOMB_MEMBER_48_modifyMembersBindsSignaturesToExactMemberBatches(
+    function testFuzz_modifyMembersBindsSignaturesToExactMemberBatches(
         uint8 mutationSelector,
         uint256 saltRaw
     ) public {

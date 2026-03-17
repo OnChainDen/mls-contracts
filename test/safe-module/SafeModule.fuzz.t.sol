@@ -75,8 +75,8 @@ contract RevertingFuzzTarget {
 
 /**
  * @dev Fuzz tests for SafeExecutorModule and BatchedTransaction.
- *      Covers test plan rows SMI-FUZ-1 through SMI-FUZ-4 and SMI-FUZ-6.
- *      SMI-FUZ-7 and SMI-FUZ-8 cover guardian module signature fuzzing and are
+ *  Covers test plan rows through and.
+ * cover guardian module signature fuzzing and are
  *      implemented in the existing LibOrganizationAccountSignature fuzz suite.
  */
 contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
@@ -121,7 +121,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
     /// @dev Verifies only the configured authorized executor can make `executeOnBehalf` succeed.
     /// @param caller The fuzzed caller attempting to invoke the module.
     /// @param newValue The value written on the success branch.
-    function testFuzz_FSEM_EXEC_150_executeOnBehalf_onlyAuthorizedExecutorCanCall(address caller, uint256 newValue)
+    function testFuzz_executeOnBehalf_onlyAuthorizedExecutorCanCall(address caller, uint256 newValue)
         public
     {
         bytes memory data = abi.encodeWithSelector(FuzzTarget.setValue.selector, newValue);
@@ -152,7 +152,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
 
     /// @dev Verifies `executeOnBehalf` always rejects attempts to target the Safe itself.
     /// @param data The fuzzed calldata supplied on the forbidden Safe-targeted call.
-    function testFuzz_FSEM_EXEC_151_executeOnBehalf_callsToSafeAlwaysRevert(bytes calldata data) public {
+    function testFuzz_executeOnBehalf_callsToSafeAlwaysRevert(bytes calldata data) public {
         vm.assume(data.length <= 1024);
 
         // Setup: choose arbitrary calldata while forcing the module target to equal the configured Safe.
@@ -169,7 +169,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
     /// @dev Verifies `executeOnBehalf` chooses the Safe operation solely from the target kind.
     /// @param useBatchedTarget Whether to route through `BATCHED_TRANSACTION` instead of a direct call target.
     /// @param newValue Fuzzed value written through the selected execution path.
-    function testFuzz_SMI_FUZ_1_executeOnBehalf_operationMatchesTargetKind(bool useBatchedTarget, uint256 newValue)
+    function testFuzz_executeOnBehalf_operationMatchesTargetKind(bool useBatchedTarget, uint256 newValue)
         public
     {
         // Setup: build a successful direct-call or batch-call payload against known contract targets.
@@ -206,7 +206,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
 
     /// @dev Verifies `executeOnBehalf` forwards exact calldata while always instructing the Safe to send zero value.
     /// @param randomData The fuzzed calldata forwarded into the Safe.
-    function testFuzz_SMI_FUZ_2__FSEM_EXEC_153_executeOnBehalf_forwardsZeroValueAndCalldataByteForByte(bytes calldata randomData)
+    function testFuzz_executeOnBehalf_forwardsZeroValueAndCalldataByteForByte(bytes calldata randomData)
         public
     {
         vm.assume(randomData.length <= 1024);
@@ -229,7 +229,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
     /// @dev Verifies every failed Safe execution path reverts `ExecutionFailed` instead of returning `false`.
     /// @param useBatchedFailure Whether to fail through the batched delegatecall path instead of a direct target
     /// revert.
-    function testFuzz_FSEM_EXEC_154_executeOnBehalf_failedExecutionAlwaysRevertsExecutionFailed(bool useBatchedFailure)
+    function testFuzz_executeOnBehalf_failedExecutionAlwaysRevertsExecutionFailed(bool useBatchedFailure)
         public
     {
         address target;
@@ -257,7 +257,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
     /// @dev Verifies malformed signature inputs never revert and only return canonical ERC-1271 values.
     /// @param hash Message hash supplied to `isValidSignature`.
     /// @param signature Arbitrary malformed or random signature bytes.
-    function testFuzz_SMI_FUZ_3_A_isValidSignature_randomInputsNeverRevertOrReturnUnexpectedValues(
+    function testFuzz_isValidSignature_randomInputsNeverRevertOrReturnUnexpectedValues(
         bytes32 hash,
         bytes calldata signature
     ) public view {
@@ -276,7 +276,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
     /// @param signCorrectHash Whether the signer signs the exact validated hash.
     /// @param hash Message hash supplied to `isValidSignature`.
     /// @param otherSignerPkRaw Fuzzed seed for an alternate non-authorized signer key.
-    function testFuzz_SMI_FUZ_3_B_isValidSignature_onlyAuthorizedExactHashProducesMagic(
+    function testFuzz_isValidSignature_onlyAuthorizedExactHashProducesMagic(
         bool useAuthorizedSigner,
         bool signCorrectHash,
         bytes32 hash,
@@ -301,7 +301,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies successful batch execution matches sequential-call semantics.
-    function testFuzz_SMI_FUZ_4__FBT_EXEC_156_execute_validBatchMatchesSequentialSemantics(uint8 batchSize) public {
+    function testFuzz_execute_validBatchMatchesSequentialSemantics(uint8 batchSize) public {
         // Setup: bound batch size to reasonable range.
         batchSize = uint8(bound(batchSize, 1, 20));
 
@@ -321,7 +321,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies that self-target at any position in the batch causes atomic revert.
-    function testFuzz_SMI_FUZ_6__FBT_EXEC_157_execute_selfTargetAtAnyPositionCausesAtomicRevert(uint8 position) public {
+    function testFuzz_execute_selfTargetAtAnyPositionCausesAtomicRevert(uint8 position) public {
         // Setup: batch of 5 transactions with one targeting address(this) (the "Safe").
         uint8 batchSize = 5;
         position = uint8(bound(position, 0, batchSize - 1));

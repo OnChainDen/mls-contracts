@@ -17,8 +17,7 @@ import {GuardianRecoveryState, TxRecoveryState} from "types/RecoveryTypes.sol";
  */
 contract OrganizationInitializationBaseRoleBoundariesTest is InitializationSuiteBase {
     /// @dev Verifies guardian, tx-recovery, and guardian-recovery entrypoints remain disjoint after initialization.
-    /// [INIT-STATE-4]
-    function test_INIT_STATE_4_initializedRoleChecksRemainDisjointAcrossGuardianAndRecoveryEntrypoints() public {
+    function test_initializedRoleChecksRemainDisjointAcrossGuardianAndRecoveryEntrypoints() public {
         // Setup: deploy one initialized organization whose guardian, guardian-recovery, and tx-recovery roles are all
         // distinct addresses.
         IOrganization organization =
@@ -71,8 +70,7 @@ contract OrganizationInitializationBaseRoleBoundariesTest is InitializationSuite
     }
 
     /// @dev Verifies recovery roles cannot call guardian-only entrypoints unless they are also the current guardian.
-    /// [INIT-STATE-5]
-    function test_INIT_STATE_5_recoveryRolesCannotCallGuardianOnlyEntrypointsUnlessAlsoGuardian() public {
+    function test_recoveryRolesCannotCallGuardianOnlyEntrypointsUnlessAlsoGuardian() public {
         // Setup: deploy one initialized organization and build an auth struct whose contents are irrelevant because
         // role checks should fail before admin-auth validation.
         IOrganization organization =

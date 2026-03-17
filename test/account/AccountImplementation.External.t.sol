@@ -20,7 +20,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies receive accepts ETH from arbitrary senders.
      */
-    function test_AI_RCV_1__OAT_AI_4_receive_acceptsEthFromAnyone() public {
+    function test_receive_acceptsEthFromAnyone() public {
         // Setup: fund a random sender and define transfer value.
         address sender = address(0xA101);
         uint256 value = 0.7 ether;
@@ -38,8 +38,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies receive emits `MLSWalletAccountNativeTokenReceived` with sender/value.
      */
-    /// AI-AENT-6
-    function test_AI_AENT_6__AI_RCV_2__OAT_AI_4_receive_emitsNativeTokenReceivedEvent() public {
+    function test_receive_emitsNativeTokenReceivedEvent() public {
         // Setup: fund sender and configure event expectation.
         address sender = address(0xA102);
         uint256 value = 0.3 ether;
@@ -57,7 +56,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies zero-value receive still emits `MLSWalletAccountNativeTokenReceived`.
      */
-    function test_AI_RCV_3_receive_zeroValueTransfer_emitsEvent() public {
+    function test_receive_zeroValueTransfer_emitsEvent() public {
         // Setup: choose sender for zero-value call.
         address sender = address(0xA103);
 
@@ -75,8 +74,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies non-organization caller reverts with `OnlyOrganization`.
      */
-    /// AI-AENT-1
-    function testFuzz_AI_AENT_1__AI_INV_1__AI_ET_1__OAT_AI_1__FAI_ORG_145_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization(address caller)
+    function testFuzz_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization(address caller)
         public
     {
         vm.assume(caller != address(beacon));
@@ -97,7 +95,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies successful executeTransaction emits `TransactionExecuted`.
      */
-    function test_AI_ET_3_executeTransaction_success_emitsTransactionExecuted() public {
+    function test_executeTransaction_success_emitsTransactionExecuted() public {
         // Setup: deploy target and build calldata tuple.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("payload"), 33);
@@ -115,9 +113,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies failed downstream call reverts with `TransactionExecutionFailed`.
      */
-    /// AI-AENT-3
-    /// AI-AENT-4
-    function test_AI_AENT_3__AI_AENT_4__AI_INV_4__AI_ET_4__OAT_AI_2_executeTransaction_failedCall_revertsTransactionExecutionFailed()
+    function test_executeTransaction_failedCall_revertsTransactionExecutionFailed()
         public
     {
         // Setup: deploy target and build reverting calldata.
@@ -133,7 +129,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies value is forwarded to destination in executeTransaction.
      */
-    function test_AI_ET_5_executeTransaction_forwardsEthValue() public {
+    function test_executeTransaction_forwardsEthValue() public {
         // Setup: deploy receiver and fund account balance.
         AccountNativeReceiver receiver = new AccountNativeReceiver();
         uint256 value = 0.21 ether;
@@ -151,7 +147,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies calldata is forwarded unchanged to destination.
      */
-    function test_AI_ET_6_executeTransaction_forwardsCalldata() public {
+    function test_executeTransaction_forwardsCalldata() public {
         // Setup: deploy target and encode deterministic payload.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory innerPayload = hex"112233445566";
@@ -172,8 +168,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies emitted `TransactionExecuted` carries exact `(to,value,data,nonce,policyId)`.
      */
-    /// AI-AENT-2
-    function test_AI_AENT_2__AI_ET_7_executeTransaction_emitsTransactionExecutedWithExpectedTuple() public {
+    function test_executeTransaction_emitsTransactionExecutedWithExpectedTuple() public {
         // Setup: deploy target and deterministic tuple.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("tuple"), 90);
@@ -192,7 +187,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies getOrganizationAddress returns beacon (organization) address.
      */
-    function test_AI_GOA_1_getOrganizationAddress_returnsBoundOrganizationAddress() public view {
+    function test_getOrganizationAddress_returnsBoundOrganizationAddress() public view {
         // Call: read organization address through account proxy.
         address organization = account.getOrganizationAddress();
 
@@ -203,7 +198,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies getOrganizationAddress is callable by arbitrary callers.
      */
-    function test_AI_GOA_2_getOrganizationAddress_callableByAnyone() public {
+    function test_getOrganizationAddress_callableByAnyone() public {
         // Setup: choose arbitrary caller.
         address caller = address(0xA104);
 
@@ -218,7 +213,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature delegates `(account,hash,signature)` to organization contract.
      */
-    function test_AI_INV_3__AI_IVS_1__OAT_AI_5_isValidSignature_delegatesToOrganizationWithExpectedArguments() public {
+    function test_isValidSignature_delegatesToOrganizationWithExpectedArguments() public {
         // Setup: configure beacon mock to enforce exact delegated call arguments.
         bytes32 hash = keccak256("account-signature-delegate");
         bytes memory signature = hex"0102030405";
@@ -235,8 +230,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature returns ERC-1271 magic value when organization approves.
      */
-    /// AI-AENT-9
-    function test_AI_AENT_9_A__AI_IVS_2__OAT_AI_5_isValidSignature_organizationApproves_returnsMagicValue() public {
+    function test_isValidSignature_organizationApproves_returnsMagicValue() public {
         // Setup: configure organization to approve.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(IERC1271.isValidSignature.selector);
@@ -251,8 +245,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature returns non-magic value when organization rejects.
      */
-    /// AI-AENT-9
-    function test_AI_AENT_9_B__AI_IVS_3__OAT_AI_5_isValidSignature_organizationRejects_returnsNonMagicValue() public {
+    function test_isValidSignature_organizationRejects_returnsNonMagicValue() public {
         // Setup: configure organization to reject.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(0xffffffff);
@@ -267,8 +260,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies bouncing ETH into `receive()` does not let an arbitrary contract bypass `onlyOrganization`.
      */
-    /// AI-AENT-7
-    function test_AI_AENT_7_receiveBounce_cannotBypassOnlyOrganizationForPrivilegedExecution() public {
+    function test_receiveBounce_cannotBypassOnlyOrganizationForPrivilegedExecution() public {
         // Setup: deploy a target that sends ETH into the account receive path and then attempts privileged reentry.
         AccountReceiveReentrancyAttacker attacker = new AccountReceiveReentrancyAttacker();
         AccountCallRecorderTarget downstream = new AccountCallRecorderTarget();
@@ -299,7 +291,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
      * @dev Verifies direct calls on the implementation contract fail `onlyOrganization` because its own storage is
      * unset.
      */
-    function test_OAT_AI_6_executeTransaction_calledOnImplementationContract_revertsOnlyOrganization() public {
+    function test_executeTransaction_calledOnImplementationContract_revertsOnlyOrganization() public {
         // Setup: deploy a deterministic target for the direct implementation call.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("direct-impl"), 88);
@@ -315,7 +307,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies direct `isValidSignature` calls on the implementation contract fail closed and return invalid.
      */
-    function test_OAT_AI_7_isValidSignature_calledOnImplementationContract_returnsInvalidValue() public view {
+    function test_isValidSignature_calledOnImplementationContract_returnsInvalidValue() public view {
         // Call: validate an arbitrary signature directly against the implementation contract.
         bytes4 result = implementation.isValidSignature(keccak256("direct-implementation-signature"), hex"CAFE");
 
@@ -327,7 +319,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature is callable by arbitrary callers (fuzz).
      */
-    function testFuzz_AI_IVS_4_isValidSignature_callableByAnyone(address caller, bytes32 hash, bytes memory signature)
+    function testFuzz_isValidSignature_callableByAnyone(address caller, bytes32 hash, bytes memory signature)
         public
     {
         // Setup: configure deterministic organization response.

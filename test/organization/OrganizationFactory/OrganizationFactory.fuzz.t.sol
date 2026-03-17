@@ -25,7 +25,7 @@ contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
     /// @param disableGuardianRecovery Whether guardian recovery should be omitted from initialization params.
     /// @param disableTxRecovery Whether transaction/ERC1271 recovery should be omitted from initialization params.
     /// @param salt Fuzzed CREATE2 salt used for deployment.
-    function test_INIT_FUZZ_1__INIT_FUZZ_3__FLOI_INIT_26_fuzzValidParams_initializeSucceedsAndInvariantsHold(
+    function test_fuzzValidParams_initializeSucceedsAndInvariantsHold(
         uint256 seed,
         uint8 memberCountRaw,
         uint8 adminCountRaw,
@@ -66,7 +66,7 @@ contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies duplicate members in fuzzed inputs are handled with set semantics during initialization.
-    function test_INIT_FUZZ_2_fuzzDuplicateMembers_initializeUsesSetSemantics(uint256 seed, bytes32 salt) public {
+    function test_fuzzDuplicateMembers_initializeUsesSetSemantics(uint256 seed, bytes32 salt) public {
         // Setup: Build params containing duplicate member entries and a valid single-admin configuration.
         address a = _deriveAddress(seed, 1);
         address b = _deriveAddress(seed, 2);
@@ -92,7 +92,7 @@ contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies fuzzed invalid voting thresholds always revert and leave no deployed code.
-    function test_INIT_FUZZ_4_fuzzInvalidThresholds_alwaysRevert(
+    function test_fuzzInvalidThresholds_alwaysRevert(
         uint256 seed,
         uint8 adminCountRaw,
         uint8 deltaRaw,
@@ -119,7 +119,7 @@ contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies fuzzed timelocks inside the allowed range are accepted during initialization.
-    function test_INIT_FUZZ_5_fuzzTimelocksInsideRange_accepted(
+    function test_fuzzTimelocksInsideRange_accepted(
         uint256 seed,
         uint256 adminTimelockRaw,
         uint256 guardianTimelockRaw,
@@ -148,7 +148,7 @@ contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies fuzzed timelocks outside the allowed range revert with `InvalidTimelockDuration`.
-    function test_INIT_FUZZ_6_fuzzTimelocksOutsideRange_revertInvalidTimelockDuration(
+    function test_fuzzTimelocksOutsideRange_revertInvalidTimelockDuration(
         uint256 seed,
         uint256 outOfRangeRaw,
         bool belowMin,
@@ -185,7 +185,7 @@ contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
     /// @dev Verifies `OrganizationFactory.computeOrganizationAddress` stays deterministic and matches the deployed
     /// proxy address for fuzzed salts.
     /// @param salt Fuzzed CREATE2 salt used to precompute and deploy the organization address.
-    function testFuzz_INIT_FUZZ_7__FOF_DEPLOY_129_fuzzComputeAddress_matchesActualDeployment(bytes32 salt) public {
+    function testFuzz_fuzzComputeAddress_matchesActualDeployment(bytes32 salt) public {
         // Setup: Prepare valid initialization params and precompute the expected deployment address for the fuzzed
         // salt.
         InitializationParams memory params = _defaultInitializationParams();
@@ -204,7 +204,7 @@ contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
     /// retry with the same tuple.
     /// @param salt Fuzzed CREATE2 salt reused across the failing and successful deployment attempts.
     /// @param thresholdDeltaRaw Fuzzed delta used to push the invalid voting threshold above the admin count.
-    function testFuzz_INIT_FUZZ_8__FLOI_INIT_27__FOF_DINIT_131_fuzzFailedThenRetry_sameTupleCanSucceed(
+    function testFuzz_fuzzFailedThenRetry_sameTupleCanSucceed(
         bytes32 salt,
         uint8 thresholdDeltaRaw
     ) public {
@@ -237,7 +237,7 @@ contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
     /// @param seed Entropy seed used to derive deterministic addresses.
     /// @param failureModeRaw Fuzzed selector choosing which initialization sub-step should fail.
     /// @param salt Fuzzed CREATE2 salt reused across the failing and retry deployment attempts.
-    function testFuzz_FLOI_INIT_27_failingValidationSubsteps_revertAtomicallyAndAllowRetry(
+    function testFuzz_failingValidationSubsteps_revertAtomicallyAndAllowRetry(
         uint256 seed,
         uint8 failureModeRaw,
         bytes32 salt
@@ -309,7 +309,7 @@ contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
     /// @dev Verifies only the configured deployer can successfully deploy organizations.
     /// @param caller Fuzzed caller constrained away from the authorized deployer.
     /// @param salt Fuzzed CREATE2 salt used in the failed deployment attempt.
-    function testFuzz_FOF_DEPLOY_130_deployOrganization_onlyAuthorizedDeployerCanDeploy(address caller, bytes32 salt)
+    function testFuzz_deployOrganization_onlyAuthorizedDeployerCanDeploy(address caller, bytes32 salt)
         public
     {
         // Setup: constrain the caller away from the configured authorized deployer.

@@ -12,7 +12,7 @@ import {ConstraintType, ParamType, ParameterConstraint} from "types/PolicyTypes.
  */
 contract LibPolicyParameterConstraintsAreParametersAllowedByConstraintsTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that empty `parameterConstraints` bytes returns true.
-    function test_LPPC_APROC_1_areParametersAllowedByConstraints_emptyConstraintsBytes_returnsTrue() public view {
+    function test_areParametersAllowedByConstraints_emptyConstraintsBytes_returnsTrue() public view {
         // Setup: configure a valid fixture for empty `parameterConstraints` bytes returns true.
         bytes memory data = abi.encodeWithSelector(BASE_SELECTOR, uint256(7));
 
@@ -24,7 +24,7 @@ contract LibPolicyParameterConstraintsAreParametersAllowedByConstraintsTest is L
     }
 
     /// @dev Verifies that ABI-encoded empty constraints array returns true.
-    function test_LPPC_APROC_2_areParametersAllowedByConstraints_abiEncodedEmptyArray_returnsTrue() public view {
+    function test_areParametersAllowedByConstraints_abiEncodedEmptyArray_returnsTrue() public view {
         // Setup: configure a valid fixture for ABI-encoded empty constraints array returns true.
         ParameterConstraint[] memory constraints = new ParameterConstraint[](0);
         bytes memory encodedConstraints = abi.encode(constraints);
@@ -124,7 +124,7 @@ contract LibPolicyParameterConstraintsAreParametersAllowedByConstraintsTest is L
     }
 
     /// @dev Verifies malformed encoded constraints revert in the current implementation.
-    function test_LPPC_APROC_7_areParametersAllowedByConstraints_malformedEncodedConstraints_reverts() public {
+    function test_areParametersAllowedByConstraints_malformedEncodedConstraints_reverts() public {
         // Setup: craft malformed constraints that bypass the short-length guard but contain invalid ABI offsets.
         bytes memory malformedConstraints = abi.encode(uint256(32), uint256(2));
         bytes memory data = abi.encodeWithSelector(BASE_SELECTOR, uint256(1));
@@ -157,8 +157,7 @@ contract LibPolicyParameterConstraintsAreParametersAllowedByConstraintsTest is L
     }
 
     /// @dev Verifies non-empty `parameterConstraints` payloads shorter than the ABI empty-array header fail closed.
-    /// [POL-INV-15]
-    function test_POL_INV_15_areParametersAllowedByConstraints_nonEmptyPayloadShorterThanAbiEmptyArray_returnsFalse()
+    function test_areParametersAllowedByConstraints_nonEmptyPayloadShorterThanAbiEmptyArray_returnsFalse()
         public
         view
     {

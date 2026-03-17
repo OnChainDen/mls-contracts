@@ -296,7 +296,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that group approver type returns configured approval threshold.
-    function test_POL_INV_6_getRequiredApprovals_groupApprover_returnsConfiguredThreshold() public {
+    function test_getRequiredApprovals_groupApprover_returnsConfiguredThreshold() public {
         // Setup: configure a valid fixture for group approver type returns configured approval threshold.
         Policy memory policy = _groupApproverPolicy(2211, 3);
 
@@ -307,7 +307,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that member approver ignores `approvalThreshold` field.
-    function test_POL_INV_6_getRequiredApprovals_memberApproverIgnoresThresholdField() public {
+    function test_getRequiredApprovals_memberApproverIgnoresThresholdField() public {
         // Setup: configure a valid fixture for member approver ignores `approvalThreshold` field.
         Policy memory policy = _memberApproverPolicy(reviewer1);
         policy.config.approval.approvalThreshold = 9;
@@ -337,7 +337,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that non-member signer returns false regardless of approver configuration.
-    function test_isSignerAuthorizedForPolicy__OPB_PH_3_nonMemberSigner_returnsFalseAcrossApproverModes() public {
+    function test_isSignerAuthorizedForPolicy_nonMemberSigner_returnsFalseAcrossApproverModes() public {
         // Setup: build fixture inputs where non-member signer returns false regardless of approver configuration should
         // be denied.
         address nonMember = address(0xA401);
@@ -373,7 +373,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that group approver type authorizes members of the configured approver group.
-    function test_isSignerAuthorizedForPolicy__OPB_PH_3_groupApprover_groupMemberAuthorized() public {
+    function test_isSignerAuthorizedForPolicy_groupApprover_groupMemberAuthorized() public {
         // Setup: configure a valid fixture for group approver type authorizes members of the configured approver group.
         Policy memory policy = _groupApproverPolicy(2213, 1);
         _setActiveGroupWithMembers(2213, buildArray(reviewer1));

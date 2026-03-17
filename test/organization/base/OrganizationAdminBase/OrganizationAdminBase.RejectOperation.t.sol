@@ -49,7 +49,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
     }
 
     /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` burns the operation nonce after a valid rejection.
-    function test_NMADB_RAO_1__OAB_RAO_1_rejectAdminOperation_validRejection_succeedsAndBurnsNonce() public {
+    function test_rejectAdminOperation_validRejection_succeedsAndBurnsNonce() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -78,7 +78,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
     }
 
     /// @dev Verifies that `AdminOperationRejected` is emitted with the exact operation tuple.
-    function test_NMADB_RAO_1_rejectAdminOperation_emitsAdminOperationRejectedWithExactArgs() public {
+    function test_rejectAdminOperation_emitsAdminOperationRejectedWithExactArgs() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -111,7 +111,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
     }
 
     /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` rejects signatures collected for the approval domain.
-    function test_OAB_RAO_3_rejectAdminOperation_approvalSignaturesCannotAuthorizeRejection() public {
+    function test_rejectAdminOperation_approvalSignaturesCannotAuthorizeRejection() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -217,7 +217,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
     }
 
     /// @dev Verifies that replaying a rejection with the same nonce reverts with `NonceAlreadyUsed`.
-    function test_NMADB_RAO_2_rejectAdminOperation_replaySameNonce_revertsNonceAlreadyUsed() public {
+    function test_rejectAdminOperation_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -248,7 +248,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
 
     /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` blocks later execution of the same payload by
     /// consuming its nonce.
-    function test_NMADB_RAO_4__OAB_RAO_1_rejectThenExecuteSamePayload_executionFailsByUsedNonce() public {
+    function test_rejectThenExecuteSamePayload_executionFailsByUsedNonce() public {
         address newAdmin = address(0x210);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
@@ -298,7 +298,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
 
     /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` cannot reject a payload after approval execution has
     /// already consumed its nonce.
-    function test_NMADB_RAO_5__OAB_RAO_2_executeThenRejectSamePayload_rejectionFailsByUsedNonce() public {
+    function test_executeThenRejectSamePayload_rejectionFailsByUsedNonce() public {
         address newAdmin = address(0x211);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
@@ -377,7 +377,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
     }
 
     /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` burns only the nonce for the rejected payload.
-    function test_NMADB_RAO_3_rejectAdminOperation_wrongOperationDataConsumesDifferentNonceWithoutBlockingIntendedOperation()
+    function test_rejectAdminOperation_wrongOperationDataConsumesDifferentNonceWithoutBlockingIntendedOperation()
         public
     {
         address intendedAdmin = address(0x212);
@@ -442,7 +442,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
     }
 
     /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` rejects `OperationType.AccountTransaction`.
-    function test_NMADB_RAO_6_rejectAdminOperation_accountTransactionType_revertsAndDoesNotBurnNonce() public {
+    function test_rejectAdminOperation_accountTransactionType_revertsAndDoesNotBurnNonce() public {
         bytes memory operationData = abi.encode(address(0xAB1), address(0xAB2), uint256(1), keccak256("tx"), uint256(9));
         uint256 salt = 2030;
 
@@ -474,7 +474,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
     }
 
     /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` rejects `OperationType.AccountTransactionRejection`.
-    function test_NMADB_RAO_7_rejectAdminOperation_accountTransactionRejectionType_revertsAndDoesNotBurnNonce() public {
+    function test_rejectAdminOperation_accountTransactionRejectionType_revertsAndDoesNotBurnNonce() public {
         bytes memory operationData =
             abi.encode(address(0xAB3), address(0xAB4), uint256(2), keccak256("reject"), uint256(10));
         uint256 salt = 2031;

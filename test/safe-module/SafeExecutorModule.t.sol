@@ -85,7 +85,7 @@ contract MockSafe {
 
 /**
  * @dev RevertingMockSafe — always reverts with custom data on execTransactionFromModule.
- *      Used to test revert propagation (SEM-EOB-13, SEM-EOB-20).
+ *  Used to test revert propagation (, ).
  */
 contract RevertingMockSafe {
     error CustomSafeError(string reason);
@@ -97,7 +97,7 @@ contract RevertingMockSafe {
 
 /**
  * @dev MockSafeWithModuleAuth — checks that caller is an enabled module before executing.
- *      Simulates Safe v1.4.1 module auth behavior (SEM-EOB-15).
+ *  Simulates Safe v1.4.1 module auth behavior ().
  */
 contract MockSafeWithModuleAuth {
     mapping(address module => bool enabled) public enabledModules;
@@ -148,7 +148,7 @@ contract MockTarget {
 }
 
 /**
- * @dev RequiresEthTarget — reverts unless msg.value > 0 (SEM-EOB-14).
+ * @dev RequiresEthTarget — reverts unless msg.value > 0 ().
  */
 contract RequiresEthTarget {
     function payableAction() external payable {
@@ -230,7 +230,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies `constructor` sets all three immutable addresses correctly.
-    function test_SEM_CON_1_SEM_CON_2_SEM_CON_3_constructorSetsImmutables() public view {
+    function test_constructorSetsImmutables() public view {
         // Verify: SAFE, AUTHORIZED_EXECUTOR, and BATCHED_TRANSACTION are stored correctly.
         assertEq(module.SAFE(), address(mockSafe), "SAFE immutable mismatch");
         assertEq(module.AUTHORIZED_EXECUTOR(), authorizedExecutor, "AUTHORIZED_EXECUTOR immutable mismatch");
@@ -240,14 +240,14 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies `constructor` reverts with `SafeAddressCannotBeZero` when safe is address(0).
-    function test_SEM_CON_4_constructorRevertsZeroSafe() public {
+    function test_constructorRevertsZeroSafe() public {
         // Call: deploy with zero safe address. Expect revert.
         vm.expectRevert(ISafeExecutorModule.SafeAddressCannotBeZero.selector);
         new SafeExecutorModule(address(0), authorizedExecutor, address(mockBatchedTransaction));
     }
 
     /// @dev Verifies `constructor` reverts with `ExecutorAddressCannotBeZero` when executor is address(0).
-    function test_SEM_CON_5_constructorRevertsZeroExecutor() public {
+    function test_constructorRevertsZeroExecutor() public {
         // Call: deploy with zero executor address. Expect revert.
         vm.expectRevert(ISafeExecutorModule.ExecutorAddressCannotBeZero.selector);
         new SafeExecutorModule(address(mockSafe), address(0), address(mockBatchedTransaction));
@@ -255,23 +255,21 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
 
     /// @dev Verifies `constructor` reverts with `BatchedTransactionAddressCannotBeZero` when batchedTransaction is
     /// address(0).
-    function test_SEM_CON_6_constructorRevertsZeroBatchedTransaction() public {
+    function test_constructorRevertsZeroBatchedTransaction() public {
         // Call: deploy with zero batchedTransaction address. Expect revert.
         vm.expectRevert(ISafeExecutorModule.BatchedTransactionAddressCannotBeZero.selector);
         new SafeExecutorModule(address(mockSafe), authorizedExecutor, address(0));
     }
 
     /// @dev Verifies `constructor` revert precedence: safe check is first when all params are zero.
-    function test_SEM_CON_7_constructorRevertPrecedenceSafeFirst() public {
+    function test_constructorRevertPrecedenceSafeFirst() public {
         // Call: deploy with all-zero params. Expect SafeAddressCannotBeZero (first check).
         vm.expectRevert(ISafeExecutorModule.SafeAddressCannotBeZero.selector);
         new SafeExecutorModule(address(0), address(0), address(0));
     }
 
-    // ISEM-EOB-1
     /// @dev Verifies `executeOnBehalf` reverts with `UnauthorizedCaller` for non-authorized callers.
-    ///      [ASIG-INV-12]
-    function test_ASIG_INV_12_A_ISEM_EOB_1__SEM_EOB_1_executeOnBehalfRevertsUnauthorizedCaller() public {
+    function test_executeOnBehalfRevertsUnauthorizedCaller() public {
         // Setup: prepare valid calldata targeting mockTarget.
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
 
@@ -286,7 +284,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies `executeOnBehalf` checks authorization before target restrictions (auth check first).
-    function test_SEM_EOB_2_executeOnBehalfAuthCheckBeforeTargetCheck() public {
+    function test_executeOnBehalfAuthCheckBeforeTargetCheck() public {
         // Setup: calldata targeting the Safe itself (would trigger CannotCallSafe if auth passed).
         bytes memory data = abi.encodeWithSelector(MockSafe.addOwnerWithThreshold.selector, makeAddr("owner"), 2);
 
@@ -300,9 +298,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         module.executeOnBehalf(address(mockSafe), data);
     }
 
-    // ISEM-EOB-2
-    /// @dev Verifies `executeOnBehalf` reverts with `CannotCallSafe` when targeting the Safe. [ASIG-INV-7]
-    function test_ASIG_INV_7_ISEM_EOB_2__SEM_EOB_3_executeOnBehalfRevertsCannotCallSafe() public {
+    /// @dev Verifies `executeOnBehalf` reverts with `CannotCallSafe` when targeting the Safe.
+    function test_executeOnBehalfRevertsCannotCallSafe() public {
         // Setup: calldata targeting the Safe.
         bytes memory data = abi.encodeWithSelector(MockSafe.addOwnerWithThreshold.selector, makeAddr("owner"), 2);
 
@@ -313,8 +310,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies `executeOnBehalf` invokes `Safe.execTransactionFromModule` exactly once and returns true.
-    ///      [ASIG-INV-12]
-    function test_ASIG_INV_12_B_SEM_EOB_4_SEM_EOB_10_executeOnBehalfCallsSafeOnceAndReturnsTrue() public {
+    function test_executeOnBehalfCallsSafeOnceAndReturnsTrue() public {
         // Setup: valid calldata.
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 123);
 
@@ -328,7 +324,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies `executeOnBehalf` forwards the exact `to` argument to the Safe.
-    function test_SEM_EOB_5_executeOnBehalfForwardsToArgument() public {
+    function test_executeOnBehalfForwardsToArgument() public {
         // Setup: valid calldata targeting mockTarget.
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
 
@@ -341,7 +337,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies `executeOnBehalf` forwards the exact `data` bytes to the Safe.
-    function test_SEM_EOB_6_executeOnBehalfForwardsDataBytes() public {
+    function test_executeOnBehalfForwardsDataBytes() public {
         // Setup: specific calldata to verify byte-for-byte forwarding.
         uint256 expectedValue = 999;
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, expectedValue);
@@ -354,9 +350,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         assertEq(mockSafe.lastCallData(), data, "Safe should receive exact data bytes");
     }
 
-    // ISEM-EOB-3
-    /// @dev Verifies `executeOnBehalf` always forwards value=0 to the Safe. [ASIG-INV-8]
-    function test_ASIG_INV_8_A_ISEM_EOB_3__SEM_EOB_7_executeOnBehalfAlwaysForwardsZeroValue() public {
+    /// @dev Verifies `executeOnBehalf` always forwards value=0 to the Safe.
+    function test_executeOnBehalfAlwaysForwardsZeroValue() public {
         // Setup: valid calldata.
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
 
@@ -368,9 +363,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         assertEq(mockSafe.lastCallValue(), 0, "Value forwarded to Safe must be zero");
     }
 
-    // ISEM-EOB-3
     /// @dev Verifies `executeOnBehalf` uses CALL (0) for non-BatchedTransaction targets.
-    function test_ISEM_EOB_3__SEM_EOB_8_executeOnBehalfUsesCallForRegularTargets() public {
+    function test_executeOnBehalfUsesCallForRegularTargets() public {
         // Setup: target is not BatchedTransaction.
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
 
@@ -382,9 +376,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         assertEq(mockSafe.lastCallOperation(), 0, "Operation should be CALL (0) for regular targets");
     }
 
-    // ISEM-EOB-3
     /// @dev Verifies `executeOnBehalf` uses DELEGATECALL (1) when target is BatchedTransaction.
-    function test_ISEM_EOB_3__SEM_EOB_9_executeOnBehalfUsesDelegatecallForBatchedTransaction() public {
+    function test_executeOnBehalfUsesDelegatecallForBatchedTransaction() public {
         // Setup: target is BatchedTransaction.
         bytes memory data = abi.encodeWithSelector(MockBatchedTransaction.execute.selector, "");
 
@@ -397,9 +390,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         assertEq(mockSafe.lastCallTo(), address(mockBatchedTransaction), "Target should be BatchedTransaction");
     }
 
-    // ISEM-EOB-4
     /// @dev Verifies `executeOnBehalf` reverts with `ExecutionFailed` when Safe returns false.
-    function test_ISEM_EOB_4__SEM_EOB_11_executeOnBehalfRevertsOnSafeReturnsFalse() public {
+    function test_executeOnBehalfRevertsOnSafeReturnsFalse() public {
         // Setup: configure Safe to return false.
         mockSafe.setShouldSucceed(false);
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
@@ -410,9 +402,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         module.executeOnBehalf(address(mockTarget), data);
     }
 
-    // ISEM-EOB-4
     /// @dev Verifies `executeOnBehalf` reverts with `ExecutionFailed` when downstream target reverts.
-    function test_ISEM_EOB_4__SEM_EOB_12_executeOnBehalfRevertsOnDownstreamTargetRevert() public {
+    function test_executeOnBehalfRevertsOnDownstreamTargetRevert() public {
         // Setup: call a function that always reverts on the target.
         bytes memory data = abi.encodeWithSelector(MockTarget.revertingFunction.selector);
 
@@ -423,7 +414,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies `executeOnBehalf` reverts when Safe itself reverts unexpectedly (never returns success).
-    function test_SEM_EOB_13_executeOnBehalfRevertsWhenSafeReverts() public {
+    function test_executeOnBehalfRevertsWhenSafeReverts() public {
         // Setup: deploy a Safe mock that always reverts with custom error.
         RevertingMockSafe revertingSafe = new RevertingMockSafe();
         SafeExecutorModule revertModule =
@@ -436,8 +427,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         revertModule.executeOnBehalf(address(mockTarget), data);
     }
 
-    /// @dev Verifies `executeOnBehalf` enforces no-ETH-transfer policy (value always 0). [ASIG-INV-8]
-    function test_ASIG_INV_8_B_SEM_EOB_14_executeOnBehalfCannotSendEth() public {
+    /// @dev Verifies `executeOnBehalf` enforces no-ETH-transfer policy (value always 0).
+    function test_executeOnBehalfCannotSendEth() public {
         // Setup: deploy target that requires non-zero msg.value.
         RequiresEthTarget ethTarget = new RequiresEthTarget();
         bytes memory data = abi.encodeWithSelector(RequiresEthTarget.payableAction.selector);
@@ -449,7 +440,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies `executeOnBehalf` fails when module is not enabled on actual Safe.
-    function test_SEM_EOB_15_executeOnBehalfFailsWhenModuleNotEnabled() public {
+    function test_executeOnBehalfFailsWhenModuleNotEnabled() public {
         // Setup: deploy Safe that checks module auth (module not enabled).
         MockSafeWithModuleAuth authSafe = new MockSafeWithModuleAuth();
         SafeExecutorModule authModule =
@@ -464,7 +455,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies multiple sequential `executeOnBehalf` calls are independent and deterministic.
-    function test_SEM_EOB_16_executeOnBehalfMultipleSequentialCallsIndependent() public {
+    function test_executeOnBehalfMultipleSequentialCallsIndependent() public {
         // Call: three sequential calls with different values.
         vm.prank(authorizedExecutor);
         module.executeOnBehalf(address(mockTarget), abi.encodeWithSelector(MockTarget.setValue.selector, 10));
@@ -483,7 +474,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies non-batch target observes `msg.sender == SAFE` (not module or executor).
-    function test_SEM_EOB_17_executeOnBehalfTargetSeesSafeAsMsgSender() public {
+    function test_executeOnBehalfTargetSeesSafeAsMsgSender() public {
         // Setup: valid calldata targeting mockTarget.
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
 
@@ -496,7 +487,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies `executeOnBehalf` with BatchedTransaction target executes sub-transactions successfully.
-    function test_SEM_EOB_18_executeOnBehalfBatchedTransactionExecutesSubTxs() public {
+    function test_executeOnBehalfBatchedTransactionExecutesSubTxs() public {
         // Setup: deploy real BatchedTransaction and configure MockSafe to execute delegatecalls.
         BatchedTransaction realBatchedTx = new BatchedTransaction();
         SafeExecutorModule integrationModule =
@@ -521,7 +512,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies `executeOnBehalf` with BatchedTransaction sub-tx targeting Safe fails atomically.
-    function test_SEM_EOB_19_executeOnBehalfBatchWithSafeTargetRevertsAtomically() public {
+    function test_executeOnBehalfBatchWithSafeTargetRevertsAtomically() public {
         // Setup: real BatchedTransaction, MockSafe executing delegatecalls.
         BatchedTransaction realBatchedTx = new BatchedTransaction();
         SafeExecutorModule integrationModule =
@@ -545,7 +536,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies Safe revert reason/data is bubbled through (not remapped to ExecutionFailed).
-    function test_SEM_EOB_20_executeOnBehalfBubblesSafeRevertData() public {
+    function test_executeOnBehalfBubblesSafeRevertData() public {
         // Setup: deploy a Safe that reverts with specific custom error.
         RevertingMockSafe revertingSafe = new RevertingMockSafe();
         SafeExecutorModule revertModule =
@@ -559,7 +550,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies delegatecall context: sub-transaction targets observe `msg.sender == SAFE`.
-    function test_SEM_EOB_21_executeOnBehalfDelegatecallSubTxSeeSafeAsSender() public {
+    function test_executeOnBehalfDelegatecallSubTxSeeSafeAsSender() public {
         // Setup: real BatchedTransaction with delegatecall execution enabled.
         BatchedTransaction realBatchedTx = new BatchedTransaction();
         SafeExecutorModule integrationModule =
@@ -584,9 +575,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         );
     }
 
-    // ISEM-EOB-5
     /// @dev Verifies `isValidSignature` returns ERC-1271 magic value for valid authorized executor EOA signature.
-    function test_ISEM_EOB_5__SEM_IVS_1_isValidSignatureAcceptsAuthorizedEOASignature() public view {
+    function test_isValidSignatureAcceptsAuthorizedEOASignature() public view {
         // Setup: create valid EOA signature from authorized executor.
         bytes memory signature = _signHash(AUTHORIZED_EXECUTOR_PK, TEST_HASH);
 
@@ -597,9 +587,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         assertEq(result, SignatureUtils.ERC1271_MAGIC_VALUE, "Valid authorized signature should return magic value");
     }
 
-    // ISEM-EOB-5
     /// @dev Verifies `isValidSignature` returns invalid value for valid EOA signature from non-authorized signer.
-    function test_ISEM_EOB_5__SEM_IVS_2_isValidSignatureRejectsNonAuthorizedSigner() public view {
+    function test_isValidSignatureRejectsNonAuthorizedSigner() public view {
         // Setup: create valid EOA signature from a different signer.
         bytes memory signature = _signHash(OTHER_SIGNER_PK, TEST_HASH);
 
@@ -611,7 +600,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies `isValidSignature` returns invalid value when signature was created for a different hash.
-    function test_SEM_IVS_3_isValidSignatureRejectsWrongHash() public view {
+    function test_isValidSignatureRejectsWrongHash() public view {
         // Setup: sign a different hash with the authorized key.
         bytes32 differentHash = keccak256("different message");
         bytes memory signature = _signHash(AUTHORIZED_EXECUTOR_PK, differentHash);
@@ -623,9 +612,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         assertEq(result, SignatureUtils.ERC1271_INVALID_VALUE, "Signature for different hash should return invalid");
     }
 
-    // ISEM-EOB-6
     /// @dev Verifies `isValidSignature` returns invalid value (no revert) for empty signature.
-    function test_ISEM_EOB_6__SEM_IVS_4_isValidSignatureHandlesEmptySignature() public view {
+    function test_isValidSignatureHandlesEmptySignature() public view {
         // Setup: empty signature bytes.
         bytes memory emptySig = "";
 
@@ -636,9 +624,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         assertEq(result, SignatureUtils.ERC1271_INVALID_VALUE, "Empty signature should return invalid value");
     }
 
-    // ISEM-EOB-6
     /// @dev Verifies `isValidSignature` returns invalid value (no revert) for malformed EOA signature.
-    function test_ISEM_EOB_6__SEM_IVS_5_isValidSignatureHandlesMalformedSignature() public view {
+    function test_isValidSignatureHandlesMalformedSignature() public view {
         // Setup: signature with valid v byte (27) but wrong length (33 bytes instead of 65).
         bytes memory malformedSig = abi.encodePacked(uint8(27), bytes32(0));
 
@@ -649,9 +636,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         assertEq(result, SignatureUtils.ERC1271_INVALID_VALUE, "Malformed signature should return invalid value");
     }
 
-    // ISEM-EOB-6
     /// @dev Verifies `isValidSignature` returns invalid value for signature with invalid v byte (not 0/27/28).
-    function test_ISEM_EOB_6__SEM_IVS_6_isValidSignatureRejectsInvalidVByte() public view {
+    function test_isValidSignatureRejectsInvalidVByte() public view {
         // Setup: 65-byte signature with v=1 (invalid v byte).
         bytes memory invalidVSig = abi.encodePacked(uint8(1), bytes32(uint256(0x1234)), bytes32(uint256(0x5678)));
 
@@ -662,9 +648,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         assertEq(result, SignatureUtils.ERC1271_INVALID_VALUE, "Invalid v byte should return invalid value");
     }
 
-    // ISEM-EOB-6
     /// @dev Verifies `isValidSignature` returns invalid value for high-s malleable EOA signature.
-    function test_ISEM_EOB_6__SEM_IVS_7_isValidSignatureRejectsHighSMalleableSignature() public view {
+    function test_isValidSignatureRejectsHighSMalleableSignature() public view {
         // Setup: create a malleable (high-s) signature from the authorized executor.
         bytes memory malleableSig = _makeHighSSignature(AUTHORIZED_EXECUTOR_PK, TEST_HASH);
 
@@ -675,9 +660,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         assertEq(result, SignatureUtils.ERC1271_INVALID_VALUE, "Malleable high-s signature should return invalid");
     }
 
-    // ISEM-EOB-5
     /// @dev Verifies `isValidSignature` returns invalid for ERC-1271 signature where signer != authorized executor.
-    function test_ISEM_EOB_5__SEM_IVS_8_isValidSignatureRejectsNonAuthorizedContractSigner() public {
+    function test_isValidSignatureRejectsNonAuthorizedContractSigner() public {
         // Setup: deploy a mock ERC-1271 signer that always returns valid magic, but is not the authorized executor.
         MockERC1271AlwaysValid mockSigner = new MockERC1271AlwaysValid();
         bytes memory contractSig = _buildContractSignature(address(mockSigner), hex"AABB");
@@ -689,9 +673,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         assertEq(result, SignatureUtils.ERC1271_INVALID_VALUE, "Non-authorized contract signer should return invalid");
     }
 
-    // ISEM-EOB-6
     /// @dev Verifies `isValidSignature` returns invalid value (no revert) for malformed nested ERC-1271 payload.
-    function test_ISEM_EOB_6__SEM_IVS_9_isValidSignatureHandlesMalformedNestedPayload() public view {
+    function test_isValidSignatureHandlesMalformedNestedPayload() public view {
         // Setup: ERC-1271 header with only 2 bytes (v=0, missing signer and length fields).
         bytes memory malformedContractSig = hex"0000";
 
@@ -705,7 +688,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies `isValidSignature` returns deterministic output for identical inputs.
-    function test_SEM_IVS_10_isValidSignatureIsDeterministic() public view {
+    function test_isValidSignatureIsDeterministic() public view {
         // Setup: valid authorized signature.
         bytes memory signature = _signHash(AUTHORIZED_EXECUTOR_PK, TEST_HASH);
 
@@ -719,7 +702,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies `isValidSignature` is view and does not mutate state.
-    function test_SEM_IVS_11_isValidSignatureIsViewAndNoStateMutation() public {
+    function test_isValidSignatureIsViewAndNoStateMutation() public {
         // Setup: build a valid signature.
         bytes memory signature = _signHash(AUTHORIZED_EXECUTOR_PK, TEST_HASH);
 
@@ -729,7 +712,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies `isValidSignature` accepts valid authorized signature for both v=27 and v=28 encodings.
-    function test_SEM_IVS_12_isValidSignatureAcceptsBothVValues() public view {
+    function test_isValidSignatureAcceptsBothVValues() public view {
         // Setup: find valid signatures with v=27 and v=28.
         (bytes memory sig27, bytes32 hash27) = _findValidSignatureForV(AUTHORIZED_EXECUTOR_PK, 27, TEST_HASH);
         (bytes memory sig28, bytes32 hash28) = _findValidSignatureForV(AUTHORIZED_EXECUTOR_PK, 28, TEST_HASH);
@@ -743,9 +726,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         assertEq(result28, SignatureUtils.ERC1271_MAGIC_VALUE, "v=28 signature should be accepted");
     }
 
-    // ISEM-EOB-6
     /// @dev Verifies `isValidSignature` returns invalid (no revert) when nested ERC-1271 signer reverts.
-    function test_ISEM_EOB_6__SEM_IVS_13_isValidSignatureHandlesRevertingNestedSigner() public {
+    function test_isValidSignatureHandlesRevertingNestedSigner() public {
         // Setup: deploy ERC-1271 signer that always reverts.
         MockERC1271RevertingSigner revertingSigner = new MockERC1271RevertingSigner();
         bytes memory contractSig = _buildContractSignature(address(revertingSigner), hex"AABB");
@@ -757,9 +739,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         assertEq(result, SignatureUtils.ERC1271_INVALID_VALUE, "Reverting nested ERC-1271 signer should return invalid");
     }
 
-    // ISEM-EOB-6
     /// @dev Verifies `isValidSignature` returns invalid (no revert) when nested ERC-1271 signer returns truncated data.
-    function test_ISEM_EOB_6__SEM_IVS_14_isValidSignatureHandlesTruncatedNestedReturn() public {
+    function test_isValidSignatureHandlesTruncatedNestedReturn() public {
         // Setup: deploy ERC-1271 signer that returns < 32 bytes.
         MockERC1271ShortReturnSigner shortSigner = new MockERC1271ShortReturnSigner();
         bytes memory contractSig = _buildContractSignature(address(shortSigner), hex"AABB");

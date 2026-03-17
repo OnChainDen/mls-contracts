@@ -19,7 +19,7 @@ import {
  */
 contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccountFactorySuiteBase {
     /// @dev Verifies deployment uses deterministic CREATE2 address derivation for a fixed salt.
-    function test_LOAF_DA_1_deployAccount_deterministicCreate2Address_matchesManualDerivation() public {
+    function test_deployAccount_deterministicCreate2Address_matchesManualDerivation() public {
         bytes32 create2Salt = bytes32(uint256(8023));
 
         // Setup: set a valid beacon implementation with runtime code.
@@ -36,7 +36,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies deployed address matches `computeAccountAddress(create2Salt)`.
-    function test_ACCF_INV_2_LOAF_DA_2_deployAccount_deployedAddress_matchesComputeAccountAddress() public {
+    function test_deployAccount_deployedAddress_matchesComputeAccountAddress() public {
         bytes32 create2Salt = bytes32(uint256(8024));
 
         // Setup: set a valid beacon implementation with runtime code.
@@ -52,7 +52,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies boundary salts deploy to addresses matching `computeAccountAddress`.
-    function test_LOAF_DA_4_deployAccount_boundarySalts_matchComputedAddresses() public {
+    function test_deployAccount_boundarySalts_matchComputedAddresses() public {
         // Setup: set a valid beacon implementation with runtime code.
         harness.setAccountImplementationStorage(accountImplementationV1);
 
@@ -72,7 +72,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies successful deployment marks `deployedAccounts[account] = true`.
-    function test_LOAF_DA_5_deployAccount_success_setsDeployedAccountsMappingTrue() public {
+    function test_deployAccount_success_setsDeployedAccountsMappingTrue() public {
         bytes32 create2Salt = bytes32(uint256(8025));
 
         // Setup: set a valid beacon implementation with runtime code.
@@ -86,7 +86,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies successful deployment emits `AccountDeployed` with expected parameters.
-    function test_LOAF_DA_6_deployAccount_success_emitsAccountDeployedWithExpectedParameters() public {
+    function test_deployAccount_success_emitsAccountDeployedWithExpectedParameters() public {
         bytes32 create2Salt = bytes32(uint256(8026));
 
         // Setup: set a valid beacon implementation and precompute expected address.
@@ -102,7 +102,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies deploying the same salt twice reverts due CREATE2 collision.
-    function test_ACCF_INV_11_LOAF_DA_7_deployAccount_sameSaltTwice_revertsCreate2Collision() public {
+    function test_deployAccount_sameSaltTwice_revertsCreate2Collision() public {
         bytes32 create2Salt = bytes32(uint256(8027));
 
         // Setup: set valid beacon implementation and perform first successful deployment.
@@ -116,7 +116,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies deployed proxy is bound to this organization as its beacon.
-    function test_LOAF_DA_8_deployAccount_deployedProxyBeaconIsOrganization() public {
+    function test_deployAccount_deployedProxyBeaconIsOrganization() public {
         bytes32 create2Salt = bytes32(uint256(8028));
 
         // Setup: set a valid account implementation with `getOrganizationAddress` view.
@@ -131,7 +131,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies defensive mismatch branch reverts `AccountDeploymentAddressMismatch` under fault injection.
-    function test_LOAF_DA_9_deployAccount_faultInjectedAddressMismatch_revertsAccountDeploymentAddressMismatch()
+    function test_deployAccount_faultInjectedAddressMismatch_revertsAccountDeploymentAddressMismatch()
         public
     {
         bytes32 create2Salt = bytes32(uint256(8029));
@@ -146,7 +146,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies no-code implementation reverts and leaves mapping/events unchanged on failed deployment.
-    function test_LOAF_DA_10__LOAF_DA_12__LOAF_DA_13_deployAccount_noCodeImplementation_revertsAndDoesNotSetMappingOrEmitEvent()
+    function test_deployAccount_noCodeImplementation_revertsAndDoesNotSetMappingOrEmitEvent()
         public
     {
         bytes32 create2Salt = bytes32(uint256(8068));
@@ -172,7 +172,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies zero implementation reverts and leaves mapping/events unchanged on failed deployment.
-    function test_LOAF_DA_11__LOAF_DA_12__LOAF_DA_13_deployAccount_zeroImplementation_revertsAndDoesNotSetMappingOrEmitEvent()
+    function test_deployAccount_zeroImplementation_revertsAndDoesNotSetMappingOrEmitEvent()
         public
     {
         bytes32 create2Salt = bytes32(uint256(8081));
@@ -196,7 +196,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies deployed proxy runtime code matches reference `AccountProxy` runtime code.
-    function test_LOAF_DA_3_deployAccount_runtimeCode_matchesReferenceAccountProxyRuntimeCode() public {
+    function test_deployAccount_runtimeCode_matchesReferenceAccountProxyRuntimeCode() public {
         bytes32 create2Salt = bytes32(uint256(8079));
 
         // Setup: set valid beacon implementation and deploy account via library.

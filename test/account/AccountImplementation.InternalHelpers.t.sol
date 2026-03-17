@@ -14,7 +14,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /// @param forwardedPayload The bytes payload decoded by the recorder target.
     /// @param marker The marker value decoded by the recorder target.
     /// @param rawValue The native-token value forwarded through `_execute`.
-    function testFuzz_FAI_EXEC_146_executeInternal_successPathForwardsRandomValueAndData(
+    function testFuzz_executeInternal_successPathForwardsRandomValueAndData(
         bytes calldata forwardedPayload,
         uint256 marker,
         uint256 rawValue
@@ -44,7 +44,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
 
     /// @dev Verifies `_execute` fails closed and preserves balances when the downstream call reverts.
     /// @param rawValue The native-token value attempted on the reverting call.
-    function testFuzz_FAI_EXEC_146_executeInternal_failurePathReturnsFalseWithoutTransferringValue(uint256 rawValue)
+    function testFuzz_executeInternal_failurePathReturnsFalseWithoutTransferringValue(uint256 rawValue)
         public
     {
         uint256 value = bound(rawValue, 0, 1 ether);
@@ -67,7 +67,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_execute` returns true for a successful downstream call.
      */
-    function test_AI_EXE_1_executeInternal_successfulCall_returnsTrue() public {
+    function test_executeInternal_successfulCall_returnsTrue() public {
         // Setup: deploy target and encode successful calldata.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("ok"), uint256(1));
@@ -83,7 +83,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_execute` returns false when downstream target reverts.
      */
-    function test_AI_EXE_2_executeInternal_targetReverts_returnsFalse() public {
+    function test_executeInternal_targetReverts_returnsFalse() public {
         // Setup: deploy target and encode reverting calldata.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.fail.selector);
@@ -98,7 +98,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_execute` call to an EOA with no code returns true.
      */
-    function test_AI_EXE_3_executeInternal_callToEOA_returnsTrue() public {
+    function test_executeInternal_callToEOA_returnsTrue() public {
         // Setup: choose deterministic EOA destination.
         address eoa = address(0xE0A1);
 
@@ -112,7 +112,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_execute` forwards ETH value to target.
      */
-    function test_AI_EXE_4_executeInternal_forwardsEthValue() public {
+    function test_executeInternal_forwardsEthValue() public {
         // Setup: deploy receiver and fund account balance.
         AccountNativeReceiver receiver = new AccountNativeReceiver();
         uint256 value = 0.15 ether;
@@ -130,7 +130,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_execute` forwards calldata to target contract unchanged.
      */
-    function test_AI_EXE_5_executeInternal_forwardsCalldata() public {
+    function test_executeInternal_forwardsCalldata() public {
         // Setup: deploy recorder target and encode deterministic payload.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payloadBytes = hex"11223344AABB";
@@ -149,7 +149,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_execute` does not forward more gas than specified.
      */
-    function test_AI_EXE_6_executeInternal_respectsGasParameterUpperBound() public {
+    function test_executeInternal_respectsGasParameterUpperBound() public {
         // Setup: deploy target and encode payload.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("gas"), uint256(2));
@@ -166,7 +166,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_execute` supports empty calldata with value-only native transfer.
      */
-    function test_AI_EXE_7_executeInternal_emptyDataWithValue_nativeTransferSucceeds() public {
+    function test_executeInternal_emptyDataWithValue_nativeTransferSucceeds() public {
         // Setup: deploy receiver and fund account.
         AccountNativeReceiver receiver = new AccountNativeReceiver();
         uint256 value = 0.09 ether;
@@ -183,7 +183,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies target return data is not propagated by `_execute` (bool-only wrapper output).
      */
-    function test_AI_EXE_8_executeInternal_targetReturnDataNotCaptured() public {
+    function test_executeInternal_targetReturnDataNotCaptured() public {
         // Setup: deploy target that returns bytes32 from `record`.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("ret"), uint256(99));
@@ -201,7 +201,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies execution uses CALL semantics (callee sees account as `msg.sender`, not external caller).
      */
-    function test_AI_EXE_9__OAT_AI_3_executeInternal_usesCallSemantics_notDelegatecallSemantics() public {
+    function test_executeInternal_usesCallSemantics_notDelegatecallSemantics() public {
         // Setup: deploy target and encode payload.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("caller"), uint256(123));
@@ -217,7 +217,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_onlyOrganization` passes when caller equals bound organization.
      */
-    function test_AI_OO_1_onlyOrganizationInternal_organizationCaller_succeeds() public {
+    function test_onlyOrganizationInternal_organizationCaller_succeeds() public {
         // Setup: bound organization is the beacon address.
         vm.prank(address(beacon));
         // Call: execute wrapper around `_onlyOrganization`.
@@ -228,7 +228,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_onlyOrganization` reverts when caller is not the bound organization.
      */
-    function test_AI_OO_2_onlyOrganizationInternal_nonOrganizationCaller_revertsOnlyOrganization() public {
+    function test_onlyOrganizationInternal_nonOrganizationCaller_revertsOnlyOrganization() public {
         // Verify: non-organization caller is rejected.
         vm.expectRevert(IAccount.OnlyOrganization.selector);
         vm.prank(NON_ORGANIZATION);
@@ -239,7 +239,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_onlyOrganization` rejects `msg.sender == address(0)`.
      */
-    function test_AI_OO_4_onlyOrganizationInternal_zeroAddressCaller_revertsOnlyOrganization() public {
+    function test_onlyOrganizationInternal_zeroAddressCaller_revertsOnlyOrganization() public {
         // Verify: zero-address caller is not authorized.
         vm.expectRevert(IAccount.OnlyOrganization.selector);
         vm.prank(address(0));
@@ -248,9 +248,9 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     }
 
     /**
-     * @dev Verifies AI-PH-1: `_onlyOrganization` reverts for non-organization caller.
+     * @dev Verifies `_onlyOrganization` reverts for non-organization caller.
      */
-    function test_AI_AHELP_3__AI_PH_1__OAT_PH_1__onlyOrganizationInternal_nonOrganizationCaller_revertsOnlyOrganization()
+    function test_onlyOrganizationInternal_nonOrganizationCaller_revertsOnlyOrganization_minimalPath()
         public
     {
         // Setup
@@ -264,10 +264,9 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     }
 
     /**
-     * @dev Verifies AI-PH-2: `_onlyOrganization` succeeds for configured organization caller.
+     * @dev Verifies `_onlyOrganization` succeeds for configured organization caller.
      */
-    /// AI-AHELP-4
-    function test_AI_AHELP_4__AI_PH_2_onlyOrganizationInternal_configuredOrganizationCaller_succeeds() public {
+    function test_onlyOrganizationInternal_configuredOrganizationCaller_succeeds() public {
         // Setup
 
         // Call
@@ -278,9 +277,9 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     }
 
     /**
-     * @dev Verifies AI-PH-3: `_execute` returns true for successful call and forwards exact tuple.
+     * @dev Verifies `_execute` returns true for successful call and forwards exact tuple.
      */
-    function test_AI_AHELP_1__AI_PH_3__OAT_PH_1_executeInternal_success_returnsTrueAndForwardsExactTuple() public {
+    function test_executeInternal_success_returnsTrueAndForwardsExactTuple() public {
         // Setup
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("ai-ph"), uint256(303));
@@ -297,10 +296,9 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     }
 
     /**
-     * @dev Verifies AI-PH-4: `_execute` returns false when downstream call fails.
+     * @dev Verifies `_execute` returns false when downstream call fails.
      */
-    /// AI-AHELP-2
-    function test_AI_AHELP_2__AI_PH_4_executeInternal_failedInnerCall_returnsFalseWithoutReverting() public {
+    function test_executeInternal_failedInnerCall_returnsFalseWithoutReverting() public {
         // Setup
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.fail.selector);

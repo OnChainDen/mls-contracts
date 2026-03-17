@@ -39,7 +39,7 @@ contract HashBoundERC1271Signer is IERC1271 {
  */
 contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
     /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` returns `false` for an empty signature payload.
-    function test_L_58__NMADM_SIG_1_areAdminSignaturesValid_emptySignatures_returnsFalse() public {
+    function test_L_58_areAdminSignaturesValid_emptySignatures_returnsFalse() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -51,7 +51,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` returns `true` once the admin threshold is met.
-    function test_L_59__NMADM_SIG_6_LOADM_AASV_1__LOA_AADMIN_3_areAdminSignaturesValid_exactThreshold_returnsTrue()
+    function test_L_59_areAdminSignaturesValid_exactThreshold_returnsTrue()
         public
     {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
@@ -84,7 +84,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
 
     /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` returns `false` when a non-empty signer stream
     /// ends below threshold.
-    function test_NMADM_SIG_4_areAdminSignaturesValid_fewerThanThreshold_returnsFalse() public {
+    function test_areAdminSignaturesValid_fewerThanThreshold_returnsFalse() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
@@ -99,7 +99,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` reverts for duplicate admin signers.
-    function test_L_62__NMADM_SIG_2__LOA_AADMIN_1_areAdminSignaturesValid_duplicateSigner_revertsDuplicateOrOutOfOrder()
+    function test_L_62_areAdminSignaturesValid_duplicateSigner_revertsDuplicateOrOutOfOrder()
         public
     {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
@@ -119,7 +119,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` reverts for out-of-order admin signers.
-    function test_L_63__NMADM_SIG_3__LOA_AADMIN_1_areAdminSignaturesValid_outOfOrderSigner_revertsDuplicateOrOutOfOrder()
+    function test_L_63_areAdminSignaturesValid_outOfOrderSigner_revertsDuplicateOrOutOfOrder()
         public
     {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
@@ -153,7 +153,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` reverts when a recovered signer is not an admin.
-    function test_L_64__NMADM_SIG_5__LOA_AADMIN_2_areAdminSignaturesValid_nonAdminNonMemberSigner_revertsSignerIsNotAdmin()
+    function test_L_64_areAdminSignaturesValid_nonAdminNonMemberSigner_revertsSignerIsNotAdmin()
         public
     {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
@@ -189,7 +189,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that mixed EOA and ERC-1271 signers succeed when globally sorted.
-    function test_LOADM_AASV_3_test_areAdminSignaturesValid_mixedEOAAndERC1271_sorted_succeeds() public {
+    function test_test_areAdminSignaturesValid_mixedEOAAndERC1271_sorted_succeeds() public {
         address contractAdmin = address(validSigner1271);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({
@@ -213,7 +213,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
 
     /// @dev Verifies `_areAdminSignaturesValid` reverts with `SignerIsNotAdmin` when an EOA signature is validated
     /// against a different operation hash, because `ecrecover` silently recovers a different (non-admin) address.
-    function test_LOADM_AASV_2_areAdminSignaturesValid_eoaSignedDifferentHash_revertsSignerIsNotAdmin() public {
+    function test_areAdminSignaturesValid_eoaSignedDifferentHash_revertsSignerIsNotAdmin() public {
         // Setup: configure a single EOA admin with threshold 1.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -242,7 +242,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
 
     /// @dev Verifies `_areAdminSignaturesValid` reverts with `SignatureRecoveryFailed` when an ERC-1271 contract
     /// signature is validated against a different operation hash, because the contract rejects the wrong hash.
-    function test_LOADM_AASV_2_areAdminSignaturesValid_erc1271SignedDifferentHash_revertsSignatureRecoveryFailed()
+    function test_areAdminSignaturesValid_erc1271SignedDifferentHash_revertsSignatureRecoveryFailed()
         public
     {
         // Setup: configure a single hash-bound ERC-1271 admin with threshold 1.
@@ -267,7 +267,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` reverts for malformed packed signatures.
-    function test_L_66__NMADM_SIG_8_areAdminSignaturesValid_malformedEncoding_revertsSignatureRecoveryFailed() public {
+    function test_L_66_areAdminSignaturesValid_malformedEncoding_revertsSignatureRecoveryFailed() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -295,7 +295,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
 
     /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` parses mixed EOA and ERC-1271 signatures across
     /// multiple packed offsets.
-    function test_NMADM_SIG_7_areAdminSignaturesValid_mixedEOA_ERC1271_EOA_offsetsParseCorrectly() public {
+    function test_areAdminSignaturesValid_mixedEOA_ERC1271_EOA_offsetsParseCorrectly() public {
         address contractAdmin = address(0x5000000000000000000000000000000000000000);
 
         // Setup: install valid ERC-1271 bytecode at an address sorted between two EOA admins and require all three

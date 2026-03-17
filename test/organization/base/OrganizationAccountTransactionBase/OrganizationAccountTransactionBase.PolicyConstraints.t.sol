@@ -64,9 +64,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies `executeAccountTransaction` rejects disallowed source accounts and allows any-source policies
-     *      across different deployed accounts. [OPB-SAF-1, OPB-SAF-2]
+     *  across different deployed accounts.
      */
-    function test_OPB_SAF_1__OPB_SAF_2__POL_INV_3_executeAccountTransaction_sourceAccountPolicies_requireProofOrAllowAnySource()
+    function test_executeAccountTransaction_sourceAccountPolicies_requireProofOrAllowAnySource()
         public
     {
         // Setup: deploy two organization accounts plus one interaction target, then bind a specific-source policy to
@@ -168,10 +168,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies native-transfer destination custom lists check the `to` address, native-token filters reject
-     *      policies that do not allow ETH, and amount thresholds apply as an inclusive `<=` boundary. [OPB-DV-1,
-     *      OPB-TAT-1, OPB-TAT-3]
+     *  policies that do not allow ETH, and amount thresholds apply as an inclusive `<=` boundary.
      */
-    function test_OPB_DV_1__OPB_TAT_1__OPB_TAT_3_executeAccountTransaction_nativeTransferPolicies_checkDestinationTokenAndThreshold()
+    function test_executeAccountTransaction_nativeTransferPolicies_checkDestinationTokenAndThreshold()
         public
     {
         // Setup: fund one deployed account and build a native-transfer policy that only allows ETH to one receiver.
@@ -299,9 +298,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies ERC-20 transfers use the recipient argument for destination checks and bind the allowed token
-     *      contract. [OPB-DV-2, OPB-TAT-2]
+     *  contract.
      */
-    function test_OPB_DV_2__OPB_TAT_2__TXRL_INV_11_executeAccountTransaction_erc20TransferPolicies_checkRecipientAndToken()
+    function test_executeAccountTransaction_erc20TransferPolicies_checkRecipientAndToken()
         public
     {
         // Setup: deploy one account plus two token contracts, then fund the account with both token balances.
@@ -398,9 +397,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies `DestinationType.Any` allows a native transfer to any destination without requiring a destination
-     * proof. [OPB-DV-4]
+     * proof.
      */
-    function test_OPB_DV_4_executeAccountTransaction_destinationTypeAny_allowsUnlistedDestinationWithoutProof() public {
+    function test_executeAccountTransaction_destinationTypeAny_allowsUnlistedDestinationWithoutProof() public {
         // Setup: fund one deployed account and build a native-transfer policy that leaves destination checks fully
         // open.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
@@ -437,9 +436,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies disabling the token-amount threshold allows any transfer amount that otherwise matches the
-     * policy. [OPB-TAT-4]
+     * policy.
      */
-    function test_OPB_TAT_4_executeAccountTransaction_amountThresholdDisabled_allowsAnyAmount() public {
+    function test_executeAccountTransaction_amountThresholdDisabled_allowsAnyAmount() public {
         // Setup: fund one deployed account and build a native-transfer policy with threshold enforcement disabled.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         MockNativeReceiver receiver = new MockNativeReceiver();
@@ -478,9 +477,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies function allowlists bind selector plus constraint hash, reject calldata shorter than 4 bytes,
-     *      and enforce exact static-parameter matches. [OPB-FAPC-1, OPB-FAPC-3, OPB-FAPC-4]
+     * enforce exact static-parameter matches.
      */
-    function test_OPB_FAPC_1__OPB_FAPC_3__OPB_FAPC_4__POL_INV_10_executeAccountTransaction_staticFunctionPolicies_failClosed()
+    function test_executeAccountTransaction_staticFunctionPolicies_failClosed()
         public
     {
         // Setup: deploy one account plus one interaction target, then allow only `ping(uint256)` with an exact
@@ -584,9 +583,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies dynamic bytes exact constraints accept matching payloads and reject mismatched, head-overlap, or
-     *      truncated calldata. [OPB-FAPC-5, OPB-FAPC-6, OPB-FAPC-7]
+     *  truncated calldata.
      */
-    function test_OPB_FAPC_5__OPB_FAPC_6__OPB_FAPC_7_executeAccountTransaction_dynamicBytesConstraints_failClosed()
+    function test_executeAccountTransaction_dynamicBytesConstraints_failClosed()
         public
     {
         // Setup: deploy one account plus one interaction target, then allow only `storePayload(bytes)` with one exact
@@ -702,9 +701,8 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies `anyFunction=true` allows arbitrary selectors and calldata without requiring a function proof.
-     * [OPB-FAPC-2]
      */
-    function test_OPB_FAPC_2_executeAccountTransaction_anyFunction_allowsAnySelectorAndCalldata() public {
+    function test_executeAccountTransaction_anyFunction_allowsAnySelectorAndCalldata() public {
         // Setup: deploy one account plus one interaction target and build a contract-interaction policy with
         // `anyFunction=true`.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
@@ -731,9 +729,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies per-entity rate-limit scopes separate initiator/account/destination budgets, while an all-shared
-     *      scope collapses them into one budget. [OPB-RL-1, OPB-RL-2, OPB-RL-3, OPB-RL-4]
+     *  scope collapses them into one budget.
      */
-    function test_OPB_RL_1__OPB_RL_2__OPB_RL_3__OPB_RL_4__TXRL_INV_3_executeAccountTransaction_rateLimitScopes_chargeExpectedKeys()
+    function test_executeAccountTransaction_rateLimitScopes_chargeExpectedKeys()
         public
     {
         // Setup: deploy two accounts and two interaction targets for four scoped-rate-limit subcases.
@@ -957,9 +955,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies rate-limit usage resets after a time window passes and that the exact boundary already belongs to
-     *      the new window. [OPB-RL-5, OPB-RL-6]
+     *  the new window.
      */
-    function test_OPB_RL_5__OPB_RL_6__TXRL_INV_2_executeAccountTransaction_rateLimitWindows_resetAfterBoundary()
+    function test_executeAccountTransaction_rateLimitWindows_resetAfterBoundary()
         public
     {
         // Setup: deploy one account plus one interaction target, then use a one-call-per-hour policy for two
@@ -1059,9 +1057,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies rejection does not mutate rate-limit usage and rate-limit overflows fail closed with
-     *      `RateLimitExceeded`. [OPB-RL-7, OPB-RL-8]
+     *  `RateLimitExceeded`.
      */
-    function test_OPB_RL_7__OPB_RL_8__OAT_RAT_4__TXRL_INV_4__TXRL_INV_8_executeAccountTransaction_rejectionAndOverflow_leaveUsageSafe()
+    function test_executeAccountTransaction_rejectionAndOverflow_leaveUsageSafe()
         public
     {
         // Setup: deploy one account plus one interaction target, then prepare one rate-limited auto-approve policy.
@@ -1136,9 +1134,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies zero-threshold manual group approvals are rejected and `anyInitiator=true` still requires
-     *      organization membership. [OPB-AIA-1, OPB-AIA-2]
+     *  organization membership.
      */
-    function test_OPB_AIA_1__OPB_AIA_2__POL_INV_7_executeAccountTransaction_manualZeroThresholdAndNonMemberInitiator_failClosed()
+    function test_executeAccountTransaction_manualZeroThresholdAndNonMemberInitiator_failClosed()
         public
     {
         // Setup: deploy one account plus one interaction target, then prepare one zero-threshold manual policy and one
@@ -1201,9 +1199,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies `executeAccountTransaction` group initiator authorization uses current organization membership
-     *      instead of stale group bits. [OPB-AIA-4]
+     *  instead of stale group bits.
      */
-    function test_OPB_AIA_4_executeAccountTransaction_groupInitiatorRequiresCurrentOrgMembership() public {
+    function test_executeAccountTransaction_groupInitiatorRequiresCurrentOrgMembership() public {
         // Setup: deploy one account plus one interaction target, configure a single admin signer for real
         // `modifyGroups/modifyMembers` calls, create a two-member initiator group, and then remove one initiator from
         // the organization without touching the existing group membership bit.
@@ -1274,9 +1272,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies `executeAccountTransaction` group reviewer authorization uses current organization membership
-     *      instead of stale group bits. [OPB-AIA-5]
+     *  instead of stale group bits.
      */
-    function test_OPB_AIA_5_executeAccountTransaction_groupApproverRequiresCurrentOrgMembership() public {
+    function test_executeAccountTransaction_groupApproverRequiresCurrentOrgMembership() public {
         // Setup: deploy one account plus one interaction target, configure a single admin signer for real
         // `modifyGroups/modifyMembers` calls, create a two-reviewer group with threshold one, and then remove one
         // reviewer from the organization while leaving the existing group bit in place.
@@ -1459,9 +1457,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies policy-root updates invalidate previously collected signatures and group membership drops can make
-     *      pre-collected manual approvals fall below threshold. [OPB-PGM-1, OPB-PGM-2]
+     *  pre-collected manual approvals fall below threshold.
      */
-    function test_OPB_PGM_1__OPB_PGM_2_executeAccountTransaction_policyAndGroupMutations_invalidateCollectedSignatures()
+    function test_executeAccountTransaction_policyAndGroupMutations_invalidateCollectedSignatures()
         public
     {
         // Setup: deploy one account plus one interaction target, then collect signatures under one auto-approve policy

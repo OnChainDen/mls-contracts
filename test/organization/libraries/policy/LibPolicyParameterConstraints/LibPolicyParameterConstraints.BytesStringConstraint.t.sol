@@ -12,7 +12,7 @@ import {ConstraintType} from "types/PolicyTypes.sol";
  */
 contract LibPolicyParameterConstraintsBytesStringConstraintTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that dynamic bytes exact hash matching works.
-    function test_LPPC_ATYPE_3_isBytesOrStringParameterAllowedByConstraint_dynamicBytesHashMatchAndMismatch()
+    function test_isBytesOrStringParameterAllowedByConstraint_dynamicBytesHashMatchAndMismatch()
         public
         view
     {
@@ -160,7 +160,7 @@ contract LibPolicyParameterConstraintsBytesStringConstraintTest is LibPolicyPara
     }
 
     /// @dev Verifies that declared lengths extending beyond calldata return false.
-    function test_LPPC_ATYPE_2_isBytesOrStringParameterAllowedByConstraint_declaredLengthBeyondCalldata_returnsFalse()
+    function test_isBytesOrStringParameterAllowedByConstraint_declaredLengthBeyondCalldata_returnsFalse()
         public
         view
     {
@@ -217,7 +217,7 @@ contract LibPolicyParameterConstraintsBytesStringConstraintTest is LibPolicyPara
     }
 
     /// @dev Verifies that offset/length arithmetic overflow fails closed.
-    function test_LPPC_ATYPE_6_isBytesOrStringParameterAllowedByConstraint_overflowingOffset_failClosedDesiredBehavior()
+    function test_isBytesOrStringParameterAllowedByConstraint_overflowingOffset_failClosedDesiredBehavior()
         public
     {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for offset/length arithmetic
@@ -255,8 +255,8 @@ contract LibPolicyParameterConstraintsBytesStringConstraintTest is LibPolicyPara
         }
     }
 
-    /// @dev Verifies malformed bytes/string comparison data fails closed with false. [POL-INV-14]
-    function test_POL_INV_14_isBytesOrStringParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
+    /// @dev Verifies malformed bytes/string comparison data fails closed with false.
+    function test_isBytesOrStringParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
         // closed with false.
         public

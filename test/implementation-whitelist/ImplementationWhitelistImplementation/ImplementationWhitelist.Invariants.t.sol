@@ -232,15 +232,15 @@ contract ImplementationWhitelistInvariantsTest is Test {
         targetContract(address(handler));
     }
 
-    /// @dev IWC-INV-1: Only current whitelist owner can mutate whitelist entries.
-    function invariant_IWC_INV_1_ownerExclusivity_nonOwnerMutationsAlwaysFail() public view {
+    /// @dev : Only current whitelist owner can mutate whitelist entries.
+    function invariant_ownerExclusivity_nonOwnerMutationsAlwaysFail() public view {
         assertFalse(handler.nonOwnerMutationSucceeded(), "non-owner mutation should never succeed");
     }
 
     // forgefmt: disable-next-item
-    /// @dev IWC-INV-2 + IWC-INV-3: Onchain whitelist state must match the reference model for every tracked address
+    /// @dev + : Onchain whitelist state must match the reference model for every tracked address
     // under both contract types, which also proves type independence (adding to one type never affects the other).
-    function invariant_IWC_INV_2_3_whitelistStateMatchesReferenceModel() public view {
+    function invariant_3_whitelistStateMatchesReferenceModel() public view {
         ImplementationWhitelistHarness whitelist = handler.whitelist();
         uint256 count = handler.trackedCount();
 
@@ -257,22 +257,22 @@ contract ImplementationWhitelistInvariantsTest is Test {
         }
     }
 
-    /// @dev IWC-INV-4: `isUpgradeAuthorized` is false outside authorized org-upgrade execution window.
+    /// @dev : `isUpgradeAuthorized` is false outside authorized org-upgrade execution window.
     ///      For the whitelist contract itself, the UUPS `_authorizeUpgrade` is owner-gated, not flag-based.
     ///      This invariant verifies the whitelist proxy always has a valid owner set (authorization state is sound).
-    function invariant_IWC_INV_4_upgradeAuthFlagSafety_whitelistOwnerAlwaysSet() public view {
+    function invariant_upgradeAuthFlagSafety_whitelistOwnerAlwaysSet() public view {
         address currentOwner = handler.whitelist().owner();
         assertTrue(currentOwner != address(0), "whitelist owner must always be set (authorization state sound)");
         assertEq(currentOwner, handler.owner(), "whitelist owner must match expected owner");
     }
 
-    /// @dev IWC-INV-6: Whitelist data is preserved after whitelist UUPS upgrade.
-    function invariant_IWC_INV_6_whitelistStateContinuity_preservedAcrossUpgrades() public view {
+    /// @dev : Whitelist data is preserved after whitelist UUPS upgrade.
+    function invariant_whitelistStateContinuity_preservedAcrossUpgrades() public view {
         assertFalse(handler.upgradeCorruptedState(), "whitelist state must survive UUPS upgrades");
     }
 
-    /// @dev IWC-INV-7: Initialization permanence — once initialized, cannot revert to false.
-    function invariant_IWC_INV_7_initializationPermanence_onceInitializedCannotRevert() public view {
+    /// @dev : Initialization permanence — once initialized, cannot revert to false.
+    function invariant_initializationPermanence_onceInitializedCannotRevert() public view {
         assertFalse(handler.initializationBecameFalse(), "initialization must never revert to false");
         assertTrue(handler.whitelist().isInitialized(), "whitelist must remain initialized");
     }

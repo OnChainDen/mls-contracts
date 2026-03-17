@@ -13,8 +13,8 @@ import {AdminAuthParams} from "types/AdminTypes.sol";
  */
 contract OrganizationGuardianBaseAcceptGuardianTest is OrganizationGuardianBaseSuiteBase {
     /// @dev Verifies `OrganizationGuardianBase.acceptGuardian` only allows the pending guardian to accept a finalized
-    /// guardian update. [OGU-GU-6]
-    function test_OGB_AG_1__OGU_GU_6__GUARD_INV_7_nonPendingGuardianCaller_revertsOnlyPendingGuardian() public {
+    /// guardian update.
+    function test_nonPendingGuardianCaller_revertsOnlyPendingGuardian() public {
         // Setup
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
         guardianStateHarness.setPendingGuardianUpdateTimestamp(block.timestamp);
@@ -29,8 +29,8 @@ contract OrganizationGuardianBaseAcceptGuardianTest is OrganizationGuardianBaseS
         assertEq(harness.guardian(), GUARDIAN, "guardian should remain unchanged");
     }
 
-    /// @dev Verifies OGB-AG-2: pending guardian caller delegates to library and completes acceptance.
-    function test_OGB_AG_2_pendingGuardianCaller_delegatesAndAccepts() public {
+    /// @dev Verifies pending guardian caller delegates to library and completes acceptance.
+    function test_pendingGuardianCaller_delegatesAndAccepts() public {
         // Setup
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
         guardianStateHarness.setPendingGuardianUpdateTimestamp(block.timestamp);
@@ -47,8 +47,8 @@ contract OrganizationGuardianBaseAcceptGuardianTest is OrganizationGuardianBaseS
         assertFalse(harness.isGuardianUpdateReadyForAcceptance(), "ready flag should clear");
     }
 
-    /// @dev Verifies OGB-AG-3: pending guardian caller before finalize reverts `GuardianUpdateNotReadyForAcceptance`.
-    function test_OGB_AG_3_pendingGuardianBeforeFinalize_revertsGuardianUpdateNotReadyForAcceptance() public {
+    /// @dev Verifies pending guardian caller before finalize reverts `GuardianUpdateNotReadyForAcceptance`.
+    function test_pendingGuardianBeforeFinalize_revertsGuardianUpdateNotReadyForAcceptance() public {
         // Setup
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
         guardianStateHarness.setPendingGuardianUpdateTimestamp(block.timestamp);
@@ -63,8 +63,8 @@ contract OrganizationGuardianBaseAcceptGuardianTest is OrganizationGuardianBaseS
         assertEq(harness.guardian(), GUARDIAN, "guardian should remain unchanged");
     }
 
-    /// @dev Verifies OGB-AG-4: second accept call reverts and state does not mutate after successful acceptance.
-    function test_OGB_AG_4_secondAcceptCall_revertsAndDoesNotMutateState() public {
+    /// @dev Verifies second accept call reverts and state does not mutate after successful acceptance.
+    function test_secondAcceptCall_revertsAndDoesNotMutateState() public {
         // Setup
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
         guardianStateHarness.setPendingGuardianUpdateTimestamp(block.timestamp);
@@ -92,8 +92,8 @@ contract OrganizationGuardianBaseAcceptGuardianTest is OrganizationGuardianBaseS
     }
 
     /// @dev Verifies the normal guardian-update lifecycle succeeds end to end with guardian execution, admin auth,
-    /// timelock expiry, and pending-guardian acceptance. [OGU-GU-1]
-    function test_OGU_GU_1_normalGuardianUpdateFlow_initiateTimelockFinalizeAccept_succeedsWithGuardianAndAdminAuth()
+    /// timelock expiry, and pending-guardian acceptance.
+    function test_normalGuardianUpdateFlow_initiateTimelockFinalizeAccept_succeedsWithGuardianAndAdminAuth()
         public
     {
         // Setup: configure one-admin authorization and stage a fresh normal guardian update toward

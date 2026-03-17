@@ -75,7 +75,7 @@ contract LibPolicyParameterConstraintsAddressConstraintTest is LibPolicyParamete
     }
 
     /// @dev Verifies that OneOf with a multi-leaf root rejects empty proofs.
-    function test_LPPC_ATYPE_1_isAddressParameterAllowedByConstraint_oneOfMultiLeafEmptyProof_returnsFalse() public {
+    function test_isAddressParameterAllowedByConstraint_oneOfMultiLeafEmptyProof_returnsFalse() public {
         // Setup: build a two-leaf tree where a non-empty proof is required.
         address[] memory values = buildArray(reviewer1, reviewer2);
         (bytes32 root,) = _buildAddressRootAndProof(values, 0);
@@ -129,7 +129,7 @@ contract LibPolicyParameterConstraintsAddressConstraintTest is LibPolicyParamete
     }
 
     /// @dev Verifies that Exact rejects oversized address comparison payloads.
-    function test_POL_INV_14_isAddressParameterAllowedByConstraint_exactOversizedComparisonData_returnsFalse()
+    function test_isAddressParameterAllowedByConstraint_exactOversizedComparisonData_returnsFalse()
         public
         view
     {
@@ -146,7 +146,7 @@ contract LibPolicyParameterConstraintsAddressConstraintTest is LibPolicyParamete
     }
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
-    function test_POL_INV_14_isAddressParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
+    function test_isAddressParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
         public
     {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails

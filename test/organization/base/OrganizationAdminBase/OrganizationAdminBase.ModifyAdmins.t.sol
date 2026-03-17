@@ -38,7 +38,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
     }
 
     /// @dev Verifies `OrganizationAdminBase.modifyAdmins` reverts for non-guardian callers.
-    function test_OAB_MA_2_modifyAdmins_nonGuardianCaller_revertsOnlyGuardian() public {
+    function test_modifyAdmins_nonGuardianCaller_revertsOnlyGuardian() public {
         // Arrange: valid baseline config, but call from a non-guardian account.
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -122,7 +122,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
 
     /// @dev Verifies `OrganizationAdminBase.modifyAdmins` adds/removes admins and updates the threshold in one
     /// authorized execution.
-    function test_OAB_MA_1_modifyAdmins_guardianWithValidAuth_addsRemovesAndUpdatesThreshold_endToEnd() public {
+    function test_modifyAdmins_guardianWithValidAuth_addsRemovesAndUpdatesThreshold_endToEnd() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({
             members: buildArray(admin1, admin2, admin3), admins: buildArray(admin1, admin2), threshold: 2
@@ -156,7 +156,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
 
     /// @dev Verifies `OrganizationAdminBase.modifyAdmins` rejects duplicate signer entries in the packed approval
     /// signature list.
-    function test_OAB_MA_3_modifyAdmins_duplicateSigner_revertsDuplicateOrOutOfOrderAdminSigner() public {
+    function test_modifyAdmins_duplicateSigner_revertsDuplicateOrOutOfOrderAdminSigner() public {
         address newAdmin = address(0x20F);
         // Setup: require two admin signatures, then build an approval payload that repeats the same signer twice.
         _setMembersAndAdmins({
@@ -204,7 +204,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
 
     /// @dev Verifies `OrganizationAdminBase.modifyAdmins` rejects out-of-order signer entries in the packed approval
     /// signature list.
-    function test_OAB_MA_3_modifyAdmins_outOfOrderSigners_revertsDuplicateOrOutOfOrderAdminSigner() public {
+    function test_modifyAdmins_outOfOrderSigners_revertsDuplicateOrOutOfOrderAdminSigner() public {
         address newAdmin = address(0x210);
         // Setup: require two admin signatures, then build an approval payload whose packed signatures are descending by
         // signer address.
@@ -266,7 +266,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
 
     /// @dev Verifies `OrganizationAdminBase.modifyAdmins` fails when a signer loses admin status after signatures are
     /// collected but before execution.
-    function test_OAB_MA_4_modifyAdmins_adminRemovedAfterSigning_revertsSignerIsNotAdminAtExecutionTime() public {
+    function test_modifyAdmins_adminRemovedAfterSigning_revertsSignerIsNotAdminAtExecutionTime() public {
         address newAdmin = address(0x211);
         // Setup: collect a valid two-admin approval, then demote one signer before the guardian executes the change.
         _setMembersAndAdmins({
@@ -308,7 +308,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
 
     /// @dev Verifies `OrganizationAdminBase.modifyAdmins` rejects signatures that only satisfy the old threshold after
     /// the organization threshold increases.
-    function test_OAB_MA_5_modifyAdmins_thresholdRaisedAfterSigning_revertsInsufficientAuthorization() public {
+    function test_modifyAdmins_thresholdRaisedAfterSigning_revertsInsufficientAuthorization() public {
         address newAdmin = address(0x212);
         // Setup: collect a one-signature approval while the threshold is one, then raise the live threshold to two
         // before execution.
@@ -396,7 +396,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
     }
 
     /// @dev Verifies `OrganizationAdminBase.modifyAdmins` rejects signatures collected for the rejection domain.
-    function test_OAB_RAO_3_modifyAdmins_rejectionSignatures_cannotExecuteApprovalPath() public {
+    function test_modifyAdmins_rejectionSignatures_cannotExecuteApprovalPath() public {
         address newAdmin = address(0x203);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
@@ -664,7 +664,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
     }
 
     /// @dev Verifies `OrganizationAdminBase.modifyAdmins` rejects expired auth and leaves the nonce unused.
-    function test_OAB_MA_6_modifyAdmins_expiredAuth_revertsAndDoesNotConsumeNonce() public {
+    function test_modifyAdmins_expiredAuth_revertsAndDoesNotConsumeNonce() public {
         address newAdmin = address(0x209);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
@@ -703,7 +703,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
     }
 
     /// @dev Verifies that replaying the same nonce reverts with `NonceAlreadyUsed`.
-    function test_NMADB_MA_1_modifyAdmins_replaySameNonce_revertsNonceAlreadyUsed() public {
+    function test_modifyAdmins_replaySameNonce_revertsNonceAlreadyUsed() public {
         address newAdmin = address(0x20A);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
@@ -743,7 +743,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
     }
 
     /// @dev Verifies that a downstream revert rolls back both state and nonce consumption.
-    function test_NMADB_MA_2_modifyAdmins_downstreamRevert_rollsBackNonceConsumption() public {
+    function test_modifyAdmins_downstreamRevert_rollsBackNonceConsumption() public {
         address nonMember = address(0x20B);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -780,7 +780,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
     }
 
     /// @dev Verifies that an invalid-threshold downstream revert also rolls back nonce consumption.
-    function test_NMADB_MA_2_modifyAdmins_invalidThresholdDownstreamRevert_rollsBackNonceConsumption() public {
+    function test_modifyAdmins_invalidThresholdDownstreamRevert_rollsBackNonceConsumption() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 

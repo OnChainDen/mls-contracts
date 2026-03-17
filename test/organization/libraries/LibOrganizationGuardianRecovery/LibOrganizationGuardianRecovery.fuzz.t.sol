@@ -15,7 +15,7 @@ import {GuardianRecoveryState, PendingRecoveryInitTimelock, TxRecoveryState} fro
  */
 contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecoverySuiteBase {
     /// @dev Verifies that random non-zero recovery addresses with valid timelocks configure successfully.
-    function testFuzz_OGR_FZ_1_randomNonZeroRecoveryAddress_validTimelock_configures(
+    function testFuzz_randomNonZeroRecoveryAddress_validTimelock_configures(
         address recoveryAddress,
         uint256 timelock
     ) public {
@@ -46,7 +46,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
     /// @param timelock The first configured guardian-recovery timelock.
     /// @param secondRecoveryAddress The second attempted recovery address.
     /// @param secondTimelock The second attempted guardian-recovery timelock.
-    function testFuzz_FLOGR_INIT_109_initializeGuardianRecovery_canOnlyBeConfiguredOnce(
+    function testFuzz_initializeGuardianRecovery_canOnlyBeConfiguredOnce(
         address recoveryAddress,
         uint256 timelock,
         address secondRecoveryAddress,
@@ -76,7 +76,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
     }
 
     /// @dev Verifies that validation helper accepts in-range timelocks and rejects out-of-range values.
-    function testFuzz_OGR_FZ_2__OGR_FZ_3_validateParams_acceptsInRangeRejectsOutOfRange(
+    function testFuzz_validateParams_acceptsInRangeRejectsOutOfRange(
         address recoveryAddress,
         uint256 timelock
     ) public {
@@ -107,7 +107,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
 
     /// @dev Verifies recovery-guardian updates use the configured guardian-recovery timelock and enforce the
     /// finalize timestamp relation.
-    function testFuzz_OGR_FZ_4__OGR_FZ_5__OGR_FZ_9__GREC_INV_10__FLOGR_RUPDATE_113_finalizeBeforeAfterTimelock_behavesByTimestamp(
+    function testFuzz_finalizeBeforeAfterTimelock_behavesByTimestamp(
         uint256 timelock,
         uint256 delta
     ) public {
@@ -159,7 +159,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
     /// @param pendingRecoveryAddress The recovery address proposed through deferred initialization.
     /// @param pendingTimelock The recovery timelock proposed through deferred initialization.
     /// @param cancelAfterInitiate Whether to cancel immediately instead of finalizing after the timelock.
-    function testFuzz_FLOGR_DINIT_111_deferredGuardianRecoveryInit_obeysAdminOperationTimelock(
+    function testFuzz_deferredGuardianRecoveryInit_obeysAdminOperationTimelock(
         address pendingRecoveryAddress,
         uint256 pendingTimelock,
         bool cancelAfterInitiate
@@ -221,7 +221,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
     }
 
     /// @dev Verifies that random non-zero guardians complete flow while zero guardian always reverts on initiate.
-    function testFuzz_OGR_FZ_6__OGR_FZ_10_randomGuardiansOrZero_initiateBehavior(address newGuardian) public {
+    function testFuzz_randomGuardiansOrZero_initiateBehavior(address newGuardian) public {
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
@@ -244,7 +244,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
     }
 
     /// @dev Verifies that random non-recovery addresses revert enforceOnlyGuardianRecoveryAddress.
-    function testFuzz_OGR_FZ_7_randomNonRecoveryAddresses_revertOnEnforceOnlyGuardianRecoveryAddress(address caller)
+    function testFuzz_randomNonRecoveryAddresses_revertOnEnforceOnlyGuardianRecoveryAddress(address caller)
         public
     {
         // Setup: reconfigure baseline recovery address and timelock.
@@ -271,7 +271,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
     }
 
     /// @dev Verifies that random non-pending-guardian addresses revert enforceOnlyRecoveryPendingGuardian.
-    function testFuzz_OGR_FZ_8_randomNonPendingGuardianAddresses_revertOnEnforceOnlyRecoveryPendingGuardian(
+    function testFuzz_randomNonPendingGuardianAddresses_revertOnEnforceOnlyRecoveryPendingGuardian(
         address pendingGuardian,
         address caller
     ) public {
@@ -299,7 +299,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
     }
 
     /// @dev Verifies that random state transitions never change guardian except via successful accept.
-    function testFuzz_OGR_FZ_11_statefulSequence_guardianChangesOnlyOnSuccessfulAccept(uint256 seed, uint8 steps)
+    function testFuzz_statefulSequence_guardianChangesOnlyOnSuccessfulAccept(uint256 seed, uint8 steps)
         public
     {
         // Setup: reconfigure baseline recovery address and timelock.
@@ -348,7 +348,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
     }
 
     /// @dev Verifies that configured state always has non-zero in-range timelock when recoveryAddress is non-zero.
-    function testFuzz_OGR_FZ_12_configCoherence_whenConfiguredTimelockIsNonZeroAndInRange(
+    function testFuzz_configCoherence_whenConfiguredTimelockIsNonZeroAndInRange(
         address recoveryAddress,
         uint256 timelock
     ) public {
@@ -385,7 +385,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
     /// @param pendingInitTimelock The pending tx-recovery init timelock seeded into storage.
     /// @param pendingInitTimestamp The pending tx-recovery init timestamp seeded into storage.
     /// @param newGuardian The recovery guardian used for the guardian-recovery mutation path.
-    function testFuzz_FLOGR_ISO_117_guardianRecoveryOperations_neverMutateTxRecoveryState(
+    function testFuzz_guardianRecoveryOperations_neverMutateTxRecoveryState(
         address txRecoveryAddress,
         bool enabled,
         uint256 txTimelock,
@@ -453,7 +453,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
     /// @param pendingTimestamp The pending deferred-init finalize timestamp seeded into storage.
     /// @param configuredRecovery The active recovery address used for the validate-not-configured branch.
     /// @param configuredTimelock The active recovery timelock used for the validate-not-configured branch.
-    function testFuzz_FLOGR_HAR_118_helperWrappers_areIdempotentAndFieldConsistent(
+    function testFuzz_helperWrappers_areIdempotentAndFieldConsistent(
         address pendingAddress,
         uint256 pendingTimelock,
         uint256 pendingTimestamp,

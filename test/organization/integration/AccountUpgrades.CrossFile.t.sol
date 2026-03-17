@@ -14,7 +14,7 @@ import {OperationType} from "types/CommonTypes.sol";
  */
 contract OrganizationAccountFactoryBaseUpgradeIntegrationTest is OrganizationUpgradesCrossFileSuiteBase {
     /// @dev Verifies account implementation updates do not alter Organization proxy implementation pointer.
-    function test_ACCF_INV_6_OAFB_SAI_16_accountImplementationUpgrade_doesNotAlterOrganizationImplementation() public {
+    function test_accountImplementationUpgrade_doesNotAlterOrganizationImplementation() public {
         // Setup: capture Organization implementation pointer and prepare account implementation update.
         _setSingleAdminThresholdOne();
         address organizationImplementationBefore = _readProxyImplementation(address(organizationProxy));
@@ -44,7 +44,7 @@ contract OrganizationAccountFactoryBaseUpgradeIntegrationTest is OrganizationUpg
     }
 
     /// @dev Verifies nonces consumed through reject flow cannot authorize account implementation updates.
-    function test_OAFB_SAI_6_rejectedNonce_revertsWhenUsedForAccountUpgrade() public {
+    function test_rejectedNonce_revertsWhenUsedForAccountUpgrade() public {
         // Setup: configure baseline, whitelist target, and build approval/rejection auth for same nonce tuple.
         _setSingleAdminThresholdOne();
         address accountImplV1 = address(new AccountImplementation());
@@ -84,7 +84,7 @@ contract OrganizationAccountFactoryBaseUpgradeIntegrationTest is OrganizationUpg
     }
 
     /// @dev Verifies Organization UUPS upgrades preserve account implementation pointer used by `implementation()`.
-    function test_OAFB_IMP_3_organizationUpgrade_preservesBeaconImplementationPointer() public {
+    function test_organizationUpgrade_preservesBeaconImplementationPointer() public {
         // Setup: configure account implementation and whitelist Organization V2 for upgrade.
         _setSingleAdminThresholdOne();
         address accountImplV1 = address(new AccountImplementation());

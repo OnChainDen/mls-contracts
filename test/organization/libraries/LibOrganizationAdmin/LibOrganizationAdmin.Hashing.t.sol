@@ -27,7 +27,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
         0x5ef4f435c251fc893b3e274d308fb1e415011e419c90b611c5c13c8a2a5d9d0c;
 
     /// @dev Verifies that the same input tuple produces a deterministic hash.
-    function test_NMADM_HASH_1_LOADM_GAOH_1_getAdminOperationHash_sameInput_isDeterministic() public view {
+    function test_getAdminOperationHash_sameInput_isDeterministic() public view {
         // Setup: define one operation payload and a fixed parameter tuple.
         bytes memory operationData = abi.encode("op68", uint256(1));
 
@@ -53,7 +53,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that a different operation type produces a different hash.
-    function test_NMADM_HASH_3_LOADM_GAOH_2_getAdminOperationHash_differentOperationType_producesDifferentHash()
+    function test_getAdminOperationHash_differentOperationType_producesDifferentHash()
         public
         view
     {
@@ -82,7 +82,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that different operation data produces a different hash.
-    function test_NMADM_HASH_4_LOADM_GAOH_3_getAdminOperationHash_differentOperationData_producesDifferentHash()
+    function test_getAdminOperationHash_differentOperationData_producesDifferentHash()
         public
         view
     {
@@ -110,7 +110,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that a different salt produces a different hash.
-    function test_NMADM_HASH_5_LOADM_GAOH_4_getAdminOperationHash_differentSalt_producesDifferentHash() public view {
+    function test_getAdminOperationHash_differentSalt_producesDifferentHash() public view {
         // Setup: define one payload and two salt variants.
         bytes memory operationData = abi.encode("op71");
 
@@ -136,7 +136,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that a different expiration timestamp produces a different hash.
-    function test_NMADM_HASH_6_LOADM_GAOH_5_getAdminOperationHash_differentExpiration_producesDifferentHash()
+    function test_getAdminOperationHash_differentExpiration_producesDifferentHash()
         public
         view
     {
@@ -165,7 +165,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that toggling `isApproval` produces a different hash.
-    function test_E712_HASH_3_A_NMADM_HASH_2_LOADM_GAOH_6__LOA_AADMIN_6_getAdminOperationHash_differentIsApproval_producesDifferentHash()
+    function test_getAdminOperationHash_differentIsApproval_producesDifferentHash()
         public
         view
     {
@@ -194,7 +194,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that a different chain ID produces a different hash.
-    function test_NMADM_HASH_7_LOADM_GAOH_7__LOA_AADMIN_7_getAdminOperationHash_differentChainId_producesDifferentHash()
+    function test_getAdminOperationHash_differentChainId_producesDifferentHash()
         public
     {
         // Setup: define one payload and keep all signed fields constant.
@@ -225,7 +225,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that a different contract address produces a different hash.
-    function test_NMADM_HASH_8_LOADM_GAOH_8__LOA_AADMIN_7_getAdminOperationHash_differentContractAddress_producesDifferentHash()
+    function test_getAdminOperationHash_differentContractAddress_producesDifferentHash()
         public
     {
         // Setup: define one payload and deploy a second harness address.
@@ -254,7 +254,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that the hash matches a manual EIP-712 typed-data computation.
-    function test_LOADM_GAOH_10_getAdminOperationHash_matchesManualEIP712Computation() public view {
+    function test_getAdminOperationHash_matchesManualEIP712Computation() public view {
         // Setup: define one operation tuple and keep all signed fields explicit.
         bytes memory operationData = abi.encode("op76", uint256(42));
         uint256 salt = 16;
@@ -302,7 +302,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies empty operation data is hashed deterministically through the `keccak256("")` path.
-    function test_LOADM_GAOH_9_getAdminOperationHash_emptyOperationData_isDeterministic() public view {
+    function test_getAdminOperationHash_emptyOperationData_isDeterministic() public view {
         // Setup: use the empty `operationData` case while keeping the remaining typed-data fields fixed.
         bytes memory emptyOperationData = bytes("");
 
@@ -354,7 +354,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationAdmin._getAdminOperationHash` matches a precomputed typed-data hash vector.
-    function test_NMADM_HASH_9_getAdminOperationHash_knownInputs_matchesGoldenVector() public {
+    function test_getAdminOperationHash_knownInputs_matchesGoldenVector() public {
         // Setup: pin chain id and clone the harness bytecode at the deterministic organization address used when the
         // off-chain golden vector was generated.
         uint256 originalChainId = block.chainid;

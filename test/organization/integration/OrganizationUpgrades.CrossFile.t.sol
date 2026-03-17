@@ -19,7 +19,7 @@ import {OperationType} from "types/CommonTypes.sol";
  */
 contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuiteBase {
     /// @dev Verifies full flow: whitelist Organization impl + guardian/admin auth -> Organization upgrade succeeds.
-    function test_UPG_CFS_1__IWC_INT_1_fullFlow_organizationUpgradeSucceeds() public {
+    function test_fullFlow_organizationUpgradeSucceeds() public {
         // Setup: seed valid guardian/admin config and whitelist V2 Organization implementation.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -42,7 +42,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
     }
 
     /// @dev Verifies full flow: whitelist Account impl + guardian/admin auth upgrades all deployed accounts.
-    function test_UPG_CFS_2__IWC_INT_1_fullFlow_accountImplementationUpgradeAffectsAllAccounts() public {
+    function test_fullFlow_accountImplementationUpgradeAffectsAllAccounts() public {
         // Setup: deploy two account implementation versions and whitelist both.
         _setSingleAdminThresholdOne();
         address accountImplV1 = address(new AccountImplementationVersion1());
@@ -118,7 +118,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
     }
 
     /// @dev Verifies unwhitelisting blocks future upgrades but does not mutate already-active implementation pointers.
-    function test_UPG_CFS_3__IWC_INT_3_unwhitelistingBlocksFutureUpgradeWithoutMutatingActivePointers() public {
+    function test_unwhitelistingBlocksFutureUpgradeWithoutMutatingActivePointers() public {
         // Setup: activate Organization V2 and Account implementation V1 while both are whitelisted.
         _setSingleAdminThresholdOne();
         address accountImplV1 = address(new AccountImplementationVersion1());
@@ -213,7 +213,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
 
     /// @dev Verifies unwhitelisting active Organization implementation does not block upgrading to new whitelisted
     /// impl.
-    function test_UPG_CFS_4_unwhitelistedActiveOrgImpl_canUpgradeToNewWhitelistedImpl() public {
+    function test_unwhitelistedActiveOrgImpl_canUpgradeToNewWhitelistedImpl() public {
         // Setup: upgrade to V2, unwhitelist V2, and whitelist V3.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -252,7 +252,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
     }
 
     /// @dev Verifies unwhitelisting active Account implementation does not block upgrade to a new whitelisted target.
-    function test_UPG_CFS_5_unwhitelistedActiveAccountImpl_canUpgradeToNewWhitelistedImpl() public {
+    function test_unwhitelistedActiveAccountImpl_canUpgradeToNewWhitelistedImpl() public {
         // Setup: activate account impl V1, unwhitelist V1, whitelist V2.
         _setSingleAdminThresholdOne();
         address accountImplV1 = address(new AccountImplementationVersion1());
@@ -293,7 +293,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
     }
 
     /// @dev Verifies Organization upgrades do not bypass Account implementation whitelist/type checks.
-    function test_UPG_CFS_6__IWC_INT_2_organizationUpgrade_doesNotBypassAccountWhitelistChecks() public {
+    function test_organizationUpgrade_doesNotBypassAccountWhitelistChecks() public {
         // Setup: upgrade Organization to V2, then try account implementation update using Organization-type whitelist
         // only.
         _setSingleAdminThresholdOne();
@@ -330,7 +330,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
     }
 
     /// @dev Verifies without valid admin auth, neither Organization nor Account upgrade path executes.
-    function test_UPG_CFS_7_withoutValidAdminAuth_neitherUpgradePathExecutes() public {
+    function test_withoutValidAdminAuth_neitherUpgradePathExecutes() public {
         // Setup: whitelist valid targets but use empty/invalid auth payload.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -352,7 +352,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
     }
 
     /// @dev Verifies execution fails if implementation is unwhitelisted after signatures are collected.
-    function test_UPG_CFS_8__IWC_INT_7_unwhitelistedAfterSigning_beforeExecution_fails() public {
+    function test_unwhitelistedAfterSigning_beforeExecution_fails() public {
         // Setup: build valid auth while target is whitelisted, then unwhitelist before execution.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -377,7 +377,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
     }
 
     /// @dev Verifies re-whitelisting re-enables upgrades only with fresh valid auth at execution time.
-    function test_UPG_CFS_9__IWC_INT_4_reWhitelistingRequiresFreshValidAuth() public {
+    function test_reWhitelistingRequiresFreshValidAuth() public {
         // Setup: collect auth, force initial failure by unwhitelisting, then let auth expire before retry.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -429,7 +429,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
     }
 
     /// @dev Verifies re-whitelisting a previously removed Account implementation re-enables account upgrade flows.
-    function test_UPG_CFS_11__IWC_INT_4_reWhitelisting_reEnablesAccountImplementationUpdates() public {
+    function test_reWhitelisting_reEnablesAccountImplementationUpdates() public {
         // Setup: activate Account V1, remove V2 from the whitelist, and build auth for switching to V2.
         _setSingleAdminThresholdOne();
         address accountImplV1 = address(new AccountImplementationVersion1());
@@ -483,7 +483,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
     }
 
     /// @dev Verifies signatures for Organization A cannot authorize same call on Organization B.
-    function test_UPG_CFS_10_signaturesAreDomainSeparatedPerOrganizationProxy() public {
+    function test_signaturesAreDomainSeparatedPerOrganizationProxy() public {
         // Setup: deploy and configure a second Organization proxy with same admin members and whitelist.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);

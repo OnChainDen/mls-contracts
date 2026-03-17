@@ -16,8 +16,7 @@ contract LibOrganizationGuardianRecoveryCancelInitializeGuardianRecoveryTest is
 {
     /// @dev Verifies `LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery` no pending initialization
     /// reverts.
-    /// Plan rows: LOGR-AOTCIGR-3.
-    function test_LOGR_CIGR_1__LOGR_AOTCIGR_3_noPendingInitialization_revertsNoGuardianRecoveryInitializationPending()
+    function test_noPendingInitialization_revertsNoGuardianRecoveryInitializationPending()
         public
     {
         // Setup: start from clean recovery state.
@@ -37,8 +36,7 @@ contract LibOrganizationGuardianRecoveryCancelInitializeGuardianRecoveryTest is
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery` cancel clears pending-init,
     /// emits event, and preserves config/recovery-update fields.
-    /// Plan rows: LOGR-AOTCIGR-1.
-    function test_LOGR_CIGR_2__LOGR_CIGR_3__LOGR_CIGR_4__LOGR_CIGR_5__LOGR_CIGR_6__LOGR_CIGR_9__LOGR_AOTCIGR_1_cancelClearsPendingInitAndPreservesOtherState()
+    function test_cancelClearsPendingInitAndPreservesOtherState()
         public
     {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and seed pending recovery-guardian
@@ -83,7 +81,7 @@ contract LibOrganizationGuardianRecoveryCancelInitializeGuardianRecoveryTest is
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery` can re-initiate after cancel,
     /// and second cancel after clear reverts.
-    function test_LOGR_CIGR_7__LOGR_CIGR_8_reInitiateAfterCancelWorks_andDoubleCancelReverts() public {
+    function test_reInitiateAfterCancelWorks_andDoubleCancelReverts() public {
         // Setup: start from clean recovery state and seed pending deferred-init tuple.
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
@@ -107,7 +105,7 @@ contract LibOrganizationGuardianRecoveryCancelInitializeGuardianRecoveryTest is
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery` succeeds after the admin-op
     /// timelock has expired as long as finalization has not occurred yet.
-    function test_LOGR_AOTCIGR_2_cancelInitializeGuardianRecovery_afterPendingTimestampStillSucceeds() public {
+    function test_cancelInitializeGuardianRecovery_afterPendingTimestampStillSucceeds() public {
         // Setup: stage a deferred initialization and advance one second past its pending timestamp without finalizing.
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
@@ -125,7 +123,7 @@ contract LibOrganizationGuardianRecoveryCancelInitializeGuardianRecoveryTest is
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery` allows a later re-initiation
     /// to compute a fresh admin-operation timelock timestamp from the new start time.
-    function test_LOGR_AOTCIGR_4_cancelInitializeGuardianRecovery_reinitiationComputesFreshPendingTimestamp() public {
+    function test_cancelInitializeGuardianRecovery_reinitiationComputesFreshPendingTimestamp() public {
         // Setup: stage and cancel one deferred initialization, then move time forward before re-initiating.
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);

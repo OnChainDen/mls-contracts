@@ -21,7 +21,7 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
     uint256 internal constant AUTHORIZED_EXECUTOR_PK = 0xA11CE;
 
     /// @dev Verifies that only recovery/policy type prefixes can produce ERC-1271 magic values.
-    function invariant_AS_INV_1_typePrefixExclusivity_onlyRecoveryAndPolicyProduceMagic() public {
+    function invariant_typePrefixExclusivity_onlyRecoveryAndPolicyProduceMagic() public {
         // Setup: prepare valid recovery and valid policy payload fixtures.
         _setTxRecoveryState(guardianSigner, true);
         bytes memory recoverySignature = _buildRecoverySignature(_signHash(GUARDIAN_PK, MESSAGE_HASH));
@@ -49,7 +49,7 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
     }
 
     /// @dev Verifies representative supported and non-policy payload classes stay on the magic-or-invalid surface.
-    function invariant_AS_INV_2_isValidSignature_payloadClassRevertBehavior_isStable() public {
+    function invariant_isValidSignature_payloadClassRevertBehavior_isStable() public {
         // Setup: prepare representative non-policy payloads plus valid recovery/policy fixtures.
         _setTxRecoveryState(guardianSigner, true);
 
@@ -80,8 +80,7 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
     }
 
     /// @dev Verifies that signatures valid in one organization are invalid in another organization.
-    /// SAG-INV-1
-    function invariant_AS_INV_3__SAG_INV_1_crossOrganizationReplay_isRejected() public {
+    function invariant_crossOrganizationReplay_isRejected() public {
         // Setup: build valid signature on organization A and mirror policy/root/member config on organization B.
         LibOrganizationAccountSignatureHarness orgB = new LibOrganizationAccountSignatureHarness();
         _seedMembers(address(orgB));
@@ -107,7 +106,7 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
     }
 
     /// @dev Verifies that review hash changes whenever initiator signature bytes change.
-    function invariant_AS_INV_4_reviewHashBindsInitiatorSignatureBytes() public view {
+    function invariant_reviewHashBindsInitiatorSignatureBytes() public view {
         // Setup: derive two different initiator signatures for the same request metadata.
         uint256 expiration = block.timestamp + 1 days;
         bytes32 initiatorHash =
@@ -137,8 +136,7 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
     }
 
     /// @dev Verifies that signature validation remains view-only and does not mutate storage usage state.
-    /// SAG-INV-6
-    function invariant_AS_INV_5__SAG_INV_6_signatureValidation_isViewAndDoesNotMutateUsage() public {
+    function invariant_signatureValidation_isViewAndDoesNotMutateUsage() public {
         // Setup: restore signer membership assumptions and build valid policy signature fixture.
         _seedDefaultMembers();
         (bytes memory signature,,,,,) =
@@ -160,7 +158,7 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
     }
 
     /// @dev Verifies that signatures valid for one account are invalid for other accounts in the same organization.
-    function invariant_AS_INV_6_crossAccountReplay_isRejectedWithinSameOrganization() public {
+    function invariant_crossAccountReplay_isRejectedWithinSameOrganization() public {
         // Setup: build valid policy signature fixture for `ACCOUNT`.
         (bytes memory signature,,,,,) =
             _buildValidPolicySignature(PolicyType.AutoApprove, DEFAULT_POLICY_ID, block.timestamp + 1 days);
@@ -175,8 +173,7 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
     }
 
     /// @dev Verifies that repeated validation with fixed pre-expiration inputs is stable and stateless.
-    /// LOAS-AIVS-6
-    function invariant_AS_INV_7__LOAS_AIVS_6_repeatedValidation_preExpiration_isStableAndStateless() public {
+    function invariant_repeatedValidation_preExpiration_isStableAndStateless() public {
         // Setup: prepare valid pre-expiration policy signature fixture and snapshot storage.
         (bytes memory signature,,,,,) =
             _buildValidPolicySignature(PolicyType.AutoApprove, DEFAULT_POLICY_ID, block.timestamp + 1 days);
@@ -200,7 +197,7 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
     }
 
     /// @dev Verifies guardian validation accepts only direct guardian signatures or enabled guardian modules.
-    function invariant_SMI_INV_6_guardianModuleSignaturesAcceptedIffDirectGuardianOrEnabledModule() public {
+    function invariant_guardianModuleSignaturesAcceptedIffDirectGuardianOrEnabledModule() public {
         // Setup: prepare direct-guardian fixtures for matching and mismatching EOAs.
         policyStateHarness.setGuardian(guardianSigner);
         bytes memory directGuardianSignature = _signHash(GUARDIAN_PK, MESSAGE_HASH);
