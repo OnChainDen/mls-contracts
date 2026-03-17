@@ -150,9 +150,8 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule oldModule =
             new SafeExecutorModule(address(guardianSafe), vm.addr(oldExecutorPk), address(batchedTransaction));
-        SafeExecutorModule newModule = new SafeExecutorModule(
-            address(guardianSafe), vm.addr(newExecutorPk), address(batchedTransaction)
-        );
+        SafeExecutorModule newModule =
+            new SafeExecutorModule(address(guardianSafe), vm.addr(newExecutorPk), address(batchedTransaction));
         guardianSafe.setModuleEnabled(address(oldModule), true);
         policyStateHarness.setGuardian(address(guardianSafe));
 

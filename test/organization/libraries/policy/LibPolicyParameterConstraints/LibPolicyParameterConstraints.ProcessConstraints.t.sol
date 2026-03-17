@@ -85,10 +85,7 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
 
     /// @dev Verifies `_processConstraints` returns false when calldata is too short for a declared head slot.
     /// [POL-INV-12]
-    function test_POL_INV_12_LPPC_APROC_4_processConstraints_dataShorterThanRequiredHead_returnsFalse()
-        public
-        view
-    {
+    function test_POL_INV_12_LPPC_APROC_4_processConstraints_dataShorterThanRequiredHead_returnsFalse() public view {
         // Setup: build fixture inputs where insufficient head bytes in calldata returns false should be denied.
         ParameterConstraint memory constraint = ParameterConstraint({
             paramType: ParamType.Uint,

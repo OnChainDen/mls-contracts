@@ -179,9 +179,7 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
 
     /// @dev Verifies `OrganizationGuardianBase.initiateGuardianUpdate` rejects finalize-stage signatures reused
     /// during initiate-stage authorization. [OGU-GU-2]
-    function test_OGB_IGU_8__NMGUB_GUF_7__OGU_GU_2_differentOperationTypeSignatures_cannotAuthorizeInitiation()
-        public
-    {
+    function test_OGB_IGU_8__NMGUB_GUF_7__OGU_GU_2_differentOperationTypeSignatures_cannotAuthorizeInitiation() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         bytes memory operationData = abi.encode(NEW_GUARDIAN_A);
@@ -234,9 +232,7 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
 
     /// @dev Verifies `OrganizationGuardianBase.initiateGuardianUpdate` rejects a second pending guardian update until
     /// the first lifecycle is cleared, without burning the signed nonce. [OGU-GU-5]
-    function test_OGB_IGU_10__NMGUB_GUF_9__OGU_GU_5_downstreamPendingRevert_rollsBackNonceAndAllowsRetry_A()
-        public
-    {
+    function test_OGB_IGU_10__NMGUB_GUF_9__OGU_GU_5_downstreamPendingRevert_rollsBackNonceAndAllowsRetry_A() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_B);
@@ -294,9 +290,7 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
 
     /// @dev Verifies `OrganizationGuardianBase.initiateGuardianUpdate` reuses the same guardian value with a new salt
     /// after cancellation.
-    function test_NMGUB_GUF_2_initiateGuardianUpdate_sameGuardianDifferentSalts_canSucceedAcrossReinitiation()
-        public
-    {
+    function test_NMGUB_GUF_2_initiateGuardianUpdate_sameGuardianDifferentSalts_canSucceedAcrossReinitiation() public {
         // Setup: configure one-admin auth plus two initiate salts for the same guardian, with an intermediate cancel.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory firstInitiateAuth, bytes memory operationData) = _buildInitiateGuardianUpdateAuth({

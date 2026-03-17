@@ -182,7 +182,8 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     }
 
     /// @dev Verifies that params validation helper enforces address checks, range checks, and boundaries.
-    /// Plan rows: LOGR-AOTVGRPOR-1, LOGR-AOTVGRPOR-2, LOGR-AOTVGRPOR-3, LOGR-AOTVGRPOR-4, LOGR-AOTVGRPOR-5, LOGR-AOTVGRPOR-6.
+    /// Plan rows: LOGR-AOTVGRPOR-1, LOGR-AOTVGRPOR-2, LOGR-AOTVGRPOR-3, LOGR-AOTVGRPOR-4, LOGR-AOTVGRPOR-5,
+    /// LOGR-AOTVGRPOR-6.
     function test_LOGR_VGRPOR_1__LOGR_VGRPOR_2__LOGR_VGRPOR_3__LOGR_VGRPOR_4__LOGR_VGRPOR_5__LOGR_VGRPOR_6__LOGR_VGRPOR_7__LOGR_VGRPOR_8__LOGR_AOTVGRPOR_1__LOGR_AOTVGRPOR_2__LOGR_AOTVGRPOR_3__LOGR_AOTVGRPOR_4__LOGR_AOTVGRPOR_5__LOGR_AOTVGRPOR_6_validateParams_helperBehavior()
         public
     {

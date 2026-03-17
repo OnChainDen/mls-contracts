@@ -13,5 +13,4 @@ import {
 /**
  * @dev Fuzz tests for `OrganizationProxy`.
  */
-contract OrganizationProxyFuzzTest is InitializationSuiteBase {
-}
+contract OrganizationProxyFuzzTest is InitializationSuiteBase {}

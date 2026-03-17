@@ -239,14 +239,12 @@ contract PolicyRateLimitsTest is Test {
         policy.config.rateLimit.timeIntervalLimit = 400;
 
         // Even a zero-amount transaction should be rejected since currentUsage (600) > newLimit (400)
-        bool zeroAmount = LibOrganizationPolicy.checkAndUpdateRateLimit(
-            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 0
-        );
+        bool zeroAmount =
+            LibOrganizationPolicy.checkAndUpdateRateLimit(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 0);
         assertFalse(zeroAmount, "Should reject zero-amount when existing usage exceeds lowered limit");
 
-        bool nonZeroAmount = LibOrganizationPolicy.checkAndUpdateRateLimit(
-            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 50
-        );
+        bool nonZeroAmount =
+            LibOrganizationPolicy.checkAndUpdateRateLimit(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 50);
         assertFalse(nonZeroAmount, "Should reject non-zero amount when existing usage exceeds lowered limit");
     }
 
@@ -334,16 +332,14 @@ contract PolicyRateLimitsTest is Test {
         assertTrue(first, "First transaction at anchor should succeed");
 
         // Same window, should fail
-        bool overflow = LibOrganizationPolicy.checkAndUpdateRateLimit(
-            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1
-        );
+        bool overflow =
+            LibOrganizationPolicy.checkAndUpdateRateLimit(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1);
         assertFalse(overflow, "Should fail within same anchor-aligned window");
 
         // One second before the anchor-aligned boundary — still in window 0
         vm.warp(999_000 + 3599);
-        bool beforeBoundary = LibOrganizationPolicy.checkAndUpdateRateLimit(
-            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1
-        );
+        bool beforeBoundary =
+            LibOrganizationPolicy.checkAndUpdateRateLimit(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1);
         assertFalse(beforeBoundary, "Should still fail one second before anchor-aligned boundary");
 
         // Advance to next anchor-aligned boundary
@@ -372,8 +368,7 @@ contract PolicyRateLimitsTest is Test {
 
         LibOrganizationPolicy.checkAndUpdateRateLimit(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 42);
 
-        uint256 usage =
-            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        uint256 usage = LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
         assertEq(usage, 42, "Usage should track correctly with non-zero anchor");
     }
 
@@ -382,8 +377,7 @@ contract PolicyRateLimitsTest is Test {
         policy.config.rateLimit.anchorTimestamp = 500_000;
 
         vm.warp(499_999);
-        uint256 usage =
-            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        uint256 usage = LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
         assertEq(usage, 0, "Usage should be 0 when block.timestamp < anchor");
     }
 
@@ -394,8 +388,7 @@ contract PolicyRateLimitsTest is Test {
         vm.warp(500_000);
         LibOrganizationPolicy.checkAndUpdateRateLimit(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 75);
 
-        uint256 usage =
-            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        uint256 usage = LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
         assertEq(usage, 75, "Usage should track correctly at exact anchor timestamp");
     }
 

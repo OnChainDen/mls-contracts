@@ -175,7 +175,9 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
 
         // Verify: malformed/high-`s` EOAs fail closed while the canonical signature remains valid.
         assertEq(validResult, SignatureUtils.ERC1271_MAGIC_VALUE, "canonical recovery signature should stay valid");
-        assertEq(malformedResult, SignatureUtils.ERC1271_INVALID_VALUE, "malformed recovery EOA bytes should fail closed");
+        assertEq(
+            malformedResult, SignatureUtils.ERC1271_INVALID_VALUE, "malformed recovery EOA bytes should fail closed"
+        );
         assertEq(highSResult, SignatureUtils.ERC1271_INVALID_VALUE, "high-s recovery EOA signatures should fail closed");
     }
 
@@ -188,8 +190,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         _setRecoveryState(harness, address(contractRecovery), true);
 
         bytes memory truncatedHeader = abi.encodePacked(uint8(0x00), bytes10(0x0102030405060708090A));
-        bytes memory oversizedInnerLength =
-            abi.encodePacked(uint8(0), address(contractRecovery), uint16(32), hex"CAFE");
+        bytes memory oversizedInnerLength = abi.encodePacked(uint8(0), address(contractRecovery), uint16(32), hex"CAFE");
 
         // Call: validate malformed ERC-1271 recovery encodings through the base entry point.
         vm.startPrank(ACCOUNT);
@@ -199,7 +200,9 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
 
         // Verify: malformed contract-signature encodings fail closed without mutating state.
         assertEq(truncatedResult, SignatureUtils.ERC1271_INVALID_VALUE, "truncated contract header should fail closed");
-        assertEq(oversizedResult, SignatureUtils.ERC1271_INVALID_VALUE, "oversized inner-length encoding should fail closed");
+        assertEq(
+            oversizedResult, SignatureUtils.ERC1271_INVALID_VALUE, "oversized inner-length encoding should fail closed"
+        );
     }
 
     /// @dev Verifies that `isValidSignatureForAccount` is view-only and does not mutate organization state.
@@ -253,7 +256,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
 
         address[] memory allowedAccounts = new address[](1);
         allowedAccounts[0] = ACCOUNT;
-        (policy.roots.sourceAccountsRoot, ) = _buildAddressRootAndProof(allowedAccounts, 0);
+        (policy.roots.sourceAccountsRoot,) = _buildAddressRootAndProof(allowedAccounts, 0);
 
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
         (, proofs.sourceAccountProof) = _buildAddressRootAndProof(allowedAccounts, 0);
@@ -399,8 +402,9 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         uint256 expirationTimestamp,
         ValidationProofs memory proofs
     ) internal view returns (bytes memory signature) {
-        bytes32 initiatorHash =
-            harness.getInitiatorSignatureHashViaLibrary(account, MESSAGE_HASH, policyId, expirationTimestamp);
+        bytes32 initiatorHash = harness.getInitiatorSignatureHashViaLibrary(
+            account, MESSAGE_HASH, policyId, expirationTimestamp
+        );
         bytes memory initiatorSignature = _signHash(initiatorPrivateKey, initiatorHash);
 
         bytes32 reviewHash = harness.getReviewSignatureHashViaLibrary(
@@ -408,9 +412,8 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         );
         bytes memory guardianSignature = _signHash(GUARDIAN_PK, reviewHash);
 
-        bytes memory signatureData = abi.encode(
-            policyId, expirationTimestamp, initiatorSignature, bytes(""), guardianSignature, proofs
-        );
+        bytes memory signatureData =
+            abi.encode(policyId, expirationTimestamp, initiatorSignature, bytes(""), guardianSignature, proofs);
         signature = abi.encodePacked(uint8(0x01), signatureData);
     }
 

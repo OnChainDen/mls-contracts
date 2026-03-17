@@ -698,11 +698,8 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         {
             bytes memory data = _encodeERC20Transfer(RECIPIENT, 0);
             uint256 expiration = block.timestamp + 1 days;
-            bytes memory firstInitiatorSignature =
-                _signDefaultInitiatorTx(harness, TOKEN, data, 29, expiration, true);
-            _validateApproval(
-                harness, TOKEN, data, 29, expiration, firstInitiatorSignature, bytes(""), proofs
-            );
+            bytes memory firstInitiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 29, expiration, true);
+            _validateApproval(harness, TOKEN, data, 29, expiration, firstInitiatorSignature, bytes(""), proofs);
         }
 
         // Verify: first call consumes exactly one unit under Any transaction type.
@@ -711,15 +708,12 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         {
             bytes memory data = _encodeERC20Transfer(RECIPIENT, 0);
             uint256 expiration = block.timestamp + 1 days;
-            bytes memory secondInitiatorSignature =
-                _signDefaultInitiatorTx(harness, TOKEN, data, 30, expiration, true);
+            bytes memory secondInitiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 30, expiration, true);
 
             vm.expectRevert(
                 abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, DEFAULT_POLICY_ID)
             );
-            _validateApproval(
-                harness, TOKEN, data, 30, expiration, secondInitiatorSignature, bytes(""), proofs
-            );
+            _validateApproval(harness, TOKEN, data, 30, expiration, secondInitiatorSignature, bytes(""), proofs);
         }
 
         // Verify: exceeded call does not mutate stored usage.
@@ -754,9 +748,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
             uint256 expiration = block.timestamp + 1 days;
             bytes memory firstInitiatorSignature =
                 _signDefaultInitiatorTx(harness, DESTINATION, data, 31, expiration, true);
-            _validateApproval(
-                harness, DESTINATION, data, 31, expiration, firstInitiatorSignature, bytes(""), proofs
-            );
+            _validateApproval(harness, DESTINATION, data, 31, expiration, firstInitiatorSignature, bytes(""), proofs);
         }
 
         // Verify: first call consumes one usage unit.
@@ -771,9 +763,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
             vm.expectRevert(
                 abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, DEFAULT_POLICY_ID)
             );
-            _validateApproval(
-                harness, DESTINATION, data, 32, expiration, secondInitiatorSignature, bytes(""), proofs
-            );
+            _validateApproval(harness, DESTINATION, data, 32, expiration, secondInitiatorSignature, bytes(""), proofs);
         }
 
         // Verify: exceeded call does not mutate stored usage.
@@ -807,15 +797,14 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         {
             bytes memory data = abi.encodeWithSelector(bytes4(0x16161616), uint256(16));
             uint256 expiration = block.timestamp + 1 days;
-            bytes memory initiatorSignature =
-                _signDefaultInitiatorTx(harness, DESTINATION, data, 16, expiration, true);
+            bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, DESTINATION, data, 16, expiration, true);
 
             // Verify: assert that the revert reason matches the policy guard under test.
             vm.expectRevert(
                 abi.encodeWithSelector(IOrganizationAccountTransaction.PolicyDoesNotApply.selector, DEFAULT_POLICY_ID)
             );
-            // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
-            // branch.
+            // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the
+            // revert branch.
             _validateApproval(harness, DESTINATION, data, 16, expiration, initiatorSignature, bytes(""), proofs);
         }
 
@@ -850,15 +839,14 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         {
             bytes memory data = abi.encodeWithSelector(bytes4(0x17171717), uint256(17));
             uint256 expiration = block.timestamp + 1 days;
-            bytes memory initiatorSignature =
-                _signDefaultInitiatorTx(harness, DESTINATION, data, 17, expiration, true);
+            bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, DESTINATION, data, 17, expiration, true);
 
             // Verify: assert that the revert reason matches the policy guard under test.
             vm.expectRevert(
                 abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0)
             );
-            // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
-            // branch.
+            // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the
+            // revert branch.
             _validateApproval(harness, DESTINATION, data, 17, expiration, initiatorSignature, bytes(""), proofs);
         }
 
@@ -884,10 +872,9 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         {
             bytes memory data = abi.encodeWithSelector(bytes4(0x18181818), uint256(18));
             uint256 expiration = block.timestamp + 1 days;
-            bytes memory initiatorSignature =
-                _signDefaultInitiatorTx(harness, DESTINATION, data, 18, expiration, true);
-            // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
-            // branch.
+            bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, DESTINATION, data, 18, expiration, true);
+            // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the
+            // revert branch.
             _validateApproval(harness, DESTINATION, data, 18, expiration, initiatorSignature, bytes(""), proofs);
         }
 
@@ -898,8 +885,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         {
             bytes memory data = abi.encodeWithSelector(bytes4(0x18181818), uint256(18));
             uint256 expiration = block.timestamp + 1 days;
-            bytes memory initiatorSignature =
-                _signDefaultInitiatorTx(harness, DESTINATION, data, 18, expiration, true);
+            bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, DESTINATION, data, 18, expiration, true);
             vm.expectRevert(
                 abi.encodeWithSelector(IOrganizationAccountTransaction.PolicyDoesNotApply.selector, DEFAULT_POLICY_ID)
             );
@@ -931,11 +917,9 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
                 _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
             ValidationProofs memory autoProofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, autoPolicy);
 
-            // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
-            // branch.
-            _validateApproval(
-                harness, DESTINATION, data, 19, expiration, initiatorSignature, bytes(""), autoProofs
-            );
+            // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the
+            // revert branch.
+            _validateApproval(harness, DESTINATION, data, 19, expiration, initiatorSignature, bytes(""), autoProofs);
         }
 
         {
@@ -944,10 +928,10 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
             ValidationProofs memory manualProofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, manualPolicy);
 
             // Verify: assert that the revert reason matches the policy guard under test.
-            vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
-            _validateApproval(
-                harness, DESTINATION, data, 19, expiration, initiatorSignature, bytes(""), manualProofs
+            vm.expectRevert(
+                abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0)
             );
+            _validateApproval(harness, DESTINATION, data, 19, expiration, initiatorSignature, bytes(""), manualProofs);
         }
     }
 
@@ -977,7 +961,18 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
             bytes memory callData = abi.encodeCall(
                 harness.validateTransactionApprovalOrRevertViaLibrary,
-                (ACCOUNT, DESTINATION, 0, data, 20, expiration, DEFAULT_POLICY_ID, initiatorSignature, bytes(""), proofs)
+                (
+                    ACCOUNT,
+                    DESTINATION,
+                    0,
+                    data,
+                    20,
+                    expiration,
+                    DEFAULT_POLICY_ID,
+                    initiatorSignature,
+                    bytes(""),
+                    proofs
+                )
             );
             _setPolicyTypeInValidateApprovalCalldata(callData, 2);
 
@@ -1053,8 +1048,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         {
             bytes memory data = abi.encodeWithSelector(bytes4(0x22222222), uint256(22));
             uint256 expiration = block.timestamp + 1 days;
-            bytes memory initiatorSignature =
-                _signDefaultInitiatorTx(harness, DESTINATION, data, 22, expiration, true);
+            bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, DESTINATION, data, 22, expiration, true);
             bytes memory rejectionByInitiator =
                 _signDefaultInitiatorTx(harness, DESTINATION, data, 22, expiration, false);
             Policy memory autoPolicy =
@@ -1064,8 +1058,8 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
             autoPolicy.config.approval.approvalThreshold = 2;
 
             ValidationProofs memory autoProofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, autoPolicy);
-            // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the revert
-            // branch.
+            // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the
+            // revert branch.
             _validateRejection(
                 harness, DESTINATION, data, 22, expiration, initiatorSignature, rejectionByInitiator, autoProofs
             );
@@ -1074,8 +1068,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         {
             bytes memory data = abi.encodeWithSelector(bytes4(0x22222222), uint256(22));
             uint256 expiration = block.timestamp + 1 days;
-            bytes memory initiatorSignature =
-                _signDefaultInitiatorTx(harness, DESTINATION, data, 22, expiration, true);
+            bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, DESTINATION, data, 22, expiration, true);
             bytes memory rejectionByInitiator =
                 _signDefaultInitiatorTx(harness, DESTINATION, data, 22, expiration, false);
             Policy memory manualPolicy =
@@ -1086,7 +1079,9 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
             ValidationProofs memory manualProofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, manualPolicy);
             // Verify: assert that the revert reason matches the policy guard under test.
-            vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 2, 0));
+            vm.expectRevert(
+                abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 2, 0)
+            );
             _validateRejection(
                 harness, DESTINATION, data, 22, expiration, initiatorSignature, rejectionByInitiator, manualProofs
             );
@@ -1100,15 +1095,15 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         {
             bytes memory data = abi.encodeWithSelector(bytes4(0x23232323), uint256(23));
             uint256 expiration = block.timestamp + 1 days;
-            bytes memory initiatorSignature =
-                _signDefaultInitiatorTx(harness, DESTINATION, data, 23, expiration, true);
-            bytes memory reviewerRejectionSignature =
-                _signDefaultReviewTx(harness, REVIEWER_PK_1, DESTINATION, data, 23, expiration, false, initiatorSignature);
+            bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, DESTINATION, data, 23, expiration, true);
+            bytes memory reviewerRejectionSignature = _signDefaultReviewTx(
+                harness, REVIEWER_PK_1, DESTINATION, data, 23, expiration, false, initiatorSignature
+            );
             Policy memory manualPolicy =
                 _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.RequireManualApproval});
             ValidationProofs memory manualProofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, manualPolicy);
-            // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the revert
-            // branch.
+            // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the
+            // revert branch.
             _validateRejection(
                 harness, DESTINATION, data, 23, expiration, initiatorSignature, reviewerRejectionSignature, manualProofs
             );
@@ -1117,10 +1112,10 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         {
             bytes memory data = abi.encodeWithSelector(bytes4(0x23232323), uint256(23));
             uint256 expiration = block.timestamp + 1 days;
-            bytes memory initiatorSignature =
-                _signDefaultInitiatorTx(harness, DESTINATION, data, 23, expiration, true);
-            bytes memory reviewerRejectionSignature =
-                _signDefaultReviewTx(harness, REVIEWER_PK_1, DESTINATION, data, 23, expiration, false, initiatorSignature);
+            bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, DESTINATION, data, 23, expiration, true);
+            bytes memory reviewerRejectionSignature = _signDefaultReviewTx(
+                harness, REVIEWER_PK_1, DESTINATION, data, 23, expiration, false, initiatorSignature
+            );
             Policy memory autoPolicy =
                 _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.RequireManualApproval});
             autoPolicy.config.approval.policyType = PolicyType.AutoApprove;
@@ -1200,16 +1195,17 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
             bytes memory initiatorSignatureChainB =
                 _signDefaultInitiatorTx(harness, DESTINATION, data, 25, expiration, true);
             vm.chainId(1);
-            bytes memory reviewerSignatureChainA =
-                _signDefaultReviewTx(harness, REVIEWER_PK_1, DESTINATION, data, 25, expiration, true, initiatorSignatureChainB);
+            bytes memory reviewerSignatureChainA = _signDefaultReviewTx(
+                harness, REVIEWER_PK_1, DESTINATION, data, 25, expiration, true, initiatorSignatureChainB
+            );
 
             vm.chainId(31_337);
             // Verify: assert that the revert reason matches the policy guard under test.
             vm.expectRevert(
                 abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0)
             );
-            // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
-            // branch.
+            // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the
+            // revert branch.
             _validateApproval(
                 harness, DESTINATION, data, 25, expiration, initiatorSignatureChainB, reviewerSignatureChainA, proofs
             );
@@ -1311,9 +1307,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that cross organization replay reviewer signatures fail with valid org b initiator.
-    function test_LOAT_CRHFP_1__INT_ETE_3_crossOrganizationReplayReviewerSignaturesFailWithValidOrgBInitiator()
-        public
-    {
+    function test_LOAT_CRHFP_1__INT_ETE_3_crossOrganizationReplayReviewerSignaturesFailWithValidOrgBInitiator() public {
         // Setup: assemble inputs expected to hit the guarded failure path for cross organization replay reviewer
         // signatures fail with valid org b initiator.
         LibOrganizationAccountTransactionHarness orgB = new LibOrganizationAccountTransactionHarness();
@@ -1334,10 +1328,10 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         {
             bytes memory data = abi.encodeWithSelector(bytes4(0x28282828), uint256(28));
             uint256 expiration = block.timestamp + 1 days;
-            bytes memory initiatorSignatureOrgB =
-                _signDefaultInitiatorTx(orgB, DESTINATION, data, 28, expiration, true);
-            bytes memory reviewerSignatureOrgB =
-                _signDefaultReviewTx(orgB, REVIEWER_PK_1, DESTINATION, data, 28, expiration, true, initiatorSignatureOrgB);
+            bytes memory initiatorSignatureOrgB = _signDefaultInitiatorTx(orgB, DESTINATION, data, 28, expiration, true);
+            bytes memory reviewerSignatureOrgB = _signDefaultReviewTx(
+                orgB, REVIEWER_PK_1, DESTINATION, data, 28, expiration, true, initiatorSignatureOrgB
+            );
 
             _validateApproval(
                 orgB, DESTINATION, data, 28, expiration, initiatorSignatureOrgB, reviewerSignatureOrgB, proofs
@@ -1349,10 +1343,10 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         {
             bytes memory data = abi.encodeWithSelector(bytes4(0x28282828), uint256(28));
             uint256 expiration = block.timestamp + 1 days;
-            bytes memory initiatorSignatureOrgB =
-                _signDefaultInitiatorTx(orgB, DESTINATION, data, 28, expiration, true);
-            bytes memory reviewerSignatureOrgA =
-                _signDefaultReviewTx(harness, REVIEWER_PK_1, DESTINATION, data, 28, expiration, true, initiatorSignatureOrgB);
+            bytes memory initiatorSignatureOrgB = _signDefaultInitiatorTx(orgB, DESTINATION, data, 28, expiration, true);
+            bytes memory reviewerSignatureOrgA = _signDefaultReviewTx(
+                harness, REVIEWER_PK_1, DESTINATION, data, 28, expiration, true, initiatorSignatureOrgB
+            );
 
             vm.expectRevert(
                 abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0)
@@ -1713,7 +1707,10 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
             "expiration must be bound"
         );
         assertTrue(
-            baseInitiatorHash != _computeInitiatorHashForPolicy(ACCOUNT, DESTINATION, 1, data, 14, expiration, true, DEFAULT_POLICY_ID + 1),
+            baseInitiatorHash
+                != _computeInitiatorHashForPolicy(
+                    ACCOUNT, DESTINATION, 1, data, 14, expiration, true, DEFAULT_POLICY_ID + 1
+                ),
             "policyId must be bound"
         );
         assertTrue(
@@ -1745,10 +1742,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         assertTrue(baseInitiatorHash != chainChangedHash, "chainId must be bound");
     }
 
-    function _assertReviewHashBindings(bytes32 baseInitiatorHash, bytes memory data, uint256 expiration)
-        internal
-        view
-    {
+    function _assertReviewHashBindings(bytes32 baseInitiatorHash, bytes memory data, uint256 expiration) internal view {
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, baseInitiatorHash);
         bytes32 baseReviewHashA = _computeReviewHash(DESTINATION, 1, data, 14, expiration, true, initiatorSignature);
         bytes32 baseReviewHashB = _computeReviewHash(DESTINATION, 1, data, 14, expiration, true, initiatorSignature);

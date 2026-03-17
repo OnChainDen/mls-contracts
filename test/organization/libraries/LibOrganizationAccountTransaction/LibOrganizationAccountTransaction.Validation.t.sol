@@ -610,9 +610,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
 
     // LOAT-AVTROR-3
     /// @dev Verifies rejection flow rejects an approval-domain signature replayed as the rejection authorization.
-    function test_LOAT_AVTROR_3_validateRejection_replayedApprovalSignatureFailsRejectionDomainSeparation()
-        public
-    {
+    function test_LOAT_AVTROR_3_validateRejection_replayedApprovalSignatureFailsRejectionDomainSeparation() public {
         // Setup: build a valid auto-approve rejection context, then reuse the approval-domain signature as the
         // rejection authorization.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
@@ -620,14 +618,14 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
         bytes memory data = abi.encodeWithSelector(bytes4(0x27262626), uint256(61));
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSig = _signInitiatorTx(
-            address(harness), INITIATOR_PK_1, ACCOUNT, DESTINATION, 0, data, 18_1, expiration, DEFAULT_POLICY_ID, true
+            address(harness), INITIATOR_PK_1, ACCOUNT, DESTINATION, 0, data, 181, expiration, DEFAULT_POLICY_ID, true
         );
 
         // Verify: replaying an approval-domain signature as the rejection authorization must fail closed.
         vm.expectRevert(IOrganizationAccountTransaction.TransactionRejectionNotAllowed.selector);
         // Call: validate rejection while reusing the approval signature bytes for the rejection path.
         harness.validateTransactionRejectionOrRevertViaLibrary(
-            ACCOUNT, DESTINATION, 0, data, 18_1, expiration, DEFAULT_POLICY_ID, initiatorSig, initiatorSig, proofs
+            ACCOUNT, DESTINATION, 0, data, 181, expiration, DEFAULT_POLICY_ID, initiatorSig, initiatorSig, proofs
         );
     }
 

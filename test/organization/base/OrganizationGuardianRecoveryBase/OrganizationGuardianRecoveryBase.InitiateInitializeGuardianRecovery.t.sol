@@ -424,13 +424,17 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         // Call: initiate once, cancel the pending deferred-init tuple, then re-initiate the identical params with a
         // new admin-auth salt.
         vm.prank(GUARDIAN);
-        harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, firstInitiateAuth);
+        harness.initiateInitializeGuardianRecovery(
+            GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, firstInitiateAuth
+        );
 
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(cancelAuth);
 
         vm.prank(GUARDIAN);
-        harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, secondInitiateAuth);
+        harness.initiateInitializeGuardianRecovery(
+            GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, secondInitiateAuth
+        );
 
         // Verify: both initiate nonces are isolated by salt, and the second call restores the same pending tuple.
         assertTrue(firstNonce != secondNonce, "different salts should isolate initiate nonces");
@@ -468,9 +472,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
             _computeRecoveryNonce(OperationType.InitiateInitializeGuardianRecovery, invalidAddressData, 11_023);
 
         recoveryStateHarness.setGuardianRecoveryPendingInit(
-            GUARDIAN_RECOVERY_ADDRESS,
-            GUARDIAN_RECOVERY_TIMELOCK,
-            block.timestamp + ADMIN_OPERATION_TIMELOCK
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
         );
         (AdminAuthParams memory pendingAuth, bytes memory pendingData) = _buildInitiateInitializeGuardianRecoveryAuth({
             recoveryAddress: GUARDIAN_RECOVERY_ADDRESS_B,
@@ -490,9 +492,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         harness.initiateInitializeGuardianRecovery(address(0), GUARDIAN_RECOVERY_TIMELOCK, invalidAddressAuth);
 
         recoveryStateHarness.setGuardianRecoveryPendingInit(
-            GUARDIAN_RECOVERY_ADDRESS,
-            GUARDIAN_RECOVERY_TIMELOCK,
-            block.timestamp + ADMIN_OPERATION_TIMELOCK
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
         );
         vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryInitializationAlreadyPending.selector);
         vm.prank(GUARDIAN);

@@ -110,10 +110,7 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` if deferred-init pending timestamp is zero then deferred-init
     /// tuple is fully cleared.
-    function invariant_OGR_INV_7_GREC_INV_3_deferredInitStateConsistency_zeroTimestampImpliesZeroTuple()
-        public
-        view
-    {
+    function invariant_OGR_INV_7_GREC_INV_3_deferredInitStateConsistency_zeroTimestampImpliesZeroTuple() public view {
         // Setup: reuse suite baseline where recovery is preconfigured.
         GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
 

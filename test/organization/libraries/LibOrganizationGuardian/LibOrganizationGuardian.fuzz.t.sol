@@ -183,7 +183,9 @@ contract LibOrganizationGuardianFuzzTest is LibOrganizationGuardianSuiteBase {
         // Call: enforce the pending-guardian caller gate, then attempt acceptance under the selected branch.
         if (caller != newGuardian) {
             vm.expectRevert(
-                abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardianAcceptance.selector, caller, newGuardian)
+                abi.encodeWithSelector(
+                    IOrganizationGuardian.UnauthorizedGuardianAcceptance.selector, caller, newGuardian
+                )
             );
             vm.prank(caller);
             harness.enforceOnlyPendingGuardianViaLibrary();

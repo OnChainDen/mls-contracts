@@ -128,5 +128,4 @@ contract TimelockUtilsTest is Test {
 
         // Verify: the revert expectation above proves out-of-range values fail validation.
     }
-
 }

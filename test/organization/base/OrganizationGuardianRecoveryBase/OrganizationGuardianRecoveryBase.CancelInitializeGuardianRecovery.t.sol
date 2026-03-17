@@ -308,17 +308,13 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.cancelInitializeGuardianRecovery` can cancel the same pending
     /// tuple twice with different salts when the tuple is recreated in between.
-    function test_NMGRB_IGR_6_cancelInitializeGuardianRecovery_samePendingTupleDifferentSalts_canCancelTwice()
-        public
-    {
+    function test_NMGRB_IGR_6_cancelInitializeGuardianRecovery_samePendingTupleDifferentSalts_canCancelTwice() public {
         // Setup: reset storage, stage one pending tuple, and prepare two cancel salts around an intermediate
         // re-initiation of the identical params.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         recoveryStateHarness.setGuardianRecoveryPendingInit(
-            GUARDIAN_RECOVERY_ADDRESS_B,
-            GUARDIAN_RECOVERY_TIMELOCK,
-            block.timestamp + 1
+            GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1
         );
         (AdminAuthParams memory firstCancelAuth, bytes memory operationData) = _buildCancelInitializeGuardianRecoveryAuth({
             pendingAddress: GUARDIAN_RECOVERY_ADDRESS_B,
@@ -356,9 +352,7 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
 
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(
-            GUARDIAN_RECOVERY_ADDRESS_B,
-            GUARDIAN_RECOVERY_TIMELOCK,
-            reinitiateAuth
+            GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, reinitiateAuth
         );
 
         vm.prank(GUARDIAN);

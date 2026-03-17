@@ -3,7 +3,9 @@
 pragma solidity 0.8.33;
 
 import {OrganizationModifiers} from "organization/common/OrganizationModifiers.sol";
-import {LibOrganizationDeployerAddressStorage} from "organization/libraries/storage/LibOrganizationDeployerAddressStorage.sol";
+import {
+    LibOrganizationDeployerAddressStorage
+} from "organization/libraries/storage/LibOrganizationDeployerAddressStorage.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 
@@ -92,5 +94,4 @@ contract OrganizationModifiersHarness is OrganizationModifiers {
         recoveryLayout.guardianRecovery.pendingGuardian = pendingGuardian;
         recoveryLayout.guardianRecovery.isUpdateReadyForAcceptance = readyForAcceptance;
     }
-
 }

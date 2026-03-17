@@ -285,7 +285,8 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     // LOACS-VPBS-3
-    /// @dev Verifies mutating the initiator signature invalidates both guardian and reviewer signatures via hash binding.
+    /// @dev Verifies mutating the initiator signature invalidates both guardian and reviewer signatures via hash
+    // binding.
     function test_LOACS_VPBS_3_validatePolicyBasedSignature_mutatedInitiatorSignature_invalidatesHashBoundSignatures()
         public
     {
@@ -496,9 +497,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that payloads not allowed by policy checks return ERC-1271 invalid value.
-    function test_LOAS_VPBS_8__LOAS_AVPBS_5_validatePolicyBasedSignature_policyNotAllowed_returnsInvalidValue()
-        public
-    {
+    function test_LOAS_VPBS_8__LOAS_AVPBS_5_validatePolicyBasedSignature_policyNotAllowed_returnsInvalidValue() public {
         // Setup: build a valid fixture and tamper the policy proof to fail policy-in-org validation.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days
@@ -525,9 +524,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
 
     // LOAS-AVPBS-5
     /// @dev Verifies policy-proof and source-account-proof mismatches return ERC-1271 invalid value.
-    function test_LOAS_AVPBS_5_validatePolicyBasedSignature_policyOrSourceAccountMismatch_returnsInvalidValue()
-        public
-    {
+    function test_LOAS_AVPBS_5_validatePolicyBasedSignature_policyOrSourceAccountMismatch_returnsInvalidValue() public {
         // Setup: build one fixture with a tampered policy proof and one with a mismatched source-account proof.
         PolicyValidationFixture memory policyProofFixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days

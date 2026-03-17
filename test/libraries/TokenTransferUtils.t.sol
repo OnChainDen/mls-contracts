@@ -615,9 +615,7 @@ contract TokenTransferUtilsTest is Test {
     /// @dev Verifies `TokenTransferUtils.extractERC20TransferRecipient` always returns the encoded recipient for valid
     /// transfer calldata.
     /// @param to Fuzzed recipient encoded into the transfer calldata.
-    function testFuzz_TXUT_PARSE_1_B__FTTU_RECIP_14_extractERC20TransferRecipient_validCalldata_correctRecipient(
-        address to
-    )
+    function testFuzz_TXUT_PARSE_1_B__FTTU_RECIP_14_extractERC20TransferRecipient_validCalldata_correctRecipient(address to)
         public
         view
     {
@@ -638,10 +636,7 @@ contract TokenTransferUtilsTest is Test {
     function testFuzz_TXUT_PARSE_2_B_extractTransferAmount_validCalldata_correctAmount(
         address to,
         uint256 expectedAmount
-    )
-        public
-        view
-    {
+    ) public view {
         // Setup: encode a valid ERC-20 transfer for the fuzzed amount.
         bytes memory data = _encodeTransferCalldata(to, expectedAmount);
 
@@ -659,10 +654,7 @@ contract TokenTransferUtilsTest is Test {
     function testFuzz_FTTU_TXTOK_12_isTransactionTokenTransfer_neverBothNativeAndERC20(
         bytes calldata data,
         uint256 value
-    )
-        public
-        view
-    {
+    ) public view {
         // Setup: evaluate both classification paths for the same fuzzed transaction shape.
         bool isNative = harness.isTransactionNativeTokenTransfer(data, value);
         bool isERC20 = harness.isTransactionERC20TokenTransfer(data, value);
@@ -700,9 +692,7 @@ contract TokenTransferUtilsTest is Test {
     /// @dev Verifies `TokenTransferUtils.extractERC20TransferRecipient` always reverts for malformed short calldata
     /// lengths.
     /// @param rawLength Fuzzed length constrained below the valid 68-byte ERC-20 transfer encoding.
-    function testFuzz_FTTU_PARSE_16_extractERC20TransferRecipient_shortCalldataAlwaysReverts(uint8 rawLength)
-        public
-    {
+    function testFuzz_FTTU_PARSE_16_extractERC20TransferRecipient_shortCalldataAlwaysReverts(uint8 rawLength) public {
         // Setup: constrain the calldata length below the valid ERC-20 transfer payload size.
         uint256 dataLength = bound(rawLength, 0, 67);
         bytes memory data = new bytes(dataLength);

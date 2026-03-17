@@ -14,9 +14,7 @@ import {OperationType} from "types/CommonTypes.sol";
  */
 contract OrganizationAccountFactoryBaseUpgradeIntegrationTest is OrganizationUpgradesCrossFileSuiteBase {
     /// @dev Verifies account implementation updates do not alter Organization proxy implementation pointer.
-    function test_ACCF_INV_6_OAFB_SAI_16_accountImplementationUpgrade_doesNotAlterOrganizationImplementation()
-        public
-    {
+    function test_ACCF_INV_6_OAFB_SAI_16_accountImplementationUpgrade_doesNotAlterOrganizationImplementation() public {
         // Setup: capture Organization implementation pointer and prepare account implementation update.
         _setSingleAdminThresholdOne();
         address organizationImplementationBefore = _readProxyImplementation(address(organizationProxy));

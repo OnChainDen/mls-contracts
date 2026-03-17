@@ -201,7 +201,8 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
             });
 
             // Call: replay the transaction signature through the ERC-1271 policy flow.
-            policyReplayResult = harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, policySignatureData);
+            policyReplayResult =
+                harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, policySignatureData);
         }
 
         // Verify: the transaction-domain signature is rejected by the ERC-1271 policy flow.

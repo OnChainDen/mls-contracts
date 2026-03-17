@@ -163,7 +163,10 @@ contract AccountReceiveReentrancyAttacker {
     bool public receiveCallSucceeded;
     bytes public privilegedRevertData;
 
-    function bounceAndReenter(address payable account, address to, uint256 value, bytes calldata data) external payable {
+    function bounceAndReenter(address payable account, address to, uint256 value, bytes calldata data)
+        external
+        payable
+    {
         (bool receiveOk,) = account.call{value: msg.value}("");
         require(receiveOk, "receive bounce failed");
         receiveCallSucceeded = true;

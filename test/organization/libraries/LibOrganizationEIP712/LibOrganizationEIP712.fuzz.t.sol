@@ -20,10 +20,7 @@ contract LibOrganizationEIP712FuzzTest is LibOrganizationEIP712TestBase {
     /// @dev Verifies `LibOrganizationEIP712.getDomainSeparator` stays deterministic for one organization and chain
     /// while typed-data wrapping remains deterministic for the same struct hash.
     /// @param structHash Fuzzed struct hash wrapped by the Organization EIP-712 helpers.
-    function testFuzz_E712_FUZ_1_getDomainSeparator_sameInputsRemainDeterministic(bytes32 structHash)
-        public
-        view
-    {
+    function testFuzz_E712_FUZ_1_getDomainSeparator_sameInputsRemainDeterministic(bytes32 structHash) public view {
         // Setup: keep the current harness and chain id fixed while fuzzing the struct hash.
 
         // Call: compute the domain separator and typed-data hash twice with identical inputs.
@@ -124,5 +121,4 @@ contract LibOrganizationEIP712FuzzTest is LibOrganizationEIP712TestBase {
         assertEq(actualTypedDataHash, expectedTypedDataHash, "typed-data hash should match manual prefix composition");
         assertEq(actualTypedDataHash, expectedOZ, "typed-data hash should match OpenZeppelin reference");
     }
-
 }

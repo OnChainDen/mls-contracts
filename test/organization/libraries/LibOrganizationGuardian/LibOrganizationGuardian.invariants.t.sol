@@ -88,10 +88,7 @@ contract LibOrganizationGuardianInvariants is OrganizationAdminTestBase {
     }
 
     /// @dev Verifies clearing the pending guardian also clears its timestamp and readiness flag.
-    function invariant_GINV_4_GUARD_INV_3_stateConsistency_noPendingImpliesClearedTimestampAndReadyFlag()
-        public
-        view
-    {
+    function invariant_GINV_4_GUARD_INV_3_stateConsistency_noPendingImpliesClearedTimestampAndReadyFlag() public view {
         // Setup
         address pendingGuardian = harness.getPendingGuardianViaLibrary();
         uint256 pendingTimestamp = harness.getPendingGuardianUpdateTimestampViaLibrary();

@@ -121,10 +121,6 @@ contract OrganizationGuardianRecoveryBaseAcceptGuardianRecoveryTest is Organizat
             "normal ready-for-acceptance flag should be preserved"
         );
         assertEq(harness.getGuardianRecoveryState().pendingGuardian, address(0), "recovery pending guardian clears");
-        assertEq(
-            harness.getGuardianRecoveryState().pendingGuardianTimestamp,
-            0,
-            "recovery pending timestamp clears"
-        );
+        assertEq(harness.getGuardianRecoveryState().pendingGuardianTimestamp, 0, "recovery pending timestamp clears");
     }
 }

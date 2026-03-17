@@ -725,9 +725,7 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         bytes memory signature = _signHash(AUTHORIZED_EXECUTOR_PK, TEST_HASH);
 
         // Call + Verify: staticcall reverts at the EVM level if any state mutation occurs.
-        (bool success,) = address(module).staticcall(
-            abi.encodeCall(module.isValidSignature, (TEST_HASH, signature))
-        );
+        (bool success,) = address(module).staticcall(abi.encodeCall(module.isValidSignature, (TEST_HASH, signature)));
         assertTrue(success, "isValidSignature should succeed under staticcall (view)");
     }
 

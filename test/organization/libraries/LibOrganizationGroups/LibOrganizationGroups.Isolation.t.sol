@@ -15,7 +15,9 @@ contract LibOrganizationGroupsIsolationTest is LibOrganizationGroupsSuiteBase {
     function test_GROUP_INV_6_modifyGroups_doesNotAlterAdminCountersThresholdOrMembershipFlags() public {
         // Setup: seed a two-admin organization with one extra member, snapshot the admin/member state, and build a
         // create-update-delete sequence against a single group ID.
-        _setMembersAndAdmins({members: buildArray(admin1, admin2, admin3), admins: buildArray(admin1, admin2), threshold: 2});
+        _setMembersAndAdmins({
+            members: buildArray(admin1, admin2, admin3), admins: buildArray(admin1, admin2), threshold: 2
+        });
 
         uint256 expectedAdminCount = harness.getAdminCount();
         uint256 expectedThreshold = harness.getVotingThreshold();

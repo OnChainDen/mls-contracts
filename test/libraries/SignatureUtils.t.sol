@@ -522,10 +522,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     /// @dev Test case: Iterating through concatenated multi-signature payloads (multiple EOAs, mixed EOA + ERC-1271,
     ///      and multiple ERC-1271 entries) should produce deterministic nextOffset progression.
     ///      [SIGU-PARSE-3] [SIGU-PARSE-4]
-    function test_SIGU_PARSE_3_B__SIGU_PARSE_4_A_recoverSignerAtOffsetPair_multiSignatureOffsets_succeed()
-        public
-        view
-    {
+    function test_SIGU_PARSE_3_B__SIGU_PARSE_4_A_recoverSignerAtOffsetPair_multiSignatureOffsets_succeed() public view {
         bytes memory sig1 = _signHash(TEST_PK_1, TEST_HASH);
         bytes memory sig2 = _signHash(TEST_PK_2, TEST_HASH);
         bytes memory sig3 = _signHash(TEST_PK_3, TEST_HASH);
@@ -863,9 +860,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Extracting an inner signature of any random length in [1, 2000] should always produce
     ///      extracted bytes that match the source exactly.
-    function testFuzz_SIGU_PARSE_2_C__FSU_HAR_7_extractContractInnerSignature_randomLength_matchesSource(
-        uint16 sigLength
-    )
+    function testFuzz_SIGU_PARSE_2_C__FSU_HAR_7_extractContractInnerSignature_randomLength_matchesSource(uint16 sigLength)
         public
         view
     {
@@ -875,7 +870,6 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     }
 
     function _assertExtractContractInnerSignatureRandomLengthMatchesSource(uint16 sigLength) internal view {
-
         bytes memory payload = new bytes(sigLength);
         for (uint256 i = 0; i < sigLength; i++) {
             // forge-lint: disable-next-line(unsafe-typecast)
@@ -957,8 +951,9 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         uint16 payloadLength,
         bytes32 entropySeed
     ) internal view {
-        (bytes memory embedded, bytes memory payload, uint256 offset) =
-            _buildEmbeddedContractSignatureFixture(expectedSigner, prefixLength, suffixLength, payloadLength, entropySeed);
+        (bytes memory embedded, bytes memory payload, uint256 offset) = _buildEmbeddedContractSignatureFixture(
+            expectedSigner, prefixLength, suffixLength, payloadLength, entropySeed
+        );
 
         // Call: parse the signer, uint16 length, and extracted inner bytes from the embedded offset.
         address actualSigner = harness.getContractSigner(embedded, offset);
@@ -1194,10 +1189,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     function testFuzz_SIGU_PARSE_1_D_tryRecoverEOASigner_randomKeyAndOffset_recoversCorrectly(
         uint256 privateKey,
         uint8 prefixLength
-    )
-        public
-        view
-    {
+    ) public view {
         // Bound private key to valid secp256k1 range
         privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
         // Bound prefix length to something reasonable
@@ -1363,15 +1355,13 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         internal
         view
     {
-
         bytes memory prefix = new bytes(prefixLength);
         bytes memory payload = new bytes(payloadLength);
         for (uint256 i = 0; i < payloadLength; i++) {
             // forge-lint: disable-next-line(unsafe-typecast)
             payload[i] = bytes1(uint8(i % 256)); // Safe: modulo 256 ensures value fits in uint8
         }
-        bytes memory contractSig =
-            abi.encodePacked(uint8(0), address(validSigner1271), uint16(payloadLength), payload);
+        bytes memory contractSig = abi.encodePacked(uint8(0), address(validSigner1271), uint16(payloadLength), payload);
         bytes memory combined = abi.encodePacked(prefix, contractSig);
 
         (bool success, address signer) = harness.tryRecoverContractSigner(combined, prefixLength, TEST_HASH);
@@ -1478,9 +1468,9 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Only the exact ERC-1271 magic value (0x1626ba7e) should produce a true result; any other
     ///      random bytes4 return value should produce false.
-    function testFuzz_FSU_ERC1271_6_isValidERC1271SignatureNow_randomMagicValue_onlyCorrectMagicIsValid(
-        bytes4 randomMagic
-    ) public {
+    function testFuzz_FSU_ERC1271_6_isValidERC1271SignatureNow_randomMagicValue_onlyCorrectMagicIsValid(bytes4 randomMagic)
+        public
+    {
         // Deploy a mock that returns the random magic value
         MockERC1271CustomReturn mock = new MockERC1271CustomReturn(randomMagic);
 
@@ -1533,9 +1523,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Random ERC-1271 inner signature lengths should always produce the correct nextOffset
     ///      calculation (23 + innerLength). [SIGU-PARSE-3]
-    function testFuzz_SIGU_PARSE_3_C__FSU_ATOFF_5_tryRecoverSignerAtOffset_randomERC1271InnerLength_offsetCorrect(
-        uint16 innerLength
-    )
+    function testFuzz_SIGU_PARSE_3_C__FSU_ATOFF_5_tryRecoverSignerAtOffset_randomERC1271InnerLength_offsetCorrect(uint16 innerLength)
         public
         view
     {
@@ -1544,11 +1532,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         _assertTryRecoverSignerAtOffsetRandomERC1271InnerLengthOffsetCorrect(innerLength);
     }
 
-    function _assertTryRecoverSignerAtOffsetRandomERC1271InnerLengthOffsetCorrect(uint16 innerLength)
-        internal
-        view
-    {
-
+    function _assertTryRecoverSignerAtOffsetRandomERC1271InnerLengthOffsetCorrect(uint16 innerLength) internal view {
         bytes memory payload = new bytes(innerLength);
         bytes memory sig = _buildContractSignature(address(validSigner1271), payload);
 
@@ -1563,10 +1547,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     function testFuzz_SIGU_PARSE_4_B__FSU_ATOFF_5_tryRecoverSignerAtOffset_mixedMultiSig_offsetChainingWorks(
         uint8 numEOA,
         uint8 numContract
-    )
-        public
-        view
-    {
+    ) public view {
         numEOA = uint8(bound(numEOA, 0, 5));
         numContract = uint8(bound(numContract, 0, 5));
 
@@ -1577,7 +1558,6 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         internal
         view
     {
-
         // Need at least 1 signature
         if (numEOA == 0 && numContract == 0) {
             numEOA = 1;
@@ -1849,8 +1829,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         uint8 v = uint8(signature[0]);
 
         // Call: recover the embedded signature through the helper-targeted harness wrapper.
-        (bool success, address signer) =
-            harness.tryRecoverEOASigner(prefixedSignature, prefixLength, TEST_HASH, v);
+        (bool success, address signer) = harness.tryRecoverEOASigner(prefixedSignature, prefixLength, TEST_HASH, v);
 
         // Verify: high-`s` signatures are always rejected by the EOA helper.
         assertFalse(success, "high-s signatures should always be rejected by _tryRecoverEOASigner");

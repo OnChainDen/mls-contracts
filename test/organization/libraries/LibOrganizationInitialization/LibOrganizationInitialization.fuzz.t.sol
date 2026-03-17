@@ -77,8 +77,7 @@ contract LibOrganizationInitializationFuzzTest is InitializationSuiteBase {
         if (includeGroups) {
             assertTrue(harness.getGroupStatus(GROUP_ID), "configured group should be created");
             assertTrue(
-                harness.getGroupMemberStatus(GROUP_ID, params.members[0]),
-                "configured group member should be persisted"
+                harness.getGroupMemberStatus(GROUP_ID, params.members[0]), "configured group member should be persisted"
             );
         } else {
             assertFalse(harness.getGroupStatus(GROUP_ID), "omitted groups should remain unset");
@@ -228,12 +227,12 @@ contract LibOrganizationInitializationFuzzTest is InitializationSuiteBase {
         // Setup: configure guardian, whitelisted account implementation, timelocks, and optional recovery addresses.
         uint256 durationSeconds = useMaxTimelocks ? 30 days : 2 days;
         params.votingThreshold = threshold;
-        params.guardian = _deriveAddress(seed, 9_001);
+        params.guardian = _deriveAddress(seed, 9001);
         params.accountImplementation = address(accountImplementation);
         params.adminOperationTimelockDurationSeconds = durationSeconds;
-        params.guardianRecoveryAddress = configureGuardianRecovery ? _deriveAddress(seed, 9_002) : address(0);
+        params.guardianRecoveryAddress = configureGuardianRecovery ? _deriveAddress(seed, 9002) : address(0);
         params.guardianRecoveryTimelockDurationSeconds = configureGuardianRecovery ? durationSeconds : 0;
-        params.transactionAndERC1271RecoveryAddress = configureTxRecovery ? _deriveAddress(seed, 9_003) : address(0);
+        params.transactionAndERC1271RecoveryAddress = configureTxRecovery ? _deriveAddress(seed, 9003) : address(0);
         params.txRecoveryTimelockDurationSeconds = configureTxRecovery ? durationSeconds : 0;
     }
 
@@ -263,9 +262,7 @@ contract LibOrganizationInitializationFuzzTest is InitializationSuiteBase {
         assertEq(harness.getVotingThresholdStorage(), 0, "reverted init should not persist voting threshold");
         assertEq(harness.getGuardianStorage(), address(0), "reverted init should not persist guardian");
         assertEq(
-            harness.getAdminOperationTimelockStorage(),
-            0,
-            "reverted init should not persist admin-operation timelock"
+            harness.getAdminOperationTimelockStorage(), 0, "reverted init should not persist admin-operation timelock"
         );
         assertEq(
             harness.getAccountImplementationStorage(),

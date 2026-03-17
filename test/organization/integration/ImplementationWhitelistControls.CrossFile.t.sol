@@ -225,8 +225,7 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         // Verify: new deployments using the now-unwhitelisted active Organization implementation are blocked.
         vm.expectRevert(
             abi.encodeWithSelector(
-                IImplementationWhitelist.ImplementationNotWhitelisted.selector,
-                address(baseOrganizationImplementation)
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(baseOrganizationImplementation)
             )
         );
         // Call: attempt to deploy a fresh organization against the unwhitelisted active implementation target.
@@ -244,13 +243,14 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         });
         vm.expectRevert(
             abi.encodeWithSelector(
-                IImplementationWhitelist.ImplementationNotWhitelisted.selector,
-                address(baseOrganizationImplementation)
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(baseOrganizationImplementation)
             )
         );
         // Call: attempt an organization upgrade targeting the already-active but now-unwhitelisted implementation.
         vm.prank(GUARDIAN);
-        organization.upgradeToAndCallWithAuthorization(address(baseOrganizationImplementation), bytes(""), orgUpgradeAuth);
+        organization.upgradeToAndCallWithAuthorization(
+            address(baseOrganizationImplementation), bytes(""), orgUpgradeAuth
+        );
 
         // Verify: trying to re-set the already-active account implementation also fails once it is unwhitelisted.
         AdminAuthParams memory accountUpgradeAuth = _buildAccountImplementationAuth({
@@ -266,7 +266,11 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         organization.setAccountImplementation(address(baseAccountImplementation), accountUpgradeAuth);
 
         // Verify: the blocked deploy/upgrade attempts never mutate the active implementation pointers.
-        assertEq(_readProxyImplementation(address(organization)), orgPointerBefore, "active org pointer should remain unchanged");
+        assertEq(
+            _readProxyImplementation(address(organization)),
+            orgPointerBefore,
+            "active org pointer should remain unchanged"
+        );
         assertEq(
             organization.getAccountImplementationStorage(),
             accountPointerBefore,

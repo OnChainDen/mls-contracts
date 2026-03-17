@@ -14,10 +14,7 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
     /// @dev Verifies `LibPolicyParameterConstraints.areParametersAllowedByConstraints` accepts both empty bytes and
     /// ABI-encoded empty arrays.
     /// @param data Arbitrary calldata supplied to the empty-constraints helper.
-    function testFuzz_FLPPC_PARAM_72_areParametersAllowed_emptyConstraintPayloadsAccept(bytes memory data)
-        public
-        view
-    {
+    function testFuzz_FLPPC_PARAM_72_areParametersAllowed_emptyConstraintPayloadsAccept(bytes memory data) public view {
         vm.assume(data.length < 256);
 
         // Setup: prepare both canonical empty-constraints encodings against the same arbitrary calldata.
@@ -69,8 +66,9 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
         bool uintRange = harness.isUintParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Range, abi.encode(uintValue, uintValue), bytes32(uint256(uintValue))
         );
-        bool intExact =
-            harness.isIntParameterAllowedByConstraintViaPolicyLibrary(ConstraintType.Exact, abi.encode(intValue), intHeadValue);
+        bool intExact = harness.isIntParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, abi.encode(intValue), intHeadValue
+        );
         bool intRange = harness.isIntParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Range, abi.encode(intValue, intValue), intHeadValue
         );
@@ -80,8 +78,9 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
         bool addressOneOf = harness.isAddressParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.OneOf, abi.encode(root), _encodeAddressHead(allowedAddress), proof
         );
-        bool boolExact =
-            harness.isBoolParameterAllowedByConstraintViaPolicyLibrary(ConstraintType.Exact, abi.encode(boolValue), boolHeadValue);
+        bool boolExact = harness.isBoolParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, abi.encode(boolValue), boolHeadValue
+        );
         bool fixedBytesExact = harness.isFixedBytesParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Exact, abi.encode(fixedBytesValue), fixedBytesValue
         );
@@ -153,10 +152,14 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
             ConstraintType.OneOf, abi.encode(bytes32(uint256(1))), bytes32(uint256(intValue))
         );
         bool addressRange = harness.isAddressParameterAllowedByConstraintViaPolicyLibrary(
-            ConstraintType.Range, abi.encode(addressValue, addressValue), _encodeAddressHead(addressValue), _emptyProof()
+            ConstraintType.Range,
+            abi.encode(addressValue, addressValue),
+            _encodeAddressHead(addressValue),
+            _emptyProof()
         );
-        bool boolRange =
-            harness.isBoolParameterAllowedByConstraintViaPolicyLibrary(ConstraintType.Range, abi.encode(true), bytes32(uint256(1)));
+        bool boolRange = harness.isBoolParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Range, abi.encode(true), bytes32(uint256(1))
+        );
         bool fixedBytesRange = harness.isFixedBytesParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Range, abi.encode(fixedBytesValue, fixedBytesValue), fixedBytesValue
         );
@@ -270,9 +273,9 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
     /// @dev Verifies the bytes/string validator fails closed instead of reverting when the dynamic offset arithmetic
     /// would overflow.
     /// @param nearMaxDelta The small delta subtracted from `type(uint256).max`.
-    function testFuzz_FLPPC_BYTES_76_isBytesOrStringParameterAllowed_overflowingOffsetFailsClosedDesiredBehavior(
-        uint8 nearMaxDelta
-    ) public {
+    function testFuzz_FLPPC_BYTES_76_isBytesOrStringParameterAllowed_overflowingOffsetFailsClosedDesiredBehavior(uint8 nearMaxDelta)
+        public
+    {
         uint256 overflowingOffset = type(uint256).max - bound(uint256(nearMaxDelta), 0, 3);
 
         // Setup: encode a valid bytes payload and replace its dynamic offset with an overflowing value.
@@ -281,7 +284,9 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
         // Call: evaluate the overflowing offset and assert it fails closed instead of reverting.
         try harness.isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Exact, abi.encode(keccak256(bytes("abc"))), bytes32(overflowingOffset), data
-        ) returns (bool allowed) {
+        ) returns (
+            bool allowed
+        ) {
             // Verify: the overflowing offset should be rejected with `false`.
             assertFalse(allowed, "overflowing offsets should fail closed");
         } catch {

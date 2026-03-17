@@ -7,11 +7,11 @@ import {IOrganizationAdminOperationTimelock} from "interfaces/organization/IOrga
 import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {
-    OrganizationGuardianRecoveryBaseSuiteBase
-} from "test/organization/base/OrganizationGuardianRecoveryBase/OrganizationGuardianRecoveryBaseSuiteBase.sol";
-import {
     OrganizationGuardianRecoveryBaseHarness
 } from "test/organization/base/OrganizationGuardianRecoveryBase/OrganizationGuardianRecoveryBaseHarness.sol";
+import {
+    OrganizationGuardianRecoveryBaseSuiteBase
+} from "test/organization/base/OrganizationGuardianRecoveryBase/OrganizationGuardianRecoveryBaseSuiteBase.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
@@ -404,16 +404,12 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         secondHarness.setAdminCount(1);
         secondHarness.setVotingThreshold(1);
         secondHarness.setGuardianRecoveryPendingInit(
-            GUARDIAN_RECOVERY_ADDRESS,
-            GUARDIAN_RECOVERY_TIMELOCK,
-            block.timestamp
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
         );
 
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
-            GUARDIAN_RECOVERY_ADDRESS,
-            GUARDIAN_RECOVERY_TIMELOCK,
-            block.timestamp
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
         );
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 

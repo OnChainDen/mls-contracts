@@ -132,7 +132,7 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         InitializationParams memory params = _defaultInitializationParams();
         params.members = new address[](10_000);
         for (uint256 i = 0; i < params.members.length; ++i) {
-            params.members[i] = address(uint160(0x1_0000 + i));
+            params.members[i] = address(uint160(0x10000 + i));
         }
         params.admins = buildArray(params.members[0]);
         params.votingThreshold = 1;

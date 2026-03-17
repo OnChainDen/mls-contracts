@@ -13,15 +13,15 @@ import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardi
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {MockERC1271ValidSigner} from "test/helpers/MockERC1271Signers.sol";
 import {
+    OrganizationAccountTransactionBaseHarness
+} from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseHarness.sol";
+import {
     MockAccountForOrganizationTransaction,
     MockERC1271NonceConsumedSigner,
     MockERC20ForAccountTransaction,
     MockInteractionTarget,
     MockNativeReceiver
 } from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseMocks.sol";
-import {
-    OrganizationAccountTransactionBaseHarness
-} from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseHarness.sol";
 import {
     OrganizationAccountTransactionBaseSuiteBase
 } from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseSuiteBase.sol";
@@ -982,16 +982,15 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
      * @dev Verifies manual-approval review signatures are bound to the exact initiator signature bytes used during
      * execution.
      */
-    function test_OAT_EAT_7_executeAccountTransaction_manualApprovalReviewSignaturesBindInitiatorSignature()
-        public
-    {
+    function test_OAT_EAT_7_executeAccountTransaction_manualApprovalReviewSignaturesBindInitiatorSignature() public {
         // Setup: deploy an account, authorize one ERC-1271 initiator member, and prepare two different valid
         // initiator-signature byte arrays for the same transaction tuple.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         MockInteractionTarget target = new MockInteractionTarget();
         MockERC1271ValidSigner contractInitiator = new MockERC1271ValidSigner();
 
-        Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.RequireManualApproval);
+        Policy memory policy =
+            _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.RequireManualApproval);
         policy.config.initiator.initiatorMember = address(contractInitiator);
         harness.setMemberStatus(address(contractInitiator), true);
 
@@ -1159,7 +1158,8 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0x1616A8A8), uint256(168));
 
-        Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.RequireManualApproval);
+        Policy memory policy =
+            _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.RequireManualApproval);
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 1;
         policy.config.rateLimit.timeIntervalLimit = 25;

@@ -677,13 +677,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         });
 
         (bool allowedResult, bool deniedResult) = _evaluateAnyPolicyTransactionClass(
-            useTokenTransfer,
-            useERC20,
-            allowedDestination,
-            deniedDestination,
-            tokenContract,
-            transferAmount,
-            proofs
+            useTokenTransfer, useERC20, allowedDestination, deniedDestination, tokenContract, transferAmount, proofs
         );
 
         // Verify: both transaction classes should be accepted only when the destination filter matches the actual
@@ -729,8 +723,9 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             constraints: bytes("")
         });
 
-        PolicyTransactionCase memory txCase =
-            _buildSignaturesPolicyTransactionCase(useTokenTransfer, useERC20, destination, tokenContract, transferAmount);
+        PolicyTransactionCase memory txCase = _buildSignaturesPolicyTransactionCase(
+            useTokenTransfer, useERC20, destination, tokenContract, transferAmount
+        );
 
         // Call: evaluate the representative account-transaction path against the signatures-only policy.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
@@ -796,13 +791,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
 
         assertTrue(
             harness.isTransactionAllowedByPolicyViaLibrary(
-                DEFAULT_POLICY_ID,
-                address(0xAA58),
-                validCase.to,
-                validCase.value,
-                validCase.data,
-                initiator1,
-                proofs
+                DEFAULT_POLICY_ID, address(0xAA58), validCase.to, validCase.value, validCase.data, initiator1, proofs
             ),
             "matching token transfer should pass"
         );
@@ -853,15 +842,16 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
     ) internal view returns (bool allowedResult, bool deniedResult) {
         if (useTokenTransfer) {
             if (useERC20) {
-                allowedResult = harness.isTransactionAllowedByPolicyViaLibrary(
-                    DEFAULT_POLICY_ID,
-                    address(0xAA60),
-                    tokenContract,
-                    0,
-                    _encodeERC20Transfer(allowedDestination, transferAmount),
-                    initiator1,
-                    proofs
-                );
+                allowedResult =
+                    harness.isTransactionAllowedByPolicyViaLibrary(
+                        DEFAULT_POLICY_ID,
+                        address(0xAA60),
+                        tokenContract,
+                        0,
+                        _encodeERC20Transfer(allowedDestination, transferAmount),
+                        initiator1,
+                        proofs
+                    );
                 deniedResult = harness.isTransactionAllowedByPolicyViaLibrary(
                     DEFAULT_POLICY_ID,
                     address(0xAA60),
@@ -875,22 +865,10 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             }
 
             allowedResult = harness.isTransactionAllowedByPolicyViaLibrary(
-                DEFAULT_POLICY_ID,
-                address(0xAA60),
-                allowedDestination,
-                transferAmount,
-                bytes(""),
-                initiator1,
-                proofs
+                DEFAULT_POLICY_ID, address(0xAA60), allowedDestination, transferAmount, bytes(""), initiator1, proofs
             );
             deniedResult = harness.isTransactionAllowedByPolicyViaLibrary(
-                DEFAULT_POLICY_ID,
-                address(0xAA60),
-                deniedDestination,
-                transferAmount,
-                bytes(""),
-                initiator1,
-                proofs
+                DEFAULT_POLICY_ID, address(0xAA60), deniedDestination, transferAmount, bytes(""), initiator1, proofs
             );
             return (allowedResult, deniedResult);
         }
@@ -921,9 +899,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         if (useTokenTransfer) {
             if (useERC20) {
                 return PolicyTransactionCase({
-                    to: tokenContract,
-                    value: 0,
-                    data: _encodeERC20Transfer(destination, transferAmount)
+                    to: tokenContract, value: 0, data: _encodeERC20Transfer(destination, transferAmount)
                 });
             }
 
@@ -931,9 +907,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         }
 
         return PolicyTransactionCase({
-            to: destination,
-            value: 0,
-            data: abi.encodeWithSelector(bytes4(0x55667788), transferAmount)
+            to: destination, value: 0, data: abi.encodeWithSelector(bytes4(0x55667788), transferAmount)
         });
     }
 }

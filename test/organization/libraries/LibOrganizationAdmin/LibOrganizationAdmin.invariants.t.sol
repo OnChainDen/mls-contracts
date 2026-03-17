@@ -4,14 +4,14 @@ pragma solidity 0.8.33;
 
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {
+    OrganizationAdminBaseHarness
+} from "test/organization/base/OrganizationAdminBase/OrganizationAdminBaseHarness.sol";
+import {
     LibOrganizationAdminHarness
 } from "test/organization/libraries/LibOrganizationAdmin/LibOrganizationAdminHarness.sol";
 import {
     LibOrganizationAdminInvariantHandler
 } from "test/organization/libraries/LibOrganizationAdmin/LibOrganizationAdminInvariantHandler.sol";
-import {
-    OrganizationAdminBaseHarness
-} from "test/organization/base/OrganizationAdminBase/OrganizationAdminBaseHarness.sol";
 import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
 import {OrganizationAdminTestBase} from "test/organization/shared/OrganizationAdminTestBase.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
@@ -206,7 +206,9 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
         // Call: attempt rejection in both account-transaction domains and expect the new explicit domain-isolation
         // revert.
         vm.expectRevert(
-            abi.encodeWithSelector(IOrganizationAdmin.InvalidAdminOperationType.selector, OperationType.AccountTransaction)
+            abi.encodeWithSelector(
+                IOrganizationAdmin.InvalidAdminOperationType.selector, OperationType.AccountTransaction
+            )
         );
         vm.prank(GUARDIAN);
         rejectHarness.rejectAdminOperation(
@@ -215,15 +217,12 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOrganizationAdmin.InvalidAdminOperationType.selector,
-                OperationType.AccountTransactionRejection
+                IOrganizationAdmin.InvalidAdminOperationType.selector, OperationType.AccountTransactionRejection
             )
         );
         vm.prank(GUARDIAN);
         rejectHarness.rejectAdminOperation(
-            OperationType.AccountTransactionRejection,
-            rejectOperationData,
-            accountTransactionRejectionRejectAuth
+            OperationType.AccountTransactionRejection, rejectOperationData, accountTransactionRejectionRejectAuth
         );
 
         // Verify: both rejected domains leave their nonce spaces untouched.
