@@ -655,6 +655,8 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             proofs
         );
 
+        // casting to bytes3 is safe because hex"AABBCC" is exactly 3 bytes
+        // forge-lint: disable-next-item(unsafe-typecast)
         bytes memory badOffsetData =
             bytes.concat(target.storePayload.selector, abi.encode(uint256(31), uint256(3), bytes3(hex"AABBCC")));
         (bytes memory badOffsetSig, uint256 badOffsetExpiration) =

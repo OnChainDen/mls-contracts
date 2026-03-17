@@ -68,6 +68,8 @@ contract LibOrganizationSignaturesFuzzTest is Test {
 
         // Verify: the forced parent revert should leave the nonce unused.
         assertFalse(success, "forced rollback path should revert");
+        // casting to bytes4 is safe because revertData always starts with a 4-byte selector
+        // forge-lint: disable-next-item(unsafe-typecast)
         assertEq(
             bytes4(revertData),
             LibOrganizationSignaturesHarness.ForcedRollback.selector,

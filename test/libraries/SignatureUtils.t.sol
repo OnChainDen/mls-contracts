@@ -982,6 +982,8 @@ contract SignatureUtilsTest is SignatureTestHelpers {
             prefix[i] = entropy[i % entropy.length];
         }
         for (uint256 i = 0; i < payloadLength; i++) {
+            // casting to uint8 is safe because truncation is intentional for byte-level XOR entropy
+            // forge-lint: disable-next-line(unsafe-typecast)
             payload[i] = bytes1(uint8(entropy[i % entropy.length]) ^ uint8(i));
         }
         for (uint256 i = 0; i < suffixLength; i++) {

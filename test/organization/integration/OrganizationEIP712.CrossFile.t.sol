@@ -54,6 +54,8 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
             _setSinglePolicyRootAndBuildProofsForHarness(txHarness, TX_POLICY_ID, txPolicy);
 
         bytes memory txData = abi.encodeWithSelector(bytes4(0x11111111), uint256(1));
+        // casting string literal to bytes32 is safe because "cross-file-admin-op" fits within 32 bytes
+        // forge-lint: disable-next-line(unsafe-typecast)
         bytes memory adminOperationData = abi.encode(bytes32("cross-file-admin-op"), uint256(7));
         uint256 expiration = block.timestamp + 1 days;
         bytes32 adminOperationHash = adminHarness.getAdminOperationHash({
@@ -236,6 +238,8 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
         _configureAdminHarness(admin1);
         bytes32[] memory hashes = new bytes32[](5);
         {
+            // casting string literal to bytes32 is safe because "cross-file-admin-seed" fits within 32 bytes
+            // forge-lint: disable-next-line(unsafe-typecast)
             bytes memory adminOperationData = abi.encode(bytes32("cross-file-admin-seed"), uint256(4));
             uint256 expiration = block.timestamp + 1 days;
             hashes[0] = adminHarness.getAdminOperationHash({
@@ -380,6 +384,7 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
 
             bytes32 adminOperationHash = adminHarness.getAdminOperationHash({
                 operationType: OperationType.ModifyAdmins,
+                // forge-lint: disable-next-line(unsafe-typecast)
                 operationData: abi.encode(seedHash, salt, bytes32("admin")),
                 salt: salt,
                 expirationTimestamp: expiration,

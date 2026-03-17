@@ -709,6 +709,8 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
     {
         params.members = new address[](memberCount);
         for (uint256 i = 0; i < memberCount; i++) {
+            // casting to uint160 is safe because 0x10000 + i stays well within uint160 range
+            // forge-lint: disable-next-line(unsafe-typecast)
             params.members[i] = address(uint160(0x10000 + i));
         }
         params.admins = new address[](adminCount);
@@ -1234,6 +1236,8 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
     function _generateAddresses(uint256 count, uint256 startOffset) internal pure returns (address[] memory addrs) {
         addrs = new address[](count);
         for (uint256 i = 0; i < count; i++) {
+            // casting to uint160 is safe because startOffset + i stays well within uint160 range
+            // forge-lint: disable-next-line(unsafe-typecast)
             addrs[i] = address(uint160(startOffset + i));
         }
     }
@@ -1316,6 +1320,8 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
             _deployOrgWithReviewerGroup(saltSeed, reviewerCount, groupId);
         vm.deal(account, 1 ether);
 
+        // casting to uint8 is safe because reviewerCount is bounded to small values by the test
+        // forge-lint: disable-next-line(unsafe-typecast)
         Policy memory policy = _buildManualApproveGroupPolicy(groupId, uint8(reviewerCount));
         ValidationProofs memory proofs = _setPoliciesAndBuildProofs(org, POLICY_ID, policy, saltSeed + 100);
 

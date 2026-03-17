@@ -987,6 +987,8 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         public
     {
         bytes memory signedOperationData = baseOperationData;
+        // casting string literal to bytes32 is safe because "mutated-operation" fits within 32 bytes
+        // forge-lint: disable-next-line(unsafe-typecast)
         bytes memory mutatedOperationData = abi.encode(bytes32("mutated-operation"), uint256(456));
         uint256 salt = 36;
 
