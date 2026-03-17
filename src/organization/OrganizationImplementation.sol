@@ -2,11 +2,13 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
+import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {OrganizationAccountFactoryBase} from "organization/base/OrganizationAccountFactoryBase.sol";
 import {OrganizationAccountSignatureBase} from "organization/base/OrganizationAccountSignatureBase.sol";
 import {OrganizationAccountTransactionBase} from "organization/base/OrganizationAccountTransactionBase.sol";
@@ -66,6 +68,10 @@ contract OrganizationImplementation is
     OrganizationGuardianRecoveryBase,
     OrganizationTxRecoveryBase
 {
+    constructor() {
+        _disableInitializers();
+    }
+
     /// @inheritdoc IOrganization
     function upgradeToAndCallWithAuthorization(
         address newImplementation,
@@ -73,10 +79,14 @@ contract OrganizationImplementation is
         AdminAuthParams calldata authParams
     ) external override onlyGuardian {
         // Validate admin authorization (isApproval = true for execution)
-        bytes memory operationData = abi.encode(newImplementation);
+        bytes memory operationData = abi.encode(newImplementation, keccak256(data));
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.Upgrade, operationData: operationData, isApproval: true, authParams: authParams
         });
+
+        if (newImplementation == address(0)) {
+            revert IOrganizationFactory.ZeroAddress();
+        }
 
         // Validate implementation against whitelist
         // forgefmt: disable-next-item
@@ -86,23 +96,25 @@ contract OrganizationImplementation is
                 newImplementation
             );
 
-        // Set authorization flag in namespaced storage
-        // This flag tells _authorizeUpgrade that we've done proper validation.
-        // Using EIP-7201 namespaced storage to prevent slot collisions during upgrades.
-        LibOrganizationUpgradeStorage.layout().isUpgradeAuthorized = true;
+        if (newImplementation.code.length == 0) {
+            revert ERC1967Utils.ERC1967InvalidImplementation(newImplementation);
+        }
+
+        // Bind authorization to this exact target implementation for the upcoming UUPS hook call.
+        LibOrganizationUpgradeStorage.layout().authorizedUpgradeImplementation = newImplementation;
 
         // Perform the upgrade
         // This calls the inherited UUPSUpgradeable.upgradeToAndCall which will:
-        // 1. Call _authorizeUpgrade (which checks our flag)
+        // 1. Call _authorizeUpgrade (which checks the authorized target binding)
         // 2. Upgrade the implementation
         // 3. Optionally call `data` on the new implementation
         upgradeToAndCall(newImplementation, data);
 
-        // Reset the flag (defense-in-depth)
-        // Even though the flag can't persist if the tx reverts, we reset it explicitly
+        // Reset authorized target (defense-in-depth)
+        // Even though this value can't persist if the tx reverts, we reset it explicitly
         // as a security best practice. This also protects against any theoretical
-        // scenario where the flag might persist.
-        LibOrganizationUpgradeStorage.layout().isUpgradeAuthorized = false;
+        // scenario where the value might persist.
+        LibOrganizationUpgradeStorage.layout().authorizedUpgradeImplementation = address(0);
     }
 
     /// @inheritdoc IBeacon
@@ -122,10 +134,10 @@ contract OrganizationImplementation is
      *      - Admin signature validation
      *      - Implementation whitelist check
      *
-     *      Our solution uses a storage flag at a namespaced slot (EIP-7201):
-     *      - `upgradeToAndCallWithAuthorization` sets the flag AFTER validating everything
-     *      - This function checks that the flag is set
-     *      - Direct calls to `upgradeToAndCall` will not have the flag set → revert
+     *      Our solution uses an authorized target value at a namespaced slot (EIP-7201):
+     *      - `upgradeToAndCallWithAuthorization` sets it to `newImplementation` AFTER validating everything
+     *      - This function checks it is non-zero and exactly equals `newImplementation`
+     *      - Direct calls to `upgradeToAndCall` will not have a matching authorized target → revert
      *
      *      WHY NAMESPACED STORAGE (EIP-7201)?
      *      - Prevents storage slot collisions when upgrading contracts
@@ -134,19 +146,14 @@ contract OrganizationImplementation is
      *      WHY REGULAR STORAGE (not transient)?
      *      We use regular storage instead of EIP-1153 transient storage for maximum EVM chain
      *      compatibility. This allows deployment to chains that haven't adopted the Cancun upgrade.
-     *      The flag is explicitly reset after the upgrade completes as defense-in-depth.
+     *      The authorized target is explicitly reset after the upgrade completes as defense-in-depth.
      *
-     * @param newImplementation The new implementation address (unused - validation already done)
+     * @param newImplementation The new implementation address whose authorization is being checked.
      */
     function _authorizeUpgrade(address newImplementation) internal view override {
-        // Silence unused variable warning - validation was already performed in
-        // upgradeToAndCallWithAuthorization before setting the authorization flag
-        (newImplementation);
-
-        // Check the authorization flag from namespaced storage
-        // If this is false, it means someone called upgradeToAndCall directly without
-        // going through upgradeToAndCallWithAuthorization
-        if (!LibOrganizationUpgradeStorage.layout().isUpgradeAuthorized) {
+        address authorizedUpgradeImplementation = LibOrganizationUpgradeStorage.layout().authorizedUpgradeImplementation;
+        // Check that a target has been authorized and that the authorized target matches this UUPS hook call.
+        if (authorizedUpgradeImplementation == address(0) || authorizedUpgradeImplementation != newImplementation) {
             revert UnauthorizedUpgrade();
         }
     }

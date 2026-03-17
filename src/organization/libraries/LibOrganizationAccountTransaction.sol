@@ -117,9 +117,11 @@ library LibOrganizationAccountTransaction {
             revert IOrganizationAccountTransaction.PolicyDoesNotApply(policyId);
         }
 
+        PolicyType approvalPolicyType = proofs.policy.config.approval.policyType;
+
         // Case: Policy requires manual approval
         // Validate that we have enough valid approvals
-        if (proofs.policy.config.approval.policyType == PolicyType.RequireManualApproval) {
+        if (approvalPolicyType == PolicyType.RequireManualApproval) {
             _validateManualConfirmationOrRevert({
                 params: params,
                 data: data,
@@ -128,10 +130,68 @@ library LibOrganizationAccountTransaction {
                 proofs: proofs,
                 isApproval: true
             });
+        } else if (approvalPolicyType != PolicyType.AutoApprove) {
+            // Fail closed on unknown approval-policy enum values.
+            revert IOrganizationAccountTransaction.PolicyDoesNotApply(policyId);
         }
 
         // Update rate limits if applicable (for all policy types)
         _validateAndUpdateRateLimitOrRevert({params: params, data: data, initiator: initiator, policy: proofs.policy});
+    }
+
+    /**
+     * @dev Validates and updates rate limits for approved transactions.
+     *      Only applies if the policy has TimeInterval rate limit.
+     *      For token transfers, tracks the transfer amount.
+     *      For other transactions, tracks count (usage = 1).
+     *      Reverts if the limit would be exceeded.
+     * @param params The packed transaction parameters
+     * @param data The transaction calldata
+     * @param initiator The initiator's address
+     * @param policy The policy being used
+     */
+    function _validateAndUpdateRateLimitOrRevert(
+        TxParams memory params,
+        bytes calldata data,
+        address initiator,
+        Policy calldata policy
+    ) internal {
+        RateLimitType rateLimitType = policy.config.rateLimit.limitType;
+
+        // Case: Policy explicitly disables rate limiting.
+        if (rateLimitType == RateLimitType.None) {
+            return;
+        }
+
+        // Case: Unknown rate-limit enum value fails closed.
+        if (rateLimitType != RateLimitType.TimeInterval) {
+            revert IOrganizationAccountTransaction.RateLimitExceeded(params.policyId);
+        }
+
+        // Determine the actual destination (may differ for token transfers)
+        address destination = LibOrganizationPolicy.getActualDestination(params.to, data, params.value);
+
+        // Calculate usage amount: token amount for transfers, 1 for other transactions
+        uint256 usageAmount;
+        if (policy.config.transactionType == TransactionType.TokenTransfers) {
+            usageAmount = TokenTransferUtils.extractTransferAmount(data, params.value);
+        } else {
+            usageAmount = 1; // Count-based limit for non-transfer transactions
+        }
+
+        // Check limit and update usage tracking
+        bool withinLimit = LibOrganizationPolicy.checkAndUpdateRateLimit({
+            policyId: params.policyId,
+            policy: policy,
+            account: params.account,
+            destination: destination,
+            initiator: initiator,
+            usageAmount: usageAmount
+        });
+
+        if (!withinLimit) {
+            revert IOrganizationAccountTransaction.RateLimitExceeded(params.policyId);
+        }
     }
 
     /**
@@ -204,16 +264,16 @@ library LibOrganizationAccountTransaction {
         }
 
         // Route to appropriate rejection validation based on policy type
-        PolicyType pType = proofs.policy.config.approval.policyType;
+        PolicyType policyType = proofs.policy.config.approval.policyType;
 
         // AutoApprove: Need an authorized initiator to sign the rejection
-        if (pType == PolicyType.AutoApprove) {
+        if (policyType == PolicyType.AutoApprove) {
             _validateAutoApproveRejectionOrRevert({
                 params: params, data: data, reviewSignatures: reviewSignatures, proofs: proofs
             });
         }
         // ManualApproval: Need threshold approvals for the rejection
-        else if (pType == PolicyType.RequireManualApproval) {
+        else if (policyType == PolicyType.RequireManualApproval) {
             _validateManualConfirmationOrRevert({
                 params: params,
                 data: data,
@@ -222,54 +282,8 @@ library LibOrganizationAccountTransaction {
                 proofs: proofs,
                 isApproval: false
             });
-        }
-    }
-
-    /**
-     * @dev Validates and updates rate limits for approved transactions.
-     *      Only applies if the policy has TimeInterval rate limit.
-     *      For token transfers, tracks the transfer amount.
-     *      For other transactions, tracks count (usage = 1).
-     *      Reverts if the limit would be exceeded.
-     * @param params The packed transaction parameters
-     * @param data The transaction calldata
-     * @param initiator The initiator's address
-     * @param policy The policy being used
-     */
-    function _validateAndUpdateRateLimitOrRevert(
-        TxParams memory params,
-        bytes calldata data,
-        address initiator,
-        Policy calldata policy
-    ) private {
-        // Only process if policy has rate limits configured
-        if (policy.config.rateLimit.limitType != RateLimitType.TimeInterval) {
-            return;
-        }
-
-        // Determine the actual destination (may differ for token transfers)
-        address destination = LibOrganizationPolicy.getActualDestination(params.to, data, params.value);
-
-        // Calculate usage amount: token amount for transfers, 1 for other transactions
-        uint256 usageAmount;
-        if (policy.config.transactionType == TransactionType.TokenTransfers) {
-            usageAmount = TokenTransferUtils.extractTransferAmount(data, params.value);
         } else {
-            usageAmount = 1; // Count-based limit for non-transfer transactions
-        }
-
-        // Check limit and update usage tracking
-        bool withinLimit = LibOrganizationPolicy.checkAndUpdateRateLimit({
-            policyId: params.policyId,
-            policy: policy,
-            account: params.account,
-            destination: destination,
-            initiator: initiator,
-            usageAmount: usageAmount
-        });
-
-        if (!withinLimit) {
-            revert IOrganizationAccountTransaction.RateLimitExceeded(params.policyId);
+            revert IOrganizationAccountTransaction.PolicyDoesNotApply(policyId);
         }
     }
 
@@ -288,7 +302,7 @@ library LibOrganizationAccountTransaction {
         bytes calldata data,
         bytes memory reviewSignatures,
         ValidationProofs calldata proofs
-    ) private view {
+    ) internal view {
         // Compute the rejection hash (isApproval = false)
         bytes32 rejectionTxHash = _computeInitiatorHashFromParams(params, data, false);
 
@@ -325,7 +339,7 @@ library LibOrganizationAccountTransaction {
         bytes memory initiatorSignature,
         ValidationProofs calldata proofs,
         bool isApproval
-    ) private view {
+    ) internal view {
         // Get required approval count from policy
         uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(proofs.policy);
 
@@ -354,7 +368,7 @@ library LibOrganizationAccountTransaction {
      * @return The EIP-712 typed data hash for signing
      */
     function _computeInitiatorHashFromParams(TxParams memory params, bytes calldata data, bool isApproval)
-        private
+        internal
         view
         returns (bytes32)
     {
@@ -392,7 +406,7 @@ library LibOrganizationAccountTransaction {
         bytes calldata data,
         bool isApproval,
         bytes memory initiatorSignature
-    ) private view returns (bytes32) {
+    ) internal view returns (bytes32) {
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.REVIEW_ACCOUNT_TRANSACTION_TYPEHASH,

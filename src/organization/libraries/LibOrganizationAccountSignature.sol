@@ -94,7 +94,7 @@ library LibOrganizationAccountSignature {
      * @return magicValue SignatureUtils.ERC1271_MAGIC_VALUE if valid, SignatureUtils.ERC1271_INVALID_VALUE otherwise
      */
     function _validateRecoverySignature(bytes32 hash, bytes memory signatureData)
-        private
+        internal
         view
         returns (bytes4 magicValue)
     {
@@ -126,7 +126,7 @@ library LibOrganizationAccountSignature {
      * @return magicValue SignatureUtils.ERC1271_MAGIC_VALUE if valid, SignatureUtils.ERC1271_INVALID_VALUE otherwise
      */
     function _validatePolicyBasedSignature(address account, bytes32 hash, bytes memory signatureData)
-        private
+        internal
         view
         returns (bytes4 magicValue)
     {
@@ -210,7 +210,7 @@ library LibOrganizationAccountSignature {
      * @return True if the signature is from the Guardian or an enabled module
      */
     function _isValidGuardianSignature(bytes memory guardianSignature, bytes32 messageHash)
-        private
+        internal
         view
         returns (bool)
     {
@@ -234,6 +234,7 @@ library LibOrganizationAccountSignature {
         (bool success, bytes memory result) =
             guardianAddress.staticcall(abi.encodeWithSignature("isModuleEnabled(address)", recoveredSignerAddress));
 
+        // Case: Module is enabled on Guardian Safe
         return success && result.length >= 32 && abi.decode(result, (bool));
     }
 
@@ -256,7 +257,7 @@ library LibOrganizationAccountSignature {
         address initiator,
         uint256 policyId,
         ValidationProofs memory proofs
-    ) private view returns (bool) {
+    ) internal view returns (bool) {
         // Case: Policy is not in the organization's policy tree
         if (!LibOrganizationPolicy.isPolicyInOrg(policyId, proofs.policy, proofs.policyProof)) {
             return false;
@@ -291,7 +292,7 @@ library LibOrganizationAccountSignature {
      * @return The EIP-712 typed data hash for signing
      */
     function _getInitiatorSignatureHash(address account, bytes32 hash, uint256 policyId, uint256 expirationTimestamp)
-        private
+        internal
         view
         returns (bytes32)
     {
@@ -327,7 +328,7 @@ library LibOrganizationAccountSignature {
         uint256 policyId,
         uint256 expirationTimestamp,
         bytes memory initiatorSignature
-    ) private view returns (bytes32) {
+    ) internal view returns (bytes32) {
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.REVIEW_SIGNATURE_VALIDATION_TYPEHASH,

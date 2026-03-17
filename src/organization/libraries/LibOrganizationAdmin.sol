@@ -171,7 +171,7 @@ library LibOrganizationAdmin {
      * @param operationHash The hash of the admin operation
      * @return True if there are enough valid signatures, false otherwise
      */
-    function _areAdminSignaturesValid(bytes memory signatures, bytes32 operationHash) private view returns (bool) {
+    function _areAdminSignaturesValid(bytes memory signatures, bytes32 operationHash) internal view returns (bool) {
         // Case: No signatures provided
         if (signatures.length == 0) {
             return false;
@@ -222,7 +222,7 @@ library LibOrganizationAdmin {
      * @param salt The user-provided salt for nonce computation
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param isApproval Whether this is an approval (true) or rejection (false) signature
-     * @return The hash of the admin operation formatted for ERC-1271 signature verification
+     * @return The EIP-712 typed data hash of the admin operation for signature verification
      */
     function _getAdminOperationHash(
         OperationType operationType,
@@ -230,7 +230,7 @@ library LibOrganizationAdmin {
         uint256 salt,
         uint256 expirationTimestamp,
         bool isApproval
-    ) private view returns (bytes32) {
+    ) internal view returns (bytes32) {
         // Create EIP-712 structured data hash
         // Note: isApproval is included to differentiate execution signatures from rejection signatures
         bytes32 structHash = keccak256(
@@ -246,7 +246,7 @@ library LibOrganizationAdmin {
             )
         );
 
-        // Return EIP-712 compatible hash for ERC-1271 signature verification
+        // Return EIP-712 typed data hash for signature verification
         return LibOrganizationEIP712.computeTypedDataHash(structHash);
     }
 }

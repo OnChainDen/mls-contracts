@@ -10,6 +10,11 @@ pragma solidity 0.8.33;
  */
 interface IOrganizationAccountSignature {
     /**
+     * @notice Thrown when the caller is not the account being validated
+     */
+    error SenderIsNotAccount();
+
+    /**
      * @notice Validates an ERC-1271 signature for a given account
      * @dev Note: Rate limits are NOT supported for ERC-1271 signatures because the standard
      *      requires isValidSignature to be a view function (cannot modify storage to track usage).

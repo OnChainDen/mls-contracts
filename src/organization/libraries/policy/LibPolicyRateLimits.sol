@@ -37,11 +37,14 @@ library LibPolicyRateLimits {
         address initiator,
         uint256 usageAmount
     ) internal returns (bool withinLimit) {
-        // Skip check if no rate limit configured
-        if (policy.config.rateLimit.limitType != RateLimitType.TimeInterval) return true;
+        // Case: Rate limiting is explicitly disabled by policy.
+        if (policy.config.rateLimit.limitType == RateLimitType.None) return true;
 
-        // Skip if time interval is not configured (0 hours)
-        if (policy.config.rateLimit.timeIntervalHours == 0) return true;
+        // Case: Unknown rate-limit enum values fail closed.
+        if (policy.config.rateLimit.limitType != RateLimitType.TimeInterval) return false;
+
+        // Fail closed if the time interval is not configured (0 hours).
+        if (policy.config.rateLimit.timeIntervalHours == 0) return false;
 
         LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 
@@ -52,11 +55,16 @@ library LibPolicyRateLimits {
 
         uint256 currentUsage = policyLayout.policyUsage[usageKey][timeWindow];
 
+        // Fail closed on arithmetic overflow in usage accumulation.
+        if (usageAmount > type(uint256).max - currentUsage) return false;
+
+        uint256 nextUsage = currentUsage + usageAmount;
+
         // Check if adding usageAmount would exceed the limit
-        if (currentUsage + usageAmount > policy.config.rateLimit.timeIntervalLimit) return false;
+        if (nextUsage > policy.config.rateLimit.timeIntervalLimit) return false;
 
         // Update usage
-        policyLayout.policyUsage[usageKey][timeWindow] = currentUsage + usageAmount;
+        policyLayout.policyUsage[usageKey][timeWindow] = nextUsage;
 
         return true;
     }

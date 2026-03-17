@@ -116,10 +116,8 @@ library LibOrganizationPolicy {
         // Case: The initiator is not authorized by the policy
         if (!LibPolicyInitiator.isInitiatorAuthorized(proofs.policy, initiator)) return false;
 
-        TransactionType txType = proofs.policy.config.transactionType;
-
         // Case: Policy matches only transactions that are token transfers
-        if (txType == TransactionType.TokenTransfers) {
+        if (proofs.policy.config.transactionType == TransactionType.TokenTransfers) {
             // Case: The transaction is not a token transfer
             if (!TokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
 
@@ -129,7 +127,7 @@ library LibOrganizationPolicy {
         }
 
         // Case: The policy matches only transactions that are contract interactions that are not token transfers
-        if (txType == TransactionType.ContractInteractions) {
+        if (proofs.policy.config.transactionType == TransactionType.ContractInteractions) {
             // Case: The transaction is a token transfer (not a contract interaction)
             if (TokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
 
@@ -147,7 +145,7 @@ library LibOrganizationPolicy {
         // Case: The policy can be applied to any type of transaction (Token transfers or Contract interactions)
         // and the destination is allowed by the policy
         if (
-            txType == TransactionType.Any
+            proofs.policy.config.transactionType == TransactionType.Any
                 && LibPolicyDestination.isDestinationAllowedByPolicy({
                     policy: proofs.policy, to: to, value: value, data: data, destinationProof: proofs.destinationProof
                 })
@@ -161,7 +159,7 @@ library LibOrganizationPolicy {
     /**
      * @dev Checks if there are enough valid approvals from signatures (using mapping lookups).
      *      Supports both EOA (ECDSA) and ERC-1271 (smart contract) signatures.
-     *      Delegates to LibPolicyApproval.
+     *      Delegates to LibPolicyApproval and fails closed (returns false on invalid inputs).
      * @param policy The policy to check against
      * @param signatures The concatenated reviewer signatures (variable length, hybrid format)
      * @param messageHash The message hash that was signed
@@ -292,7 +290,7 @@ library LibOrganizationPolicy {
      * @param policy The policy data
      * @return The computed merkle leaf
      */
-    function _computePolicyLeaf(uint256 policyId, Policy memory policy) private pure returns (bytes32) {
+    function _computePolicyLeaf(uint256 policyId, Policy memory policy) internal pure returns (bytes32) {
         return keccak256(bytes.concat(keccak256(abi.encode(policyId, policy))));
     }
 }

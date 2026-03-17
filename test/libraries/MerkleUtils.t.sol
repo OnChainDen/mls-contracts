@@ -10,20 +10,23 @@ import {Merkle} from "murky/Merkle.sol";
 import {MerkleUtils} from "libraries/MerkleUtils.sol";
 
 /**
- * @title MerkleUtilsHarness
- * @dev Test harness that exposes the internal MerkleUtils.computeAddressLeaf function
+ * @dev MerkleUtilsHarness
+ *      Test harness that exposes the internal MerkleUtils.computeAddressLeaf function
  *      via a public wrapper so it can be called from the test contract.
  */
 contract MerkleUtilsHarness {
+    /// @dev Exposes address-leaf computation for direct testing.
+    /// @param addr Address to convert into a Merkle leaf.
+    /// @return leaf Double-hashed Merkle leaf for the address.
     function computeAddressLeaf(address addr) external pure returns (bytes32) {
         return MerkleUtils.computeAddressLeaf(addr);
     }
 }
 
 /**
- * @title MerkleUtilsTest
- * @notice Comprehensive tests for MerkleUtils library.
- * @dev Covers leaf computation (double hashing), determinism, collision resistance,
+ * @dev MerkleUtilsTest
+ *      Comprehensive tests for MerkleUtils library.
+ *      Covers leaf computation (double hashing), determinism, collision resistance,
  *      and merkle proof verification via fuzz tests.
  *
  *      MerkleUtils.computeAddressLeaf uses double hashing:
@@ -36,6 +39,7 @@ contract MerkleUtilsTest is Test {
     MerkleUtilsHarness public harness;
     Merkle public merkle;
 
+    /// @dev Deploys the harness and Merkle helper used across fuzz cases.
     function setUp() public {
         harness = new MerkleUtilsHarness();
         merkle = new Merkle();
@@ -96,10 +100,8 @@ contract MerkleUtilsTest is Test {
     /// @dev Test case: No two random addresses should ever produce the same leaf (collision resistance).
     function testFuzz_computeAddressLeaf_noCollisions(address addr1, address addr2) public view {
         vm.assume(addr1 != addr2);
-
         bytes32 leaf1 = harness.computeAddressLeaf(addr1);
         bytes32 leaf2 = harness.computeAddressLeaf(addr2);
-
         assertTrue(leaf1 != leaf2, "Different addresses should never collide");
     }
 
@@ -126,7 +128,7 @@ contract MerkleUtilsTest is Test {
     }
 
     /// @dev Test case: Modifying any single byte of a valid merkle proof should always cause verification to fail.
-    function testFuzz_computeAddressLeaf_modifiedProofByte_verificationFails(
+    function testFuzz_FMU_MERK_11_computeAddressLeaf_modifiedProofByteAlwaysInvalidatesVerification(
         uint8 rawTreeSize,
         uint8 leafIndex,
         uint8 proofByteIndex

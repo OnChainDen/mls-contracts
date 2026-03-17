@@ -15,8 +15,8 @@ import {
 } from "types/PolicyTypes.sol";
 
 /**
- * @title Policy Rate Limits Test
- * @notice Tests for policy rate limit functionality
+ * @dev Policy Rate Limits Test
+ *      Tests for policy rate limit functionality
  */
 contract PolicyRateLimitsTest is Test {
     address constant ACCOUNT_1 = address(0x1);
@@ -127,14 +127,16 @@ contract PolicyRateLimitsTest is Test {
         assertTrue(withinLimit, "Should return true when no limitation");
     }
 
-    function test_checkAndUpdateRateLimit_skipIfZeroHours() public {
+    function test_checkAndUpdateRateLimit_zeroHours_returnsFalseWithoutWritingUsage() public {
         Policy memory policy = _createPolicy(0, 1000, RateLimitType.TimeInterval);
 
         bool withinLimit = LibOrganizationPolicy.checkAndUpdateRateLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1000
         );
+        uint256 usage = LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
 
-        assertTrue(withinLimit, "Should return true when timeIntervalHours is 0");
+        assertFalse(withinLimit, "Should return false when timeIntervalHours is 0");
+        assertEq(usage, 0, "Zero-hour configuration should not write usage");
     }
 
     function test_checkAndUpdateRateLimit_withinLimit() public {
@@ -269,8 +271,8 @@ contract PolicyRateLimitsTest is Test {
     // ================================
 
     /**
-     * @notice Creates a base policy with the specified rate limit configuration
-     * @dev Creates a policy with anySourceAccount, anyFunction, and anyDestination enabled.
+     * @dev Creates a base policy with the specified rate limit configuration
+     *      Creates a policy with anySourceAccount, anyFunction, and anyDestination enabled.
      *      Uses AutoApprove policy type with anyInitiator.
      * @param hours_ The time interval in hours for the limit window
      * @param limit The maximum usage allowed within the time interval
@@ -322,8 +324,8 @@ contract PolicyRateLimitsTest is Test {
     }
 
     /**
-     * @notice Creates a policy with PerEntity source account scope
-     * @dev Limits are tracked separately per source account
+     * @dev Creates a policy with PerEntity source account scope
+     *      Limits are tracked separately per source account
      * @return policy The constructed policy struct with source scope set to PerEntity
      */
     function _createPolicyWithSourceScope() internal pure returns (Policy memory policy) {
@@ -332,8 +334,8 @@ contract PolicyRateLimitsTest is Test {
     }
 
     /**
-     * @notice Creates a policy with PerEntity destination scope
-     * @dev Limits are tracked separately per destination address
+     * @dev Creates a policy with PerEntity destination scope
+     *      Limits are tracked separately per destination address
      * @return policy The constructed policy struct with destination scope set to PerEntity
      */
     function _createPolicyWithDestScope() internal pure returns (Policy memory policy) {
@@ -342,8 +344,8 @@ contract PolicyRateLimitsTest is Test {
     }
 
     /**
-     * @notice Creates a policy with PerEntity initiator scope
-     * @dev Limits are tracked separately per initiator address
+     * @dev Creates a policy with PerEntity initiator scope
+     *      Limits are tracked separately per initiator address
      * @return policy The constructed policy struct with initiator scope set to PerEntity
      */
     function _createPolicyWithInitiatorScope() internal pure returns (Policy memory policy) {

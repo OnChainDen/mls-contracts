@@ -80,19 +80,11 @@ contract ImplementationWhitelistImplementation is
     }
 
     /**
-     * @notice Authorize an upgrade
-     * @dev This function is empty because the onlyOwner modifier ensures that only the owner can upgrade
-     * @param newImplementation The new implementation address
-     */
-    // solhint-disable-next-line no-empty-blocks
-    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {}
-
-    /**
      * @dev Adds implementation addresses to the whitelist.
      * @param contractType The type of contract (Account or Organization)
      * @param implementations The implementation addresses to whitelist
      */
-    function _addToWhitelist(ContractType contractType, address[] calldata implementations) private {
+    function _addToWhitelist(ContractType contractType, address[] calldata implementations) internal {
         LibImplementationWhitelistStorage.Layout storage storageLayout = LibImplementationWhitelistStorage.layout();
 
         for (uint256 i = 0; i < implementations.length; ++i) {
@@ -106,7 +98,7 @@ contract ImplementationWhitelistImplementation is
      * @param contractType The type of contract (Account or Organization)
      * @param implementations The implementation addresses to remove from whitelist
      */
-    function _removeFromWhitelist(ContractType contractType, address[] calldata implementations) private {
+    function _removeFromWhitelist(ContractType contractType, address[] calldata implementations) internal {
         LibImplementationWhitelistStorage.Layout storage storageLayout = LibImplementationWhitelistStorage.layout();
 
         for (uint256 i = 0; i < implementations.length; ++i) {
@@ -114,4 +106,12 @@ contract ImplementationWhitelistImplementation is
             emit ImplementationUnwhitelisted(contractType, implementations[i]);
         }
     }
+
+    /**
+     * @notice Authorize an upgrade
+     * @dev This function is empty because the onlyOwner modifier ensures that only the owner can upgrade
+     * @param newImplementation The new implementation address
+     */
+    // solhint-disable-next-line no-empty-blocks
+    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {}
 }

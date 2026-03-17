@@ -128,6 +128,9 @@ Admin operations modify organizational state and require admin threshold signatu
 | `DeployAccount` | Deploy a new Account | `OrganizationAccountFactoryBase.sol` |
 | `UpgradeAccount` | Upgrade Account implementation (beacon) | `OrganizationAccountFactoryBase.sol` |
 
+> [!WARNING]
+> **Important consideration when modifying groups:** Modifying a group (via `ModifyGroups`) does **not** automatically update policies that reference that group. If a group's membership is reduced below the reviewer threshold specified in a ManualApproval policy, that policy becomes unusable until admins also update the policy (via `ModifyPolicies`). See [Manual Review Fields](#manual-review-fields-manualapproval-policies) for details.
+
 ### Who can approve or reject Admin Operations?
 Only Members who are "Admins" according to the Organization contract can approve or reject Admin Operations.
 
@@ -163,8 +166,8 @@ Policies are "if-then" rules that dictate:
 
 Example policies:
 - "if a transaction is sending more than $10,000, then require approval from 2 out of 3 members of the Finance team"
-- "if a transaction is sending less than $10,000, then require approval from 1 out of 3 members of the Finance team"
-- "if a transaction is sending less than $1,000 from the Accounts Payable Account, then automatically approve the transaction"
+- "if a transaction is sending less than or equal to $10,000, then require approval from 1 out of 3 members of the Finance team"
+- "if a transaction is sending less than or equal to $1,000 from the Accounts Payable Account, then automatically approve the transaction"
 - "if a transaction is calling the `approve` function on the USDC contract, then require approval from 2 out of 3 of the Finance team"
 - "if an ERC-1271 Account Signature is to be approved by our Treasury Account, then it requires approval from 2 out of 3 members of the Finance team"
 
@@ -224,6 +227,9 @@ Policies define which transactions they govern using the following fields:
 | **Reviewer Threshold** | Number of approvals required (only when Reviewers = Group) | Numeric value (must be ≤ group size) |
 
 *\* If set to a Group, the policy must specify a threshold for how many group members must approve.*
+
+> [!WARNING]
+> **Group updates can make policies unusable.** Updating a group does not automatically update any policies that reference it. If a group's membership is reduced below a policy's reviewer threshold (e.g., a policy requires 3-of-5 approvals from the "Finance" group, and the group is updated to have only 2 members), the policy becomes unusable — it is impossible to collect enough reviewer approvals to approve or reject transactions under that policy. When this happens, admins must update the policy (via `ModifyPolicies`) to either lower the threshold or reference a different group.
 
 ---
 

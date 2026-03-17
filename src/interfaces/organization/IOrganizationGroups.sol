@@ -79,11 +79,10 @@ interface IOrganizationGroups {
     error InvalidGroupDeletionOperation(uint256 groupId);
 
     /**
-     * @notice Thrown when trying to remove a member who is not in the group
-     * @param groupId The group ID
-     * @param member The address that is not in the group
+     * @notice Thrown when a group modification has an invalid enum value
+     * @param modificationType The invalid modification type value
      */
-    error MemberNotInGroup(uint256 groupId, address member);
+    error InvalidGroupModificationType(uint8 modificationType);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions
@@ -95,7 +94,7 @@ interface IOrganizationGroups {
      *      - Create: creates a new group (reverts if already exists, was deleted, or membersToRemove is non-empty)
      *      - Update: modifies membership of an existing group (reverts if group doesn't exist)
      *      - Delete: deletes a group (membersToAdd/membersToRemove must be empty)
-     *      Adding a duplicate group member is a no-op. Removing a non-existent group member reverts.
+     *      Adding a duplicate group member is a no-op. Removing a non-existent group member is a no-op.
      *      Group IDs are not reusable after deletion.
      * @param modifications Array of group modifications to apply
      * @param authParams The authorization parameters (salt, expiration, signatures)

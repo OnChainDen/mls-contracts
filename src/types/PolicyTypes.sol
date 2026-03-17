@@ -190,7 +190,7 @@ struct InitiatorConfig {
  * @param anyToken If true, any token is allowed (ignores tokenAddress)
  * @param tokenAddress Specific token address (only used if !anyToken)
  * @param hasAmountThreshold If true, enforce the amount limit
- * @param amountThreshold Maximum amount per transaction or time period
+ * @param amountThreshold Maximum allowed amount per transaction or time period (inclusive)
  */
 struct TokenFilter {
     bool anyToken;

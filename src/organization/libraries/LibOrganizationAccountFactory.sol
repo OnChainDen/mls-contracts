@@ -2,10 +2,12 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
 import {AccountProxy} from "account/AccountProxy.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {
     LibOrganizationAccountFactoryStorage
@@ -26,6 +28,10 @@ library LibOrganizationAccountFactory {
      * @param newImplementation The new account implementation address
      */
     function setAccountImplementation(address newImplementation) internal {
+        if (newImplementation == address(0)) {
+            revert IOrganizationFactory.ZeroAddress();
+        }
+
         // Validate implementation against whitelist
         // forgefmt: disable-next-item
         IImplementationWhitelist(LibOrganizationUpgradeStorage.layout().whitelistAddress)
@@ -33,6 +39,11 @@ library LibOrganizationAccountFactory {
                 ContractType.Account,
                 newImplementation
             );
+
+        // Case: The new implementation has no runtime code
+        if (newImplementation.code.length == 0) {
+            revert ERC1967Utils.ERC1967InvalidImplementation(newImplementation);
+        }
 
         // Update the account implementation in storage
         LibOrganizationAccountFactoryStorage.layout().accountImplementation = newImplementation;

@@ -57,7 +57,7 @@ interface IOrganizationMembers {
 
     /**
      * @notice Adds and/or removes members from the organization
-     * @dev Adding a duplicate member is a no-op. Removing a non-existent member reverts.
+     * @dev Adding a duplicate member is a no-op. Removing a non-existent member is a no-op.
      *      Removing a member who is an admin reverts with MemberIsAdmin.
      * @param membersToAdd Addresses to add as members
      * @param membersToRemove Addresses to remove from members

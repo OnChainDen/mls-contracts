@@ -23,8 +23,8 @@ import {
 } from "test/helpers/MockERC1271Signers.sol";
 
 /**
- * @title SignatureUtilsHarness
- * @dev Test harness that exposes all internal SignatureUtils library functions
+ * @dev SignatureUtilsHarness
+ *      Test harness that exposes all internal SignatureUtils library functions
  *      (both the public-facing ones and the previously-private helpers) via
  *      public wrappers so they can be called from the test contract.
  */
@@ -145,10 +145,10 @@ contract SignatureUtilsHarness {
 }
 
 /**
- * @title SignatureUtilsTest
- * @notice Comprehensive tests for SignatureUtils library covering EOA (ECDSA)
+ * @dev SignatureUtilsTest
+ *      Comprehensive tests for SignatureUtils library covering EOA (ECDSA)
  *         and ERC-1271 contract signature validation.
- * @dev Test coverage spans:
+ *      Test coverage spans:
  *      - tryRecoverSigner (core implementation)
  *      - recoverSignerOrRevert (production-path verification)
  *      - tryRecoverSignerAtOffset (multi-sig offset recovery)
@@ -188,6 +188,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     MockERC1271RightPaddedSigner public rightPaddedSigner1271;
     MockERC1271Return31BytesSigner public return31BytesSigner1271;
 
+    /// @dev Deploys the harness and all ERC-1271 signer mocks used by the suite.
     function setUp() public {
         harness = new SignatureUtilsHarness();
 
@@ -501,33 +502,34 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     }
 
     /// @dev Test case: Recovering single signatures (EOA and ERC-1271) at offset 0 should succeed for both
-    ///      tryRecoverSignerAtOffset and recoverSignerAtOffsetOrRevert.
-    function test_recoverSignerAtOffsetPair_validSingleSignatures_succeed() public view {
+    ///      tryRecoverSignerAtOffset and recoverSignerAtOffsetOrRevert. [SIGU-PARSE-3]
+    function test_SIGU_PARSE_3_A_recoverSignerAtOffsetPair_validSingleSignatures_succeed() public view {
         bytes memory eoaSig = _signHash(TEST_PK_1, TEST_HASH);
         _assertRecoverSignerAtOffsetPairSucceeds(
             eoaSig, 0, TEST_HASH, vm.addr(TEST_PK_1), 65, "EOA at offset 0 should succeed"
         );
 
-        bytes memory innerSig = hex"aabbccdd";
-        bytes memory contractSig = _buildContractSignature(address(validSigner1271), innerSig);
         _assertRecoverSignerAtOffsetPairSucceeds(
-            contractSig,
+            _buildContractSignature(address(validSigner1271), hex"aabbccdd"),
             0,
             TEST_HASH,
             address(validSigner1271),
-            23 + innerSig.length,
+            27,
             "ERC-1271 at offset 0 should succeed"
         );
     }
 
     /// @dev Test case: Iterating through concatenated multi-signature payloads (multiple EOAs, mixed EOA + ERC-1271,
     ///      and multiple ERC-1271 entries) should produce deterministic nextOffset progression.
-    function test_recoverSignerAtOffsetPair_multiSignatureOffsets_succeed() public view {
+    ///      [SIGU-PARSE-3] [SIGU-PARSE-4]
+    function test_SIGU_PARSE_3_B__SIGU_PARSE_4_A_recoverSignerAtOffsetPair_multiSignatureOffsets_succeed()
+        public
+        view
+    {
         bytes memory sig1 = _signHash(TEST_PK_1, TEST_HASH);
         bytes memory sig2 = _signHash(TEST_PK_2, TEST_HASH);
         bytes memory sig3 = _signHash(TEST_PK_3, TEST_HASH);
-        bytes memory innerSig = hex"aabbccdd";
-        bytes memory contractSig = _buildContractSignature(address(validSigner1271), innerSig);
+        bytes memory contractSig = _buildContractSignature(address(validSigner1271), hex"aabbccdd");
 
         bytes[] memory eoaPair = new bytes[](2);
         eoaPair[0] = sig1;
@@ -552,7 +554,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
             65,
             TEST_HASH,
             address(validSigner1271),
-            65 + 23 + innerSig.length,
+            92,
             "Second mixed signature should recover ERC-1271 signer"
         );
 
@@ -607,8 +609,8 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     }
 
     /// @dev Test case: Invalid inputs to offset-based recovery (out-of-bounds offset, invalid v byte, malleable
-    ///      signature, wrong ERC-1271 magic) should fail identically for both offset APIs.
-    function test_recoverSignerAtOffsetPair_invalidInputs_fail() public {
+    ///      signature, wrong ERC-1271 magic) should fail identically for both offset APIs. [SIGU-PARSE-5]
+    function test_SIGU_PARSE_5_A_recoverSignerAtOffsetPair_invalidInputs_fail() public {
         bytes memory sig = _signHash(TEST_PK_1, TEST_HASH);
         // Offset cannot be beyond or equal to total encoded length.
         _assertRecoverSignerAtOffsetPairFails(sig, 100, TEST_HASH, "Offset beyond length should fail");
@@ -639,7 +641,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     }
 
     /// @dev Test case: Extracting the v byte at a large offset (e.g., 200) should return the correct byte.
-    function test_getVByte_largeOffset_returnsCorrectByte() public view {
+    function test_SIGU_PARSE_1_A_getVByte_largeOffset_returnsCorrectByte() public view {
         // Create a 250-byte array and set byte at position 200 to a known value
         bytes memory data = new bytes(250);
         data[200] = bytes1(uint8(42));
@@ -649,7 +651,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     }
 
     /// @dev Test case: Extracting the v byte when surrounding bytes are non-zero should return only the target byte.
-    function test_getVByte_surroundingNonZero_onlyTargetByteReturned() public view {
+    function test_SIGU_PARSE_1_B_getVByte_surroundingNonZero_onlyTargetByteReturned() public view {
         // Fill with 0xFF and set target byte to a specific value
         bytes memory data = new bytes(10);
         for (uint256 i = 0; i < data.length; i++) {
@@ -661,9 +663,62 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         assertEq(v, 28, "Should extract only the target byte, not surrounding 0xFF bytes");
     }
 
+    /// @dev Verifies `_getVByte` and `_tryRecoverEOASigner` read the embedded `(v,r,s)` fields from the supplied
+    ///      offset without bleeding into surrounding bytes. [SIGU-PARSE-1]
+    function testFuzz_SIGU_PARSE_1_E__FSU_HAR_7_embeddedEOASignatureFieldExtraction_matchesKnownVRS(
+        uint256 privateKey,
+        uint8 prefixLength,
+        uint8 suffixLength,
+        bytes1 prefixFill,
+        bytes1 suffixFill
+    ) public view {
+        privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
+        prefixLength = uint8(bound(prefixLength, 0, 120));
+        suffixLength = uint8(bound(suffixLength, 0, 120));
+
+        bytes memory signature = _signHash(privateKey, TEST_HASH);
+        bytes memory prefix = new bytes(prefixLength);
+        bytes memory suffix = new bytes(suffixLength);
+        for (uint256 i = 0; i < prefixLength; i++) {
+            prefix[i] = prefixFill;
+        }
+        for (uint256 i = 0; i < suffixLength; i++) {
+            suffix[i] = suffixFill;
+        }
+
+        // Setup: embed one known canonical EOA signature behind a fuzzed noisy prefix and optional trailing bytes.
+        bytes memory embedded = abi.encodePacked(prefix, signature, suffix);
+        uint256 offset = prefixLength;
+        uint8 expectedV = uint8(signature[0]);
+        bytes32 expectedR;
+        bytes32 expectedS;
+        bytes32 actualR;
+        bytes32 actualS;
+        assembly {
+            let signatureData := add(signature, 32)
+            expectedR := mload(add(signatureData, 1))
+            expectedS := mload(add(signatureData, 33))
+
+            let embeddedData := add(embedded, 32)
+            actualR := mload(add(embeddedData, add(offset, 1)))
+            actualS := mload(add(embeddedData, add(offset, 33)))
+        }
+
+        // Call: read the embedded v byte directly and recover the signer from the same embedded offset.
+        uint8 actualV = harness.getVByte(embedded, offset);
+        (bool success, address signer) = harness.tryRecoverEOASigner(embedded, offset, TEST_HASH, actualV);
+
+        // Verify: v, r, and s match the embedded signature fields and signer recovery succeeds from that offset.
+        assertEq(actualV, expectedV, "v should match the byte at the embedded offset");
+        assertEq(actualR, expectedR, "r should match bytes [offset+1 : offset+33)");
+        assertEq(actualS, expectedS, "s should match bytes [offset+33 : offset+65)");
+        assertTrue(success, "Embedded EOA signature should recover successfully");
+        assertEq(signer, vm.addr(privateKey), "Recovered signer should match the embedded EOA signature");
+    }
+
     /// @dev Test case: Extracting the contract signer surrounded by non-zero bytes should return only the clean
     ///      20-byte address with no dirty upper bits.
-    function test_getContractSigner_surroundedByNonZero_extractsCleanAddress() public view {
+    function test_SIGU_PARSE_2_A_getContractSigner_surroundedByNonZero_extractsCleanAddress() public view {
         // Build: v(1) = 0xFF | signer(20) = known address | rest = 0xFF
         address expectedAddr = address(0x1234567890AbcdEF1234567890aBcdef12345678);
         bytes memory data = new bytes(50);
@@ -711,7 +766,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Parsing a contract signature length of 256 (0x0100) should return 256, verifying big-endian
     ///      parsing (not little-endian 1).
-    function test_getContractSignatureLength_256_bigEndianParsedCorrectly() public view {
+    function test_SIGU_PARSE_2_B_getContractSignatureLength_256_bigEndianParsedCorrectly() public view {
         // Build: v(1) | signer(20) | length(2) = 256 = 0x0100 big-endian
         bytes memory data = abi.encodePacked(uint8(0), address(0x1), uint16(256));
 
@@ -737,217 +792,214 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Extracting a 1-byte inner signature should return a byte that matches the source exactly.
     function test_extractContractInnerSignature_length1_matchesSource() public view {
-        bytes memory innerSig = hex"ab";
-        bytes memory data = abi.encodePacked(uint8(0), address(0x1), uint16(1), innerSig);
-
-        bytes memory extracted = harness.extractContractInnerSignature(data, 0, 1);
-
-        assertEq(extracted.length, 1, "Extracted length should be 1");
-        assertEq(extracted[0], innerSig[0], "Extracted byte should match source");
+        _assertExtractedInnerSignatureMatchesSource(hex"ab");
     }
 
     /// @dev Test case: Extracting a 31-byte inner signature (non-word-aligned) should not over-copy into the
     ///      returned bytes.
     function test_extractContractInnerSignature_length31_noOverCopy() public view {
-        bytes memory innerSig = new bytes(31);
-        for (uint256 i = 0; i < 31; i++) {
-            // forge-lint: disable-next-line(unsafe-typecast)
-            innerSig[i] = bytes1(uint8(i + 1)); // Safe: i+1 is bounded to 1-31
-        }
-        bytes memory data = abi.encodePacked(uint8(0), address(0x1), uint16(31), innerSig);
-
-        bytes memory extracted = harness.extractContractInnerSignature(data, 0, 31);
-
-        assertEq(extracted.length, 31, "Extracted length should be 31");
-        for (uint256 i = 0; i < 31; i++) {
-            assertEq(extracted[i], innerSig[i], string.concat("Byte mismatch at index ", vm.toString(i)));
-        }
+        _assertExtractedGeneratedInnerSignatureMatchesSource(31, 1);
     }
 
     /// @dev Test case: Extracting a 32-byte inner signature should produce an exact one-chunk copy with full data
     ///      integrity.
     function test_extractContractInnerSignature_length32_exactChunkCopy() public view {
-        bytes memory innerSig = new bytes(32);
-        for (uint256 i = 0; i < 32; i++) {
-            // forge-lint: disable-next-line(unsafe-typecast)
-            innerSig[i] = bytes1(uint8(i)); // Safe: i is bounded to 0-31
-        }
-        bytes memory data = abi.encodePacked(uint8(0), address(0x1), uint16(32), innerSig);
-
-        bytes memory extracted = harness.extractContractInnerSignature(data, 0, 32);
-
-        assertEq(extracted.length, 32, "Extracted length should be 32");
-        assertEq(keccak256(extracted), keccak256(innerSig), "Data should match exactly");
+        _assertExtractedGeneratedInnerSignatureMatchesSource(32, 0);
     }
 
     /// @dev Test case: Extracting a 33-byte inner signature should produce a two-chunk copy that returns only
     ///      33 bytes (not 64).
     function test_extractContractInnerSignature_length33_twoChunkOnly33Bytes() public view {
-        bytes memory innerSig = new bytes(33);
-        for (uint256 i = 0; i < 33; i++) {
-            // forge-lint: disable-next-line(unsafe-typecast)
-            innerSig[i] = bytes1(uint8(i)); // Safe: i is bounded to 0-32
-        }
-        bytes memory data = abi.encodePacked(uint8(0), address(0x1), uint16(33), innerSig);
-
-        bytes memory extracted = harness.extractContractInnerSignature(data, 0, 33);
-
-        assertEq(extracted.length, 33, "Extracted length should be 33, not 64");
-        for (uint256 i = 0; i < 33; i++) {
-            assertEq(extracted[i], innerSig[i], string.concat("Byte mismatch at index ", vm.toString(i)));
-        }
+        _assertExtractedGeneratedInnerSignatureMatchesSource(33, 0);
     }
 
     /// @dev Test case: Extracting a 65-byte inner signature (EOA sig size) should maintain full data integrity
     ///      byte-for-byte.
     function test_extractContractInnerSignature_length65_fullDataIntegrity() public view {
-        bytes memory innerSig = new bytes(65);
-        for (uint256 i = 0; i < 65; i++) {
-            // forge-lint: disable-next-line(unsafe-typecast)
-            innerSig[i] = bytes1(uint8(i % 256)); // Safe: modulo 256 ensures value fits in uint8
-        }
-        bytes memory data = abi.encodePacked(uint8(0), address(0x1), uint16(65), innerSig);
-
-        bytes memory extracted = harness.extractContractInnerSignature(data, 0, 65);
-
-        assertEq(extracted.length, 65, "Extracted length should be 65");
-        assertEq(keccak256(extracted), keccak256(innerSig), "Full 65-byte data should match exactly");
+        _assertExtractedGeneratedInnerSignatureMatchesSource(65, 0);
     }
 
     /// @dev Test case: Extracting an inner signature consisting of all 0xFF bytes should produce no corruption
     ///      during chunk copy.
     function test_extractContractInnerSignature_allFfBytes_noCorruption() public view {
-        bytes memory innerSig = new bytes(65);
-        for (uint256 i = 0; i < 65; i++) {
-            innerSig[i] = bytes1(uint8(0xff));
-        }
-        bytes memory data = abi.encodePacked(uint8(0), address(0x1), uint16(65), innerSig);
-
-        bytes memory extracted = harness.extractContractInnerSignature(data, 0, 65);
-
-        assertEq(extracted.length, 65, "Extracted length should be 65");
-        for (uint256 i = 0; i < 65; i++) {
-            assertEq(uint8(extracted[i]), 0xff, string.concat("Byte at ", vm.toString(i), " should be 0xFF"));
-        }
+        _assertExtractedFilledInnerSignatureMatchesSource(65, 0xff);
     }
 
     /// @dev Test case: Extracting a 96-byte inner signature should produce an exact 3-chunk copy with data
     ///      integrity byte-for-byte.
     function test_extractContractInnerSignature_length96_threeChunkIntegrity() public view {
-        bytes memory innerSig = new bytes(96);
-        for (uint256 i = 0; i < 96; i++) {
-            // forge-lint: disable-next-line(unsafe-typecast)
-            innerSig[i] = bytes1(uint8(i % 256)); // Safe: modulo 256 ensures value fits in uint8
-        }
-        bytes memory data = abi.encodePacked(uint8(0), address(0x1), uint16(96), innerSig);
-
-        bytes memory extracted = harness.extractContractInnerSignature(data, 0, 96);
-
-        assertEq(extracted.length, 96, "Extracted length should be 96");
-        assertEq(keccak256(extracted), keccak256(innerSig), "96-byte data should match exactly");
+        _assertExtractedGeneratedInnerSignatureMatchesSource(96, 0);
     }
 
     /// @dev Test case: Extracting a 97-byte inner signature should produce a 4-chunk copy that returns only
     ///      97 bytes (not 128).
     function test_extractContractInnerSignature_length97_fourChunkOnly97Bytes() public view {
-        bytes memory innerSig = new bytes(97);
-        for (uint256 i = 0; i < 97; i++) {
-            // forge-lint: disable-next-line(unsafe-typecast)
-            innerSig[i] = bytes1(uint8(i % 256)); // Safe: modulo 256 ensures value fits in uint8
-        }
-        bytes memory data = abi.encodePacked(uint8(0), address(0x1), uint16(97), innerSig);
-
-        bytes memory extracted = harness.extractContractInnerSignature(data, 0, 97);
-
-        assertEq(extracted.length, 97, "Extracted length should be 97, not 128");
-        assertEq(keccak256(extracted), keccak256(innerSig), "97-byte data should match exactly");
+        _assertExtractedGeneratedInnerSignatureMatchesSource(97, 0);
     }
 
     /// @dev Test case: Extracting a 160-byte inner signature should produce an exact 5-chunk copy with data
     ///      integrity byte-for-byte.
     function test_extractContractInnerSignature_length160_fiveChunkIntegrity() public view {
-        bytes memory innerSig = new bytes(160);
-        for (uint256 i = 0; i < 160; i++) {
-            // forge-lint: disable-next-line(unsafe-typecast)
-            innerSig[i] = bytes1(uint8(i % 256)); // Safe: modulo 256 ensures value fits in uint8
-        }
-        bytes memory data = abi.encodePacked(uint8(0), address(0x1), uint16(160), innerSig);
-
-        bytes memory extracted = harness.extractContractInnerSignature(data, 0, 160);
-
-        assertEq(extracted.length, 160, "Extracted length should be 160");
-        assertEq(keccak256(extracted), keccak256(innerSig), "160-byte data should match exactly");
+        _assertExtractedGeneratedInnerSignatureMatchesSource(160, 0);
     }
 
     /// @dev Test case: Extracting a 161-byte inner signature should produce a 6-chunk copy that returns only
     ///      161 bytes (not 192).
     function test_extractContractInnerSignature_length161_sixChunkOnly161Bytes() public view {
-        bytes memory innerSig = new bytes(161);
-        for (uint256 i = 0; i < 161; i++) {
-            // forge-lint: disable-next-line(unsafe-typecast)
-            innerSig[i] = bytes1(uint8(i % 256)); // Safe: modulo 256 ensures value fits in uint8
-        }
-        bytes memory data = abi.encodePacked(uint8(0), address(0x1), uint16(161), innerSig);
-
-        bytes memory extracted = harness.extractContractInnerSignature(data, 0, 161);
-
-        assertEq(extracted.length, 161, "Extracted length should be 161, not 192");
-        assertEq(keccak256(extracted), keccak256(innerSig), "161-byte data should match exactly");
+        _assertExtractedGeneratedInnerSignatureMatchesSource(161, 0);
     }
 
     /// @dev Test case: Extracting a 1600-byte inner signature should produce an exact 50-chunk copy with data
     ///      integrity byte-for-byte.
     function test_extractContractInnerSignature_length1600_fiftyChunkIntegrity() public view {
-        bytes memory innerSig = new bytes(1600);
-        for (uint256 i = 0; i < 1600; i++) {
-            // forge-lint: disable-next-line(unsafe-typecast)
-            innerSig[i] = bytes1(uint8(i % 256)); // Safe: modulo 256 ensures value fits in uint8
-        }
-        bytes memory data = abi.encodePacked(uint8(0), address(0x1), uint16(1600), innerSig);
-
-        bytes memory extracted = harness.extractContractInnerSignature(data, 0, 1600);
-
-        assertEq(extracted.length, 1600, "Extracted length should be 1600");
-        assertEq(keccak256(extracted), keccak256(innerSig), "1600-byte data should match exactly");
+        _assertExtractedGeneratedInnerSignatureMatchesSource(1600, 0);
     }
 
     /// @dev Test case: Extracting a 1601-byte inner signature should produce a 51-chunk copy that returns only
     ///      1601 bytes (not 1632).
     function test_extractContractInnerSignature_length1601_fiftyOneChunkOnly1601Bytes() public view {
-        bytes memory innerSig = new bytes(1601);
-        for (uint256 i = 0; i < 1601; i++) {
-            // forge-lint: disable-next-line(unsafe-typecast)
-            innerSig[i] = bytes1(uint8(i % 256)); // Safe: modulo 256 ensures value fits in uint8
-        }
-        bytes memory data = abi.encodePacked(uint8(0), address(0x1), uint16(1601), innerSig);
-
-        bytes memory extracted = harness.extractContractInnerSignature(data, 0, 1601);
-
-        assertEq(extracted.length, 1601, "Extracted length should be 1601, not 1632");
-        assertEq(keccak256(extracted), keccak256(innerSig), "1601-byte data should match exactly");
+        _assertExtractedGeneratedInnerSignatureMatchesSource(1601, 0);
     }
 
     /// @dev Test case: Extracting an inner signature of any random length in [1, 2000] should always produce
     ///      extracted bytes that match the source exactly.
-    function testFuzz_extractContractInnerSignature_randomLength_matchesSource(uint16 sigLength) public view {
+    function testFuzz_SIGU_PARSE_2_C__FSU_HAR_7_extractContractInnerSignature_randomLength_matchesSource(
+        uint16 sigLength
+    )
+        public
+        view
+    {
         sigLength = uint16(bound(sigLength, 1, 2000));
 
-        bytes memory innerSig = new bytes(sigLength);
+        _assertExtractContractInnerSignatureRandomLengthMatchesSource(sigLength);
+    }
+
+    function _assertExtractContractInnerSignatureRandomLengthMatchesSource(uint16 sigLength) internal view {
+
+        bytes memory payload = new bytes(sigLength);
         for (uint256 i = 0; i < sigLength; i++) {
             // forge-lint: disable-next-line(unsafe-typecast)
-            innerSig[i] = bytes1(uint8(i % 256)); // Safe: modulo 256 ensures value fits in uint8
+            payload[i] = bytes1(uint8(i % 256)); // Safe: modulo 256 ensures value fits in uint8
         }
-        bytes memory data = abi.encodePacked(uint8(0), address(0x1), sigLength, innerSig);
+        bytes memory data = abi.encodePacked(uint8(0), address(0x1), sigLength, payload);
 
         bytes memory extracted = harness.extractContractInnerSignature(data, 0, sigLength);
 
         assertEq(extracted.length, sigLength, "Extracted length should equal sigLength");
-        assertEq(keccak256(extracted), keccak256(innerSig), "Extracted data should match source exactly");
+        assertEq(keccak256(extracted), keccak256(payload), "Extracted data should match source exactly");
+    }
+
+    function _assertExtractedInnerSignatureMatchesSource(bytes memory payload) internal view {
+        bytes memory data = abi.encodePacked(uint8(0), address(0x1), uint16(payload.length), payload);
+        bytes memory extracted = harness.extractContractInnerSignature(data, 0, uint16(payload.length));
+
+        assertEq(extracted.length, payload.length, "Extracted length should match source length");
+        assertEq(keccak256(extracted), keccak256(payload), "Extracted data should match source exactly");
+    }
+
+    function _assertExtractedGeneratedInnerSignatureMatchesSource(uint16 sigLength, uint8 base) internal view {
+        _assertExtractedInnerSignatureMatchesSource(_makeGeneratedInnerSignature(sigLength, base));
+    }
+
+    function _assertExtractedFilledInnerSignatureMatchesSource(uint16 sigLength, uint8 fillValue) internal view {
+        bytes memory payload = new bytes(sigLength);
+        for (uint256 i = 0; i < sigLength; i++) {
+            payload[i] = bytes1(fillValue);
+        }
+
+        _assertExtractedInnerSignatureMatchesSource(payload);
+    }
+
+    function _makeGeneratedInnerSignature(uint16 sigLength, uint8 base) internal pure returns (bytes memory payload) {
+        payload = new bytes(sigLength);
+        for (uint256 i = 0; i < sigLength; i++) {
+            // forge-lint: disable-next-line(unsafe-typecast)
+            payload[i] = bytes1(uint8((i + base) % 256));
+        }
+    }
+
+    function _assertTryRecoverContractSignerResult(
+        address signerContract,
+        bytes memory payload,
+        bool expectedSuccess,
+        address expectedSigner
+    ) internal view {
+        bytes memory data = abi.encodePacked(uint8(0), signerContract, uint16(payload.length), payload);
+        (bool success, address signer) = harness.tryRecoverContractSigner(data, 0, TEST_HASH);
+
+        assertEq(success, expectedSuccess, "tryRecoverContractSigner success mismatch");
+        assertEq(signer, expectedSigner, "tryRecoverContractSigner signer mismatch");
+    }
+
+    /// @dev Verifies the contract-signature header helpers extract the embedded signer, encoded uint16 length,
+    ///      and inner bytes from a fuzzed offset. [SIGU-PARSE-2]
+    function testFuzz_SIGU_PARSE_2_E__FSU_HAR_7_embeddedContractSignatureFieldExtraction_matchesHeaderAndInnerBytes(
+        uint160 signerSeed,
+        uint8 prefixLength,
+        uint8 suffixLength,
+        uint16 payloadLength,
+        bytes32 entropySeed
+    ) public view {
+        address expectedSigner = address(uint160(bound(uint256(signerSeed), 1, type(uint160).max)));
+        prefixLength = uint8(bound(prefixLength, 0, 100));
+        suffixLength = uint8(bound(suffixLength, 0, 100));
+        payloadLength = uint16(bound(payloadLength, 0, 255));
+
+        _assertEmbeddedContractSignatureFieldExtraction(
+            expectedSigner, prefixLength, suffixLength, payloadLength, entropySeed
+        );
+    }
+
+    function _assertEmbeddedContractSignatureFieldExtraction(
+        address expectedSigner,
+        uint8 prefixLength,
+        uint8 suffixLength,
+        uint16 payloadLength,
+        bytes32 entropySeed
+    ) internal view {
+        (bytes memory embedded, bytes memory payload, uint256 offset) =
+            _buildEmbeddedContractSignatureFixture(expectedSigner, prefixLength, suffixLength, payloadLength, entropySeed);
+
+        // Call: parse the signer, uint16 length, and extracted inner bytes from the embedded offset.
+        address actualSigner = harness.getContractSigner(embedded, offset);
+        uint16 actualLength = harness.getContractSignatureLength(embedded, offset);
+        bytes memory actualInnerSig = harness.extractContractInnerSignature(embedded, offset, actualLength);
+
+        // Verify: each helper returns the exact field encoded into the embedded contract signature.
+        assertEq(actualSigner, expectedSigner, "Signer should match bytes [offset+1 : offset+21)");
+        assertEq(actualLength, payloadLength, "Length should match bytes [offset+21 : offset+23)");
+        assertEq(actualInnerSig, payload, "Inner signature should match bytes [offset+23 : offset+23+len)");
+    }
+
+    function _buildEmbeddedContractSignatureFixture(
+        address expectedSigner,
+        uint8 prefixLength,
+        uint8 suffixLength,
+        uint16 payloadLength,
+        bytes32 entropySeed
+    ) internal pure returns (bytes memory embedded, bytes memory payload, uint256 offset) {
+        bytes memory entropy = abi.encodePacked(entropySeed);
+        bytes memory prefix = new bytes(prefixLength);
+        bytes memory suffix = new bytes(suffixLength);
+        payload = new bytes(payloadLength);
+
+        for (uint256 i = 0; i < prefixLength; i++) {
+            prefix[i] = entropy[i % entropy.length];
+        }
+        for (uint256 i = 0; i < payloadLength; i++) {
+            payload[i] = bytes1(uint8(entropy[i % entropy.length]) ^ uint8(i));
+        }
+        for (uint256 i = 0; i < suffixLength; i++) {
+            suffix[i] = entropy[(i + 7) % entropy.length];
+        }
+
+        embedded = abi.encodePacked(prefix, _buildContractSignature(expectedSigner, payload), suffix);
+        offset = prefixLength;
     }
 
     /// @dev Test case: Recovering an EOA signer at a non-zero offset (second signature in a concatenated array)
     ///      should extract r and s correctly.
-    function test_tryRecoverEOASigner_nonZeroOffset_extractsCorrectly() public view {
+    function test_SIGU_PARSE_1_C_tryRecoverEOASigner_nonZeroOffset_extractsCorrectly() public view {
         bytes memory sig1 = _signHash(TEST_PK_1, TEST_HASH);
         bytes memory sig2 = _signHash(TEST_PK_2, TEST_HASH);
         bytes[] memory sigs = new bytes[](2);
@@ -1139,7 +1191,10 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Recovering an EOA signer with any random valid private key at any random offset should
     ///      always recover the correct signer.
-    function testFuzz_tryRecoverEOASigner_randomKeyAndOffset_recoversCorrectly(uint256 privateKey, uint8 prefixLength)
+    function testFuzz_SIGU_PARSE_1_D_tryRecoverEOASigner_randomKeyAndOffset_recoversCorrectly(
+        uint256 privateKey,
+        uint8 prefixLength
+    )
         public
         view
     {
@@ -1179,28 +1234,13 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     /// @dev Test case: When the full signature is exactly at the boundary (offset + 23 + sigLength == length),
     ///      recovery should succeed.
     function test_tryRecoverContractSigner_fullSigAtBoundary_succeeds() public view {
-        bytes memory innerSig = hex"aabb";
-        bytes memory data = abi.encodePacked(uint8(0), address(validSigner1271), uint16(2), innerSig);
-
-        // offset(0) + 23 + 2 == 25 == data.length
-        assertEq(data.length, 25, "Data should be exactly 25 bytes");
-
-        (bool success, address signer) = harness.tryRecoverContractSigner(data, 0, TEST_HASH);
-
-        assertTrue(success, "Should succeed when full signature exactly fits");
-        assertEq(signer, address(validSigner1271), "Signer should be the contract");
+        _assertTryRecoverContractSignerResult(address(validSigner1271), hex"aabb", true, address(validSigner1271));
     }
 
     /// @dev Test case: Recovering a contract signer when the signer is address(0) should return false gracefully
     ///      (staticcall to 0x0 fails).
     function test_tryRecoverContractSigner_signerAddressZero_returnsFalse() public view {
-        bytes memory innerSig = hex"aabb";
-        bytes memory data = abi.encodePacked(uint8(0), address(0), uint16(2), innerSig);
-
-        (bool success, address signer) = harness.tryRecoverContractSigner(data, 0, TEST_HASH);
-
-        assertFalse(success, "Should fail gracefully with signer=address(0)");
-        assertEq(signer, address(0), "Signer should be address(0)");
+        _assertTryRecoverContractSignerResult(address(0), hex"aabb", false, address(0));
     }
 
     /// @dev Test case: Recovering a contract signer when offset + 23 > signatures.length should return
@@ -1231,37 +1271,19 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     /// @dev Test case: Recovering a contract signer with a valid signer and a valid ERC-1271 response should
     ///      return (true, signer).
     function test_tryRecoverContractSigner_validSignerValidResponse_returnsTrue() public view {
-        bytes memory innerSig = hex"deadbeef";
-        bytes memory data = abi.encodePacked(uint8(0), address(validSigner1271), uint16(4), innerSig);
-
-        (bool success, address signer) = harness.tryRecoverContractSigner(data, 0, TEST_HASH);
-
-        assertTrue(success, "Should succeed with valid signer and response");
-        assertEq(signer, address(validSigner1271), "Signer should be the contract");
+        _assertTryRecoverContractSignerResult(address(validSigner1271), hex"deadbeef", true, address(validSigner1271));
     }
 
     /// @dev Test case: Recovering a contract signer when the ERC-1271 contract returns the wrong magic value
     ///      should return (false, address(0)).
     function test_tryRecoverContractSigner_wrongMagic_returnsFalse() public view {
-        bytes memory innerSig = hex"deadbeef";
-        bytes memory data = abi.encodePacked(uint8(0), address(wrongMagicSigner1271), uint16(4), innerSig);
-
-        (bool success, address signer) = harness.tryRecoverContractSigner(data, 0, TEST_HASH);
-
-        assertFalse(success, "Should fail when contract returns wrong magic");
-        assertEq(signer, address(0), "Signer should be address(0)");
+        _assertTryRecoverContractSignerResult(address(wrongMagicSigner1271), hex"deadbeef", false, address(0));
     }
 
     /// @dev Test case: Recovering a contract signer when the ERC-1271 contract reverts should return
     ///      (false, address(0)).
     function test_tryRecoverContractSigner_contractReverts_returnsFalse() public view {
-        bytes memory innerSig = hex"deadbeef";
-        bytes memory data = abi.encodePacked(uint8(0), address(revertingSigner1271), uint16(4), innerSig);
-
-        (bool success, address signer) = harness.tryRecoverContractSigner(data, 0, TEST_HASH);
-
-        assertFalse(success, "Should fail when contract reverts");
-        assertEq(signer, address(0), "Signer should be address(0)");
+        _assertTryRecoverContractSignerResult(address(revertingSigner1271), hex"deadbeef", false, address(0));
     }
 
     /// @dev Test case: Recovering a contract signer with sigLength = 0 should delegate to ERC-1271 with empty
@@ -1280,21 +1302,14 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     ///      (false, address(0)).
     function test_tryRecoverContractSigner_signerIsEOA_returnsFalse() public view {
         address eoa = vm.addr(0xBEEF);
-        bytes memory innerSig = hex"deadbeef";
-        bytes memory data = abi.encodePacked(uint8(0), eoa, uint16(4), innerSig);
-
-        (bool success, address signer) = harness.tryRecoverContractSigner(data, 0, TEST_HASH);
-
-        assertFalse(success, "Should fail when signer is an EOA");
-        assertEq(signer, address(0), "Signer should be address(0)");
+        _assertTryRecoverContractSignerResult(eoa, hex"deadbeef", false, address(0));
     }
 
     /// @dev Test case: Recovering a contract signer at a non-zero offset preceded by an EOA signature should
     ///      correctly recover the contract signer.
     function test_tryRecoverContractSigner_atNonZeroOffsetAfterEOA_recoversCorrectly() public view {
         bytes memory eoaSig = _signHash(TEST_PK_1, TEST_HASH);
-        bytes memory innerSig = hex"aabb";
-        bytes memory contractSig = abi.encodePacked(uint8(0), address(validSigner1271), uint16(2), innerSig);
+        bytes memory contractSig = abi.encodePacked(uint8(0), address(validSigner1271), uint16(2), hex"aabb");
         bytes memory combined = abi.encodePacked(eoaSig, contractSig);
 
         (bool success, address signer) = harness.tryRecoverContractSigner(combined, 65, TEST_HASH);
@@ -1327,36 +1342,36 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     /// @dev Test case: Recovering a contract signer with a very large inner signature (1000 bytes) should
     ///      extract and validate correctly.
     function test_tryRecoverContractSigner_largeSigLength_succeeds() public view {
-        bytes memory innerSig = new bytes(1000);
-        for (uint256 i = 0; i < 1000; i++) {
-            // forge-lint: disable-next-line(unsafe-typecast)
-            innerSig[i] = bytes1(uint8(i % 256)); // Safe: modulo 256 ensures value fits in uint8
-        }
-        bytes memory data = abi.encodePacked(uint8(0), address(validSigner1271), uint16(1000), innerSig);
-
-        (bool success, address signer) = harness.tryRecoverContractSigner(data, 0, TEST_HASH);
-
-        assertTrue(success, "Should handle very large inner signature");
-        assertEq(signer, address(validSigner1271), "Signer should be the contract");
+        _assertTryRecoverContractSignerResult(
+            address(validSigner1271), _makeGeneratedInnerSignature(1000, 0), true, address(validSigner1271)
+        );
     }
 
     /// @dev Test case: Recovering a contract signer with any random valid ERC-1271 signature at any random offset
     ///      should always recover correctly.
-    function testFuzz_tryRecoverContractSigner_randomOffsetAndLength_recoversCorrectly(
+    function testFuzz_SIGU_PARSE_2_D_tryRecoverContractSigner_randomOffsetAndLength_recoversCorrectly(
         uint8 prefixLength,
-        uint16 innerSigLength
+        uint16 payloadLength
     ) public view {
         prefixLength = uint8(bound(prefixLength, 0, 100));
-        innerSigLength = uint16(bound(innerSigLength, 0, 500));
+        payloadLength = uint16(bound(payloadLength, 0, 500));
+
+        _assertTryRecoverContractSignerRandomOffsetAndLength(prefixLength, payloadLength);
+    }
+
+    function _assertTryRecoverContractSignerRandomOffsetAndLength(uint8 prefixLength, uint16 payloadLength)
+        internal
+        view
+    {
 
         bytes memory prefix = new bytes(prefixLength);
-        bytes memory innerSig = new bytes(innerSigLength);
-        for (uint256 i = 0; i < innerSigLength; i++) {
+        bytes memory payload = new bytes(payloadLength);
+        for (uint256 i = 0; i < payloadLength; i++) {
             // forge-lint: disable-next-line(unsafe-typecast)
-            innerSig[i] = bytes1(uint8(i % 256)); // Safe: modulo 256 ensures value fits in uint8
+            payload[i] = bytes1(uint8(i % 256)); // Safe: modulo 256 ensures value fits in uint8
         }
         bytes memory contractSig =
-            abi.encodePacked(uint8(0), address(validSigner1271), uint16(innerSigLength), innerSig);
+            abi.encodePacked(uint8(0), address(validSigner1271), uint16(payloadLength), payload);
         bytes memory combined = abi.encodePacked(prefix, contractSig);
 
         (bool success, address signer) = harness.tryRecoverContractSigner(combined, prefixLength, TEST_HASH);
@@ -1463,7 +1478,9 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Only the exact ERC-1271 magic value (0x1626ba7e) should produce a true result; any other
     ///      random bytes4 return value should produce false.
-    function testFuzz_isValidERC1271SignatureNow_randomMagicValue_onlyCorrectMagicIsValid(bytes4 randomMagic) public {
+    function testFuzz_FSU_ERC1271_6_isValidERC1271SignatureNow_randomMagicValue_onlyCorrectMagicIsValid(
+        bytes4 randomMagic
+    ) public {
         // Deploy a mock that returns the random magic value
         MockERC1271CustomReturn mock = new MockERC1271CustomReturn(randomMagic);
 
@@ -1476,21 +1493,26 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         }
     }
 
-    /// @dev Test case: Any valid private key should produce a recoverable signature via tryRecoverSigner.
-    function testFuzz_tryRecoverSigner_anyValidPrivateKey_recoversCorrectly(uint256 privateKey) public view {
+    /// @dev Verifies valid EOA signatures recover the expected signer through both top-level recovery wrappers.
+    function testFuzz_FSU_TRS_1_tryRecoverSigner_anyValidPrivateKey_recoversCorrectly(uint256 privateKey) public view {
+        // Setup: bound the fuzzed private key to the valid secp256k1 range and sign the shared test hash.
         privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
 
         bytes memory sig = _signHash(privateKey, TEST_HASH);
         address expectedSigner = vm.addr(privateKey);
 
+        // Call: recover the signer through both the soft-fail and revert-on-failure wrappers.
         (bool success, address signer) = harness.tryRecoverSigner(sig, TEST_HASH);
+        address strictSigner = harness.recoverSignerOrRevert(sig, TEST_HASH);
 
+        // Verify: both wrappers should recover the exact EOA signer for valid signatures.
         assertTrue(success, "Should always recover valid signature");
         assertEq(signer, expectedSigner, "Should always recover correct signer");
+        assertEq(strictSigner, expectedSigner, "Strict wrapper should recover the same signer");
     }
 
     /// @dev Test case: Random bytes should never successfully recover a signer.
-    function testFuzz_tryRecoverSigner_randomBytes_neverRecovers(bytes memory randomSig) public view {
+    function testFuzz_FSU_TRS_2_tryRecoverSigner_randomBytes_neverRecovers(bytes memory randomSig) public view {
         (bool success, address signer) = harness.tryRecoverSigner(randomSig, TEST_HASH);
 
         assertFalse(success, "Random bytes should not recover a signer");
@@ -1499,7 +1521,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Flipping the s value to the upper half of the curve (signature malleability) should always
     ///      be rejected by tryRecoverSigner.
-    function testFuzz_tryRecoverSigner_malleability_alwaysRejected(uint256 privateKey) public view {
+    function testFuzz_FSU_EOA_3_tryRecoverSigner_malleability_alwaysRejected(uint256 privateKey) public view {
         privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
 
         bytes memory malleableSig = _makeHighSSignature(privateKey, TEST_HASH);
@@ -1510,12 +1532,25 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     }
 
     /// @dev Test case: Random ERC-1271 inner signature lengths should always produce the correct nextOffset
-    ///      calculation (23 + innerLength).
-    function testFuzz_tryRecoverSignerAtOffset_randomERC1271InnerLength_offsetCorrect(uint16 innerLength) public view {
+    ///      calculation (23 + innerLength). [SIGU-PARSE-3]
+    function testFuzz_SIGU_PARSE_3_C__FSU_ATOFF_5_tryRecoverSignerAtOffset_randomERC1271InnerLength_offsetCorrect(
+        uint16 innerLength
+    )
+        public
+        view
+    {
         innerLength = uint16(bound(innerLength, 0, 1000));
 
-        bytes memory innerSig = new bytes(innerLength);
-        bytes memory sig = _buildContractSignature(address(validSigner1271), innerSig);
+        _assertTryRecoverSignerAtOffsetRandomERC1271InnerLengthOffsetCorrect(innerLength);
+    }
+
+    function _assertTryRecoverSignerAtOffsetRandomERC1271InnerLengthOffsetCorrect(uint16 innerLength)
+        internal
+        view
+    {
+
+        bytes memory payload = new bytes(innerLength);
+        bytes memory sig = _buildContractSignature(address(validSigner1271), payload);
 
         (bool success,, uint256 nextOffset) = harness.tryRecoverSignerAtOffset(sig, 0, TEST_HASH);
 
@@ -1524,13 +1559,24 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     }
 
     /// @dev Test case: Random multi-signature arrays (N EOA + M ERC-1271) should always have correct offset
-    ///      chaining, with the final offset equaling the total combined length.
-    function testFuzz_tryRecoverSignerAtOffset_mixedMultiSig_offsetChainingWorks(uint8 numEOA, uint8 numContract)
+    ///      chaining, with the final offset equaling the total combined length. [SIGU-PARSE-4]
+    function testFuzz_SIGU_PARSE_4_B__FSU_ATOFF_5_tryRecoverSignerAtOffset_mixedMultiSig_offsetChainingWorks(
+        uint8 numEOA,
+        uint8 numContract
+    )
         public
         view
     {
         numEOA = uint8(bound(numEOA, 0, 5));
         numContract = uint8(bound(numContract, 0, 5));
+
+        _assertTryRecoverSignerAtOffsetMixedMultiSigOffsetChainingWorks(numEOA, numContract);
+    }
+
+    function _assertTryRecoverSignerAtOffsetMixedMultiSigOffsetChainingWorks(uint8 numEOA, uint8 numContract)
+        internal
+        view
+    {
 
         // Need at least 1 signature
         if (numEOA == 0 && numContract == 0) {
@@ -1548,8 +1594,8 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
         // Then build contract signatures
         for (uint256 i = 0; i < numContract; i++) {
-            bytes memory innerSig = new bytes(i + 1); // Varying inner sig lengths
-            sigs[numEOA + i] = _buildContractSignature(address(validSigner1271), innerSig);
+            bytes memory payload = new bytes(i + 1); // Varying inner sig lengths
+            sigs[numEOA + i] = _buildContractSignature(address(validSigner1271), payload);
         }
 
         bytes memory combined = _concatSignatures(sigs);
@@ -1567,27 +1613,37 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         assertEq(offset, combined.length, "Final offset should equal total combined length");
     }
 
-    /// @dev Test case: A signature created for hash A should never validate as the same signer when verified
-    ///      against a different hash B.
-    function testFuzz_tryRecoverSigner_differentHash_differentSigner(uint256 privateKey, bytes32 hashB) public view {
+    /// @dev Verifies a signature created for hash `A` never validates as the same signer for a distinct hash `B`
+    /// through either top-level or offset-based recovery.
+    function testFuzz_FSU_TRSO_4_tryRecoverSigner_differentHash_differentSigner(uint256 privateKey, bytes32 hashB)
+        public
+        view
+    {
+        // Setup: sign the shared test hash and constrain the alternate hash to differ.
         privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
-        // Ensure hashB != TEST_HASH
         vm.assume(hashB != TEST_HASH);
 
         bytes memory sig = _signHash(privateKey, TEST_HASH);
         address expectedSigner = vm.addr(privateKey);
 
-        // Verify against a different hash
+        // Call: attempt recovery against the different hash through both entrypoints.
         (bool success, address signer) = harness.tryRecoverSigner(sig, hashB);
+        (bool offsetSuccess, address offsetSigner,) = harness.tryRecoverSignerAtOffset(sig, 0, hashB);
 
+        // Verify: a signature for hash `A` must never validate as the original signer for hash `B`.
         if (success) {
-            // If recovery succeeds with a different hash, the signer must be different
             assertTrue(signer != expectedSigner, "Signature for hash A should not validate as same signer for hash B");
+        }
+        if (offsetSuccess) {
+            assertTrue(
+                offsetSigner != expectedSigner,
+                "Offset-based recovery for hash B should not validate as the original signer"
+            );
         }
     }
 
     /// @dev Test case: Any EOA signature length except 65 should be rejected by tryRecoverSigner.
-    function testFuzz_tryRecoverSigner_invalidEOALength_returnsFalse(uint16 sigLength) public view {
+    function testFuzz_FSU_TRS_2_tryRecoverSigner_invalidEOALength_returnsFalse(uint16 sigLength) public view {
         sigLength = uint16(bound(sigLength, 0, 1000));
         vm.assume(sigLength != 65);
 
@@ -1604,7 +1660,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     }
 
     /// @dev Test case: Any v byte except {0, 27, 28} should be rejected by tryRecoverSigner.
-    function testFuzz_tryRecoverSigner_invalidVByte_returnsFalse(uint8 invalidV) public view {
+    function testFuzz_FSU_TRS_2_tryRecoverSigner_invalidVByte_returnsFalse(uint8 invalidV) public view {
         vm.assume(invalidV != 0 && invalidV != 27 && invalidV != 28);
 
         bytes memory sig = _signHash(TEST_PK_1, TEST_HASH);
@@ -1614,5 +1670,216 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
         assertFalse(success, "Recovery should fail for invalid v bytes");
         assertEq(signer, address(0), "Signer should be address(0)");
+    }
+
+    /// @dev Verifies valid ERC-1271 signatures recover the configured contract signer through both top-level
+    /// recovery wrappers.
+    /// @param innerLength Fuzzed ERC-1271 inner-signature length.
+    function testFuzz_FSU_TRS_1_tryRecoverSigner_validERC1271Signature_recoversExpectedSigner(uint16 innerLength)
+        public
+        view
+    {
+        // Setup: build a valid contract signature with a fuzzed inner-signature length.
+        innerLength = uint16(bound(innerLength, 0, 512));
+
+        _assertValidERC1271SignatureRecoversExpectedSigner(innerLength);
+    }
+
+    function _assertValidERC1271SignatureRecoversExpectedSigner(uint16 innerLength) internal view {
+        bytes memory payload = new bytes(innerLength);
+        bytes memory signature = _buildContractSignature(address(validSigner1271), payload);
+
+        // Call: recover the signer through both the soft-fail and strict top-level contract-signature paths.
+        (bool success, address signer) = harness.tryRecoverSigner(signature, TEST_HASH);
+        address strictSigner = harness.recoverSignerOrRevert(signature, TEST_HASH);
+
+        // Verify: valid ERC-1271 signatures should recover the configured contract signer through both wrappers.
+        assertTrue(success, "valid ERC-1271 signatures should recover successfully");
+        assertEq(signer, address(validSigner1271), "recovered signer should match the ERC-1271 contract");
+        assertEq(strictSigner, address(validSigner1271), "strict wrapper should recover the contract signer");
+    }
+
+    /// @dev Verifies failing ERC-1271 response variants always fail contract-signer recovery and direct ERC-1271
+    /// validation.
+    /// @param caseSelector Fuzzed selector choosing one failing ERC-1271 signer variant.
+    /// @param innerLength Fuzzed inner-signature length.
+    function testFuzz_FSU_ERC1271_6_tryRecoverContractSigner_failureVariantsAlwaysReturnFalse(
+        uint8 caseSelector,
+        uint16 innerLength
+    ) public view {
+        // Setup: pick one failing ERC-1271 implementation and build a contract signature for it.
+        innerLength = uint16(bound(innerLength, 0, 255));
+
+        _assertTryRecoverContractSignerFailureVariantsAlwaysReturnFalse(caseSelector, innerLength);
+    }
+
+    function _assertTryRecoverContractSignerFailureVariantsAlwaysReturnFalse(uint8 caseSelector, uint16 innerLength)
+        internal
+        view
+    {
+        bytes memory payload = new bytes(innerLength);
+        address signerContract = _selectFailingERC1271Signer(caseSelector);
+        bytes memory signature = _buildContractSignature(signerContract, payload);
+
+        // Call: attempt recovery through the contract-signer path and direct ERC-1271 validation path.
+        (bool success, address signer) = harness.tryRecoverContractSigner(signature, 0, TEST_HASH);
+        bool validationSuccess = harness.isValidERC1271SignatureNow(signerContract, TEST_HASH, payload);
+
+        // Verify: non-magic, reverting, short, or state-mutating ERC-1271 responses must fail closed.
+        assertFalse(success, "failing ERC-1271 responses should never recover");
+        assertEq(signer, address(0), "failed recovery should return address(0)");
+        assertFalse(validationSuccess, "direct ERC-1271 validation should fail for all failing variants");
+    }
+
+    function _selectFailingERC1271Signer(uint8 caseSelector) internal view returns (address) {
+        address[7] memory failingSigners = [
+            address(wrongMagicSigner1271),
+            address(revertingSigner1271),
+            address(shortReturnSigner1271),
+            address(emptyReturnSigner1271),
+            address(rightPaddedSigner1271),
+            address(return31BytesSigner1271),
+            address(stateModifierSigner1271)
+        ];
+
+        return failingSigners[caseSelector % failingSigners.length];
+    }
+
+    /// @dev Verifies invalid signature encodings fail softly through `tryRecoverSigner` and revert through
+    /// `recoverSignerOrRevert`.
+    /// @param caseSelector Fuzzed selector choosing malformed-length, truncated, or invalid-`v` inputs.
+    /// @param rawLength Fuzzed signature length used for malformed/truncated cases.
+    /// @param invalidV Fuzzed invalid `v` byte for the EOA failure case.
+    function testFuzz_FSU_TRS_2_recoverSignerOrRevert_invalidInputsFailSoftAndStrict(
+        uint8 caseSelector,
+        uint16 rawLength,
+        uint8 invalidV
+    ) public {
+        bytes memory signature;
+
+        // Setup: derive one invalid signature shape for this fuzz iteration.
+        if (caseSelector % 3 == 0) {
+            uint256 malformedLength = bound(uint256(rawLength), 0, 256);
+            vm.assume(malformedLength != 65);
+            signature = new bytes(malformedLength);
+            if (malformedLength > 0) {
+                signature[0] = bytes1(uint8(27));
+            }
+        } else if (caseSelector % 3 == 1) {
+            uint256 truncatedLength = bound(uint256(rawLength), 1, 64);
+            signature = new bytes(truncatedLength);
+            signature[0] = bytes1(uint8(27));
+        } else {
+            vm.assume(invalidV != 0 && invalidV != 27 && invalidV != 28);
+            signature = _signHash(TEST_PK_1, TEST_HASH);
+            signature[0] = bytes1(invalidV);
+        }
+
+        // Call: recover through the soft-fail wrapper and the strict wrapper.
+        (bool success, address signer) = harness.tryRecoverSigner(signature, TEST_HASH);
+        vm.expectRevert(SignatureUtils.SignatureRecoveryFailed.selector);
+        harness.recoverSignerOrRevert(signature, TEST_HASH);
+
+        // Verify: invalid inputs should fail softly and revert strictly.
+        assertFalse(success, "invalid signatures should fail soft recovery");
+        assertEq(signer, address(0), "failed soft recovery should return address(0)");
+    }
+
+    /// @dev Verifies `SignatureUtils.recoverSignerAtOffsetOrRevert` matches the try-variant on successful recovery.
+    /// @param privateKey Fuzzed signing key used to build the EOA signature.
+    /// @param prefixLength Fuzzed noisy prefix length before the signature payload.
+    /// @param suffixLength Fuzzed noisy suffix length after the signature payload.
+    function testFuzz_FSU_WRAP_8_recoverSignerAtOffsetOrRevert_successPathMatchesTryRecoverSignerAtOffset(
+        uint256 privateKey,
+        uint8 prefixLength,
+        uint8 suffixLength
+    ) public view {
+        // Setup: embed one valid EOA signature behind a fuzzed offset inside arbitrary surrounding bytes.
+        privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
+        prefixLength = uint8(bound(prefixLength, 0, 64));
+        suffixLength = uint8(bound(suffixLength, 0, 64));
+        bytes memory prefix = new bytes(prefixLength);
+        bytes memory suffix = new bytes(suffixLength);
+        bytes memory signature = _signHash(privateKey, TEST_HASH);
+        bytes memory signatures = abi.encodePacked(prefix, signature, suffix);
+        uint256 offset = prefixLength;
+
+        // Call: recover through both the try-variant and the revert-wrapper variant.
+        (bool trySuccess, address trySigner, uint256 tryNextOffset) =
+            harness.tryRecoverSignerAtOffset(signatures, offset, TEST_HASH);
+        (address wrapperSigner, uint256 wrapperNextOffset) =
+            harness.recoverSignerAtOffsetOrRevert(signatures, offset, TEST_HASH);
+
+        // Verify: the wrapper should preserve the success tuple from the try-variant exactly.
+        assertTrue(trySuccess, "valid signatures should succeed through tryRecoverSignerAtOffset");
+        assertEq(wrapperSigner, vm.addr(privateKey), "recovered signer should match the signing key");
+        assertEq(wrapperSigner, trySigner, "wrapper signer should match try-variant signer");
+        assertEq(wrapperNextOffset, tryNextOffset, "wrapper nextOffset should match try-variant nextOffset");
+    }
+
+    /// @dev Verifies `SignatureUtils.recoverSignerAtOffsetOrRevert` reverts with `SignatureRecoveryFailed` on failed
+    /// recovery paths.
+    /// @param invalidV Fuzzed invalid EOA `v` byte outside `{0, 27, 28}`.
+    function testFuzz_FSU_WRAP_8_recoverSignerAtOffsetOrRevert_failurePathAlwaysReverts(uint8 invalidV) public {
+        // Setup: build an otherwise valid signature and corrupt the leading `v` byte.
+        vm.assume(invalidV != 0 && invalidV != 27 && invalidV != 28);
+        bytes memory signature = _signHash(TEST_PK_1, TEST_HASH);
+        signature[0] = bytes1(invalidV);
+
+        // Call: recover through the revert-wrapper, expecting `SignatureRecoveryFailed`.
+        vm.expectRevert(SignatureUtils.SignatureRecoveryFailed.selector);
+        harness.recoverSignerAtOffsetOrRevert(signature, 0, TEST_HASH);
+
+        // Verify: the wrapper should fail closed rather than return a partial tuple.
+    }
+
+    /// @dev Verifies `_tryRecoverEOASigner` rejects fuzzed high-`s` signatures even when the payload is embedded at
+    /// a random non-zero offset.
+    /// @param privateKey Fuzzed private key used to construct the high-`s` signature.
+    /// @param prefixLength Fuzzed noisy prefix length before the embedded signature bytes.
+    function testFuzz_FSU_EOA_3_tryRecoverEOASigner_highSMalleableSignaturesAlwaysRejected(
+        uint256 privateKey,
+        uint8 prefixLength
+    ) public view {
+        // Setup: embed one high-`s` signature behind a fuzzed offset.
+        privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
+        prefixLength = uint8(bound(prefixLength, 0, 128));
+        bytes memory signature = _makeHighSSignature(privateKey, TEST_HASH);
+        bytes memory prefixedSignature = abi.encodePacked(new bytes(prefixLength), signature);
+        uint8 v = uint8(signature[0]);
+
+        // Call: recover the embedded signature through the helper-targeted harness wrapper.
+        (bool success, address signer) =
+            harness.tryRecoverEOASigner(prefixedSignature, prefixLength, TEST_HASH, v);
+
+        // Verify: high-`s` signatures are always rejected by the EOA helper.
+        assertFalse(success, "high-s signatures should always be rejected by _tryRecoverEOASigner");
+        assertEq(signer, address(0), "failed helper recovery should return address(0)");
+    }
+
+    /// @dev Verifies offset-based recovery never returns the original signer when a signature built for one hash is
+    /// validated against a different hash.
+    /// @param privateKey Fuzzed signing key used to build the embedded EOA signature.
+    /// @param prefixLength Fuzzed prefix length used as the recovery offset.
+    /// @param otherHash Fuzzed alternate hash constrained away from `TEST_HASH`.
+    function testFuzz_FSU_TRSO_4_tryRecoverSignerAtOffset_differentHashNeverRecoversExpectedSigner(
+        uint256 privateKey,
+        uint8 prefixLength,
+        bytes32 otherHash
+    ) public view {
+        // Setup: embed one valid EOA signature behind a fuzzed prefix and choose a distinct verification hash.
+        privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
+        prefixLength = uint8(bound(prefixLength, 0, 128));
+        vm.assume(otherHash != TEST_HASH);
+        bytes memory signatures = abi.encodePacked(new bytes(prefixLength), _signHash(privateKey, TEST_HASH));
+        address expectedSigner = vm.addr(privateKey);
+
+        // Call: recover the embedded signature at the offset against the wrong hash.
+        (bool success, address signer,) = harness.tryRecoverSignerAtOffset(signatures, prefixLength, otherHash);
+
+        // Verify: any successful wrong-hash recovery must resolve to a different signer.
+        if (success) {
+            assertTrue(signer != expectedSigner, "wrong-hash offset recovery must not return the original signer");
+        }
     }
 }

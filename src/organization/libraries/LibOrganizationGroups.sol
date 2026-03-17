@@ -4,6 +4,7 @@ pragma solidity 0.8.33;
 
 import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
 import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
+import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
 import {LibOrganizationGroupsStorage} from "organization/libraries/storage/LibOrganizationGroupsStorage.sol";
 import {GroupModification, GroupModificationType} from "types/CommonTypes.sol";
 
@@ -22,7 +23,7 @@ library LibOrganizationGroups {
      *      - Create: creates a new group (reverts if already exists, was deleted, or membersToRemove is non-empty)
      *      - Update: modifies membership of an existing group (reverts if group doesn't exist)
      *      - Delete: deletes a group (membersToAdd/membersToRemove must be empty)
-     *      Adding a duplicate group member is a no-op. Removing a non-existent group member reverts.
+     *      Adding a duplicate group member is a no-op. Removing a non-existent group member is a no-op.
      *      Group IDs are not reusable after deletion.
      * @param modifications Array of group modifications to apply
      */
@@ -36,44 +37,28 @@ library LibOrganizationGroups {
                 _updateGroup(mod);
             } else if (mod.modificationType == GroupModificationType.Delete) {
                 _deleteGroup(mod);
+            } else {
+                revert IOrganizationGroups.InvalidGroupModificationType(uint8(mod.modificationType));
             }
         }
     }
 
     /**
-     * @dev Checks if a group exists in the organization
-     * @param groupId The group ID to check
-     * @return True if the group exists, false otherwise
-     */
-    function isGroup(uint256 groupId) internal view returns (bool) {
-        return LibOrganizationGroupsStorage.layout().isGroup[groupId];
-    }
-
-    /**
-     * @dev Checks if an address is a member of a group
-     * @param groupId The group ID to check
-     * @param memberAddress The address to check
-     * @return True if the address is a member of the group, false otherwise
-     */
-    function isGroupMember(uint256 groupId, address memberAddress) internal view returns (bool) {
-        return LibOrganizationGroupsStorage.layout().isGroupMember[groupId][memberAddress];
-    }
-
-    /**
-     * @dev Deletes a group. Reverts if group does not exist or if members are provided.
+     * @dev Deletes a group. Deleting a non-existent group is a no-op.
+     *      Reverts if members are provided in the delete modification.
      * @param mod The group modification containing the delete request
      */
-    function _deleteGroup(GroupModification calldata mod) private {
+    function _deleteGroup(GroupModification calldata mod) internal {
         LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
         uint256 groupId = mod.groupId;
-
-        // Case: Group does not exist
-        if (!groupsLayout.isGroup[groupId]) revert IOrganizationGroups.GroupDoesNotExist(groupId);
 
         // Case: Deletion with non-empty member arrays
         if (mod.membersToAdd.length > 0 || mod.membersToRemove.length > 0) {
             revert IOrganizationGroups.InvalidGroupDeletionOperation(groupId);
         }
+
+        // Case: Deleting a non-existent group (no-op).
+        if (!groupsLayout.isGroup[groupId]) return;
 
         groupsLayout.isGroup[groupId] = false;
         groupsLayout.wasGroupDeleted[groupId] = true;
@@ -85,7 +70,7 @@ library LibOrganizationGroups {
      *      or if membersToRemove is non-empty.
      * @param mod The group modification containing initial members to add
      */
-    function _createGroup(GroupModification calldata mod) private {
+    function _createGroup(GroupModification calldata mod) internal {
         LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
         uint256 groupId = mod.groupId;
 
@@ -108,7 +93,7 @@ library LibOrganizationGroups {
      * @dev Updates an existing group's membership. Reverts if the group does not exist.
      * @param mod The group modification containing members to add/remove
      */
-    function _updateGroup(GroupModification calldata mod) private {
+    function _updateGroup(GroupModification calldata mod) internal {
         LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
         uint256 groupId = mod.groupId;
 
@@ -129,12 +114,17 @@ library LibOrganizationGroups {
         LibOrganizationGroupsStorage.Layout storage groupsLayout,
         uint256 groupId,
         address[] calldata members
-    ) private {
+    ) internal {
         for (uint256 i = 0; i < members.length; ++i) {
             address member = members[i];
+
+            // Case: Member is the zero address
             if (member == address(0)) revert IOrganizationMembers.InvalidMemberAddress(member);
 
-            // No-op if already in group
+            // Case: Member is not an organization member
+            if (!LibOrganizationMembers.isMember(member)) revert IOrganizationMembers.MemberDoesNotExist(member);
+
+            // Case: Member is already in group (no-op).
             if (groupsLayout.isGroupMember[groupId][member]) continue;
 
             groupsLayout.isGroupMember[groupId][member] = true;
@@ -143,7 +133,7 @@ library LibOrganizationGroups {
     }
 
     /**
-     * @dev Removes members from a group. Reverts if any member is not in the group.
+     * @dev Removes members from a group. Removing a non-member is a no-op.
      * @param groupsLayout The groups storage layout
      * @param groupId The group ID to remove members from
      * @param members The addresses to remove
@@ -152,17 +142,42 @@ library LibOrganizationGroups {
         LibOrganizationGroupsStorage.Layout storage groupsLayout,
         uint256 groupId,
         address[] calldata members
-    ) private {
+    ) internal {
         for (uint256 i = 0; i < members.length; ++i) {
             address member = members[i];
 
-            // Case: Member is not in the group
-            if (!groupsLayout.isGroupMember[groupId][member]) {
-                revert IOrganizationGroups.MemberNotInGroup(groupId, member);
-            }
+            // Case: Removing a non-group-member (no-op).
+            if (!groupsLayout.isGroupMember[groupId][member]) continue;
 
             groupsLayout.isGroupMember[groupId][member] = false;
             emit IOrganizationGroups.GroupMemberRemoved(groupId, member);
         }
+    }
+
+    /**
+     * @dev Checks if a group exists in the organization
+     * @param groupId The group ID to check
+     * @return True if the group exists, false otherwise
+     */
+    function isGroup(uint256 groupId) internal view returns (bool) {
+        return LibOrganizationGroupsStorage.layout().isGroup[groupId];
+    }
+
+    /**
+     * @dev Checks if an address is a member of a group
+     * @param groupId The group ID to check
+     * @param memberAddress The address to check
+     * @return True if the address is a member of the group, false otherwise
+     */
+    function isGroupMember(uint256 groupId, address memberAddress) internal view returns (bool) {
+        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
+
+        // Case: Group does not exist
+        if (!groupsLayout.isGroup[groupId]) return false;
+
+        // Case: Member is not an organization member
+        if (!LibOrganizationMembers.isMember(memberAddress)) return false;
+
+        return groupsLayout.isGroupMember[groupId][memberAddress];
     }
 }

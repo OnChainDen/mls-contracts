@@ -43,6 +43,10 @@ contract OrganizationFactory is IOrganizationFactory {
             revert IOrganizationInitialization.UnauthorizedDeployer();
         }
 
+        if (implementationAddress == address(0)) {
+            revert ZeroAddress();
+        }
+
         // Validate that the implementation is whitelisted
         IImplementationWhitelist(whitelistAddress)
             .validateIsImplementationWhitelistedOrRevert(ContractType.Organization, implementationAddress);
@@ -81,7 +85,7 @@ contract OrganizationFactory is IOrganizationFactory {
     /// @param whitelistAddress The address of the implementation whitelist contract
     /// @return bytecode The creation bytecode to deploy via CREATE2
     function _getOrganizationProxyBytecode(address implementationAddress, address whitelistAddress)
-        private
+        internal
         pure
         returns (bytes memory bytecode)
     {

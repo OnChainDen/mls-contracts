@@ -10,11 +10,17 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
  * @author Den Technologies Inc
  */
 contract ImplementationWhitelistProxy is ERC1967Proxy {
+    error EmptyInitializationData();
+
     /**
      * @notice Constructor for the proxy
      * @param implementation The implementation contract address
      * @param initData Encoded call to initialize(owner, orgImpls, accImpls)
      * @dev ERC1967Proxy will delegatecall initData to the implementation atomically
      */
-    constructor(address implementation, bytes memory initData) ERC1967Proxy(implementation, initData) {}
+    constructor(address implementation, bytes memory initData) ERC1967Proxy(implementation, initData) {
+        if (initData.length == 0) {
+            revert EmptyInitializationData();
+        }
+    }
 }
