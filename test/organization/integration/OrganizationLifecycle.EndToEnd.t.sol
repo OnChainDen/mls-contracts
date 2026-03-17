@@ -405,7 +405,8 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
     function test_INT_ETE_4_accessControlMatrix_rejectsUnauthorizedCallersAcrossProtectedEntrypoints() public {
         // Setup: deploy one fresh proxy that has not been initialized yet to exercise `onlyDeployer`, then deploy one
         // initialized organization and stage pending guardian and recovery updates for the other modifier branches.
-        OrganizationProxy uninitializedProxy = new OrganizationProxy(address(lifecycleImplementation), address(whitelist));
+        OrganizationProxy uninitializedProxy =
+            new OrganizationProxy(address(lifecycleImplementation), address(whitelist));
         InitializationParams memory params = _buildInitializationParams(address(versionedAccountImplementationV1));
 
         vm.expectRevert(IOrganizationInitialization.UnauthorizedDeployer.selector);
@@ -499,7 +500,8 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         ValidationProofs memory activeProofs = _setPoliciesAndBuildProofs(organization, POLICY_ID, activePolicy, 15_503);
 
         bytes32 deploySalt = bytes32(uint256(15_504));
-        uint256 deployAccountNonce = organization.computeNonce(OperationType.DeployAccount, abi.encode(deploySalt), 15_505);
+        uint256 deployAccountNonce =
+            organization.computeNonce(OperationType.DeployAccount, abi.encode(deploySalt), 15_505);
         address account = _deployAccount(organization, deploySalt, 15_505);
         vm.deal(account, 1 ether);
 
@@ -512,11 +514,11 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         {
             Policy memory rejectedPolicy = _buildAutoApprovePolicy(initiatorSigner);
             bytes32 rejectedRoot = _computePolicyLeaf(POLICY_ID, rejectedPolicy);
-            bytes memory rejectedSetPoliciesData =
-                abi.encode(rejectedRoot, keccak256(bytes("ipfs://rejected-policy")));
+            bytes memory rejectedSetPoliciesData = abi.encode(rejectedRoot, keccak256(bytes("ipfs://rejected-policy")));
             uint256 rejectedSetPoliciesSalt = 15_502;
-            rejectedSetPoliciesNonce =
-                organization.computeNonce(OperationType.ModifyPolicies, rejectedSetPoliciesData, rejectedSetPoliciesSalt);
+            rejectedSetPoliciesNonce = organization.computeNonce(
+                OperationType.ModifyPolicies, rejectedSetPoliciesData, rejectedSetPoliciesSalt
+            );
             AdminAuthParams memory rejectedSetPoliciesAuth = _buildOperationAuth(
                 organization, OperationType.ModifyPolicies, rejectedSetPoliciesData, rejectedSetPoliciesSalt, false
             );
@@ -616,9 +618,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
                 true
             );
             vm.prank(UPDATED_GUARDIAN);
-            organization.setAccountImplementation(
-                address(versionedAccountImplementationV2), upgradedAccountAuth
-            );
+            organization.setAccountImplementation(address(versionedAccountImplementationV2), upgradedAccountAuth);
         }
 
         {
@@ -684,9 +684,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
             true
         );
         vm.prank(GUARDIAN);
-        organization.setAccountImplementation(
-            address(versionedAccountImplementationV2), upgradedAccountAuth
-        );
+        organization.setAccountImplementation(address(versionedAccountImplementationV2), upgradedAccountAuth);
 
         vm.prank(GUARDIAN_RECOVERY);
         organization.initiateRecoveryGuardianUpdate(RECOVERY_PENDING_GUARDIAN);
@@ -960,9 +958,8 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         bytes32 accountSalt
     ) public {
         // Setup: precompute both deployment addresses before executing the real factory and account-factory paths.
-        address expectedOrganization = factory.computeOrganizationAddress(
-            organizationSalt, address(lifecycleImplementation), address(whitelist)
-        );
+        address expectedOrganization =
+            factory.computeOrganizationAddress(organizationSalt, address(lifecycleImplementation), address(whitelist));
         OrganizationImplementationHarness organization = _deployOrganizationHarness(organizationSalt);
         address expectedAccount = organization.computeAccountAddress(accountSalt);
 
@@ -1033,10 +1030,14 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         organization.initiateGuardianUpdate(newGuardian, guardianAuth);
 
         vm.prank(GUARDIAN);
-        organization.initiateInitializeGuardianRecovery(guardianRecoveryAddress, RECOVERY_TIMELOCK, guardianRecoveryAuth);
+        organization.initiateInitializeGuardianRecovery(
+            guardianRecoveryAddress, RECOVERY_TIMELOCK, guardianRecoveryAuth
+        );
 
         vm.prank(GUARDIAN);
-        organization.initiateInitializeTransactionAndERC1271Recovery(txRecoveryAddress, RECOVERY_TIMELOCK, txRecoveryAuth);
+        organization.initiateInitializeTransactionAndERC1271Recovery(
+            txRecoveryAddress, RECOVERY_TIMELOCK, txRecoveryAuth
+        );
 
         // Verify: every pending finalize timestamp equals `block.timestamp + adminOperationTimelockDurationSeconds`.
         assertEq(
@@ -1159,9 +1160,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
             _buildOperationAuth(organization, OperationType.Upgrade, operationData, salt, true);
 
         vm.prank(GUARDIAN);
-        organization.upgradeToAndCallWithAuthorization(
-            address(upgradedOrganizationImplementation), data, auth
-        );
+        organization.upgradeToAndCallWithAuthorization(address(upgradedOrganizationImplementation), data, auth);
     }
 
     /// @dev Completes the full normal guardian-update flow against the current organization proxy.
@@ -1728,7 +1727,9 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
 
         // Step 13: Verify usage for both windows.
         assertEq(
-            organization.getPolicyUsage(POLICY_ID, policy, account, SECOND_RECIPIENT, initiatorSigner, proofs.policyProof),
+            organization.getPolicyUsage(
+                POLICY_ID, policy, account, SECOND_RECIPIENT, initiatorSigner, proofs.policyProof
+            ),
             2,
             "window 1 usage should be 2"
         );

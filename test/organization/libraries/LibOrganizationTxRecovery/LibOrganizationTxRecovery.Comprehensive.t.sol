@@ -1696,9 +1696,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
     /// @dev Verifies `LibOrganizationTxRecovery.isValidRecoverySignature` accepts both EOA and ERC-1271 recovery
     /// signers, rejects wrong signers for both paths, and does not depend on the enabled flag.
     /// @param startEnabled The initial enabled flag used for the first validation branch.
-    function testFuzz_FLOTR_SIG_116_isValidRecoverySignature_supportsEOAAndERC1271IndependentOfEnabledFlag(
-        bool startEnabled
-    ) public {
+    function testFuzz_FLOTR_SIG_116_isValidRecoverySignature_supportsEOAAndERC1271IndependentOfEnabledFlag(bool startEnabled)
+        public
+    {
         // Setup: build valid EOA and ERC-1271 recovery signers plus wrong EOA and wrong contract signers for the
         // negative branches.
         bytes memory validEOASignature = _signHash(RECOVERY_PK, MESSAGE_HASH);

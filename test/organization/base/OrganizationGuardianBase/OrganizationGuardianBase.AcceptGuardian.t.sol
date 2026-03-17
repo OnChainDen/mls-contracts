@@ -101,7 +101,7 @@ contract OrganizationGuardianBaseAcceptGuardianTest is OrganizationGuardianBaseS
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory initiateAuth,) = _buildInitiateGuardianUpdateAuth({
             newGuardian: NEW_GUARDIAN_A,
-            salt: 4_101,
+            salt: 4101,
             expiration: type(uint256).max,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -115,7 +115,7 @@ contract OrganizationGuardianBaseAcceptGuardianTest is OrganizationGuardianBaseS
         vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK);
         (AdminAuthParams memory finalizeAuth,) = _buildFinalizeGuardianUpdateAuth({
             pendingGuardian: NEW_GUARDIAN_A,
-            salt: 4_102,
+            salt: 4102,
             expiration: type(uint256).max,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)

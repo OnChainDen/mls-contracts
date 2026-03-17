@@ -48,9 +48,7 @@ contract LibOrganizationGuardianRecoveryInitializeTest is LibOrganizationGuardia
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initializeGuardianRecovery` below-min and above-max timelock
     /// values revert `InvalidTimelockDuration`.
-    function test_LOGR_IGR_4__LOGR_IGR_5__GREC_INV_11_B_outOfRangeTimelock_revertsInvalidTimelockDuration()
-        public
-    {
+    function test_LOGR_IGR_4__LOGR_IGR_5__GREC_INV_11_B_outOfRangeTimelock_revertsInvalidTimelockDuration() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 

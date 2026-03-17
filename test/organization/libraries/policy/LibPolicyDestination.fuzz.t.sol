@@ -42,10 +42,12 @@ contract LibPolicyDestinationFuzzTest is PolicyLibrariesFuzzTestBase {
         bytes memory disallowedData = asTokenTransfer ? _encodeERC20Transfer(disallowedDestination, amount) : bytes("");
 
         // Call: evaluate the exact valid proof plus two mutation branches that change the proof or destination.
-        bool validAllowed =
-            harness.isDestinationAllowedByPolicyViaPolicyLibrary(policy, allowedTo, allowedValue, allowedData, validProof);
-        bool wrongProofAllowed =
-            harness.isDestinationAllowedByPolicyViaPolicyLibrary(policy, allowedTo, allowedValue, allowedData, wrongProof);
+        bool validAllowed = harness.isDestinationAllowedByPolicyViaPolicyLibrary(
+            policy, allowedTo, allowedValue, allowedData, validProof
+        );
+        bool wrongProofAllowed = harness.isDestinationAllowedByPolicyViaPolicyLibrary(
+            policy, allowedTo, allowedValue, allowedData, wrongProof
+        );
         bool wrongDestinationAllowed = harness.isDestinationAllowedByPolicyViaPolicyLibrary(
             policy, disallowedTo, allowedValue, disallowedData, validProof
         );

@@ -891,9 +891,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     /// @dev Verifies migration calldata cannot trigger a nested second upgrade without fresh authorization.
     /// [OI-UTCWA-13, OIMP-UCA-8]
     /// OI-AUPG-6
-    function test_OI_AUPG_6__OI_UTACWA_26__OI_UTCWA_13__OIMP_UCA_8_nestedSecondUpgradeFromMigration_reverts()
-        public
-    {
+    function test_OI_AUPG_6__OI_UTACWA_26__OI_UTCWA_13__OIMP_UCA_8_nestedSecondUpgradeFromMigration_reverts() public {
         // Setup: whitelist first target only, then craft migration payload to attempt nested upgrade to un-whitelisted
         // V3.
         _setSingleAdminThresholdOne();

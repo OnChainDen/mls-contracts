@@ -24,8 +24,9 @@ contract LibPolicyApprovalFuzzTest is PolicyLibrariesFuzzTestBase {
         bytes memory reviewer1Signature = _signHash(REVIEWER_PK_1, messageHash);
         bytes memory reviewer2Signature = _signHash(REVIEWER_PK_2, messageHash);
         bytes memory duplicateSignatures = bytes.concat(reviewer1Signature, reviewer1Signature);
-        bytes memory reversedSignatures =
-            reviewer1 < reviewer2 ? bytes.concat(reviewer2Signature, reviewer1Signature) : bytes.concat(reviewer1Signature, reviewer2Signature);
+        bytes memory reversedSignatures = reviewer1 < reviewer2
+            ? bytes.concat(reviewer2Signature, reviewer1Signature)
+            : bytes.concat(reviewer1Signature, reviewer2Signature);
 
         // Call: evaluate the exact sorted quorum plus duplicate and out-of-order mutation branches.
         bool sortedAllowed = harness.areApprovalsValidViaPolicyLibrary(policy, sortedSignatures, messageHash);

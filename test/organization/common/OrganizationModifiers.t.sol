@@ -38,18 +38,14 @@ contract OrganizationModifiersTest is Test {
     /// OMOD-AGUARD-1
     /// OMOD-AGUARD-2
     /// OMOD-AGUARD-5
-    function test_OMOD_AGUARD_1__OMOD_AGUARD_2__OMOD_AGUARD_5_onlyGuardian_authorizesExactHolderAndExactError()
-        public
-    {
+    function test_OMOD_AGUARD_1__OMOD_AGUARD_2__OMOD_AGUARD_5_onlyGuardian_authorizesExactHolderAndExactError() public {
         vm.prank(GUARDIAN);
         // Call: invoke the guardian-only action from the configured guardian.
         harness.guardianOnlyAction();
         assertEq(harness.lastModifierId(), 1, "guardian should pass guardian-only action");
 
         // Verify: non-guardian callers see the exact `(caller, guardian)` error payload.
-        vm.expectRevert(
-            abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardian.selector, OTHER, GUARDIAN)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardian.selector, OTHER, GUARDIAN));
         vm.prank(OTHER);
         harness.guardianOnlyAction();
     }
@@ -226,9 +222,7 @@ contract OrganizationModifiersTest is Test {
 
         // Verify: pending guardian is still rejected by `onlyGuardian`.
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IOrganizationGuardian.UnauthorizedGuardian.selector, PENDING_GUARDIAN, GUARDIAN
-            )
+            abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardian.selector, PENDING_GUARDIAN, GUARDIAN)
         );
         vm.prank(PENDING_GUARDIAN);
         // Call: invoke the guardian-only harness action from the pending guardian.
@@ -245,8 +239,7 @@ contract OrganizationModifiersTest is Test {
 
         vm.prank(OTHER);
         // Call: invoke the deployer-only action via low-level call to capture raw revert bytes.
-        (bool success, bytes memory revertData) =
-            address(harness).call(abi.encodeCall(harness.deployerOnlyAction, ()));
+        (bool success, bytes memory revertData) = address(harness).call(abi.encodeCall(harness.deployerOnlyAction, ()));
 
         // Verify: the revert contains exactly the selector and no encoded addresses.
         assertFalse(success, "non-deployer call should revert");
@@ -259,9 +252,7 @@ contract OrganizationModifiersTest is Test {
      */
     /// OMOD-APENDG-3
     /// OMOD-AZERO-5
-    function test_OMOD_APENDG_3__OMOD_AZERO_5_onlyPendingGuardian_withoutPendingGuardian_rejectsAllCallers()
-        public
-    {
+    function test_OMOD_APENDG_3__OMOD_AZERO_5_onlyPendingGuardian_withoutPendingGuardian_rejectsAllCallers() public {
         // Setup: clear pending guardian while keeping other roles non-zero.
         harness.setGuardianState(GUARDIAN, address(0), false);
 
@@ -503,9 +494,7 @@ contract OrganizationModifiersTest is Test {
     function test_OMOD_AZERO_1_onlyGuardian_zeroGuardian_rejectsNonZeroCaller() public {
         harness.setGuardianState(address(0), PENDING_GUARDIAN, false);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardian.selector, OTHER, address(0))
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardian.selector, OTHER, address(0)));
         vm.prank(OTHER);
         harness.guardianOnlyAction();
     }

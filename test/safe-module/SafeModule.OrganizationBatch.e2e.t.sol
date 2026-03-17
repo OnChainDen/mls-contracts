@@ -110,9 +110,7 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
 
     // ISEM-EOB-7
     /// @dev Verifies the authorized executor can call a guardian-only organization function through the module.
-    function test_SMI_ETE_5__ISEM_EOB_7_authorizedExecutorCanExecuteGuardianOnlyOrganizationFunctionViaModule()
-        public
-    {
+    function test_SMI_ETE_5__ISEM_EOB_7_authorizedExecutorCanExecuteGuardianOnlyOrganizationFunctionViaModule() public {
         // Setup: build a signed `modifyMembers` call that adds one new member.
         bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA), 101);
 

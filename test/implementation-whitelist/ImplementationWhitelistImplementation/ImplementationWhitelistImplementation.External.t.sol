@@ -853,5 +853,4 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         // Verify: ownership state preserved after upgrade.
         assertEq(whitelistProxy.owner(), NEW_OWNER, "owner should be preserved after upgrade");
     }
-
 }

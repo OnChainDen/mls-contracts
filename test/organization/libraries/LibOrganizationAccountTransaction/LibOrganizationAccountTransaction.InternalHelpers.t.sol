@@ -120,9 +120,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies rate-limit exceedance reverts `RateLimitExceeded`.
-    function test_LOAT_VAURLOR_8__LOAT_AHELP_4_validateAndUpdateRateLimit_exceeded_revertsRateLimitExceeded()
-        public
-    {
+    function test_LOAT_VAURLOR_8__LOAT_AHELP_4_validateAndUpdateRateLimit_exceeded_revertsRateLimitExceeded() public {
         // Setup: low interval limit and oversized token transfer amount.
         Policy memory policy = _buildApprovalPolicy(TransactionType.TokenTransfers, PolicyType.AutoApprove);
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;

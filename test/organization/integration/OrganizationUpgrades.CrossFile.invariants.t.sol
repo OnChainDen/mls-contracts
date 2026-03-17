@@ -18,9 +18,7 @@ import {OperationType} from "types/CommonTypes.sol";
  */
 contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFileSuiteBase {
     /// @dev Verifies invariant that authorized upgrade target is unset outside authorized upgrade execution.
-    function test_UPG_CTRL_1__UPG_INV_1__IWC_INV_1__IWC_INV_4_upgradeAuthorizedFlagFalseOutsideExecution()
-        public
-    {
+    function test_UPG_CTRL_1__UPG_INV_1__IWC_INV_1__IWC_INV_4_upgradeAuthorizedFlagFalseOutsideExecution() public {
         // Setup: perform successful upgrade with migration helper that requires temporary auth flag.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -182,9 +180,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
     }
 
     /// @dev Verifies the stored whitelist address remains immutable across successful Organization upgrades.
-    function test_ACCF_INV_8__UPG_INV_6__IWC_INV_5__IWC_INV_6_whitelistAddressRemainsImmutableAcrossUpgrades()
-        public
-    {
+    function test_ACCF_INV_8__UPG_INV_6__IWC_INV_5__IWC_INV_6_whitelistAddressRemainsImmutableAcrossUpgrades() public {
         // Setup: set whitelist address and execute successful Organization upgrade.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);

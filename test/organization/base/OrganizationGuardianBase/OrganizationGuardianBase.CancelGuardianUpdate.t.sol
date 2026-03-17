@@ -327,7 +327,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory initiateAuth,) = _buildInitiateGuardianUpdateAuth({
             newGuardian: NEW_GUARDIAN_A,
-            salt: 3_201,
+            salt: 3201,
             expiration: type(uint256).max,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -339,7 +339,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK);
         (AdminAuthParams memory finalizeAuth,) = _buildFinalizeGuardianUpdateAuth({
             pendingGuardian: NEW_GUARDIAN_A,
-            salt: 3_202,
+            salt: 3202,
             expiration: type(uint256).max,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -350,14 +350,14 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
 
         (AdminAuthParams memory cancelAuth,) = _buildCancelGuardianUpdateAuth({
             pendingGuardian: NEW_GUARDIAN_A,
-            salt: 3_203,
+            salt: 3203,
             expiration: type(uint256).max,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
         (AdminAuthParams memory reinitiateAuth,) = _buildInitiateGuardianUpdateAuth({
             newGuardian: NEW_GUARDIAN_B,
-            salt: 3_204,
+            salt: 3204,
             expiration: type(uint256).max,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)

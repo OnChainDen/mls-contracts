@@ -21,11 +21,11 @@ import {ApproverType, Policy, PolicyType, ValidationProofs} from "types/PolicyTy
 contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignatureTestBase {
     uint256 internal constant AUTHORIZED_EXECUTOR_PK = 0xA11CE;
 
-    function _buildBelowThresholdReviewSignatures(uint256 signerCount, uint256 expiration, bytes memory initiatorSignature)
-        internal
-        view
-        returns (bytes memory reviewSignatures)
-    {
+    function _buildBelowThresholdReviewSignatures(
+        uint256 signerCount,
+        uint256 expiration,
+        bytes memory initiatorSignature
+    ) internal view returns (bytes memory reviewSignatures) {
         address[] memory signers = new address[](signerCount);
         bytes[] memory signatures = new bytes[](signerCount);
 
@@ -311,9 +311,8 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
             expirationTimestamp: expiration
         });
 
-        bytes memory reviewSignatures = _buildBelowThresholdReviewSignatures(
-            signerCount, expiration, initiatorSignature
-        );
+        bytes memory reviewSignatures =
+            _buildBelowThresholdReviewSignatures(signerCount, expiration, initiatorSignature);
         bytes memory guardianSignature = _signGuardianReviewHash({
             sigHarness: harness,
             privateKey: GUARDIAN_PK,
@@ -830,9 +829,8 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         policyStateHarness.setGuardian(address(guardianSafe));
 
         caseSelector = uint8(bound(caseSelector, 0, 3));
-        (bytes memory guardianSignature, bool expected) = _buildGuardianSignatureCase(
-            module, caseSelector, alternateSignerPkRaw, wrongHash, malformedInnerSignature
-        );
+        (bytes memory guardianSignature, bool expected) =
+            _buildGuardianSignatureCase(module, caseSelector, alternateSignerPkRaw, wrongHash, malformedInnerSignature);
 
         // Call: validate the fuzzed module inner-signature variant.
         bool actual = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);

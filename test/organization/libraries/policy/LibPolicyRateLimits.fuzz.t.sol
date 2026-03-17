@@ -219,10 +219,9 @@ contract LibPolicyRateLimitsFuzzTest is PolicyLibrariesFuzzTestBase {
     /// @dev Verifies `checkAndUpdateRateLimit` always fails closed when the anchor is in the future.
     /// @param futureAnchor A timestamp strictly after `block.timestamp`.
     /// @param usageAmount The attempted usage increment.
-    function testFuzz_checkAndUpdateRateLimit_beforeAnchor_alwaysFailsClosed(
-        uint256 futureAnchor,
-        uint256 usageAmount
-    ) public {
+    function testFuzz_checkAndUpdateRateLimit_beforeAnchor_alwaysFailsClosed(uint256 futureAnchor, uint256 usageAmount)
+        public
+    {
         vm.warp(10_000);
         futureAnchor = bound(futureAnchor, block.timestamp + 1, type(uint128).max);
 

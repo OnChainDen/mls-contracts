@@ -156,9 +156,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     }
 
     /// @dev Verifies `LibOrganizationEIP712.getDomainSeparator` changes when the chain id changes.
-    function test_E712_HASH_2_A_NMEIP_E712_2_LOEIP_GDS_6_getDomainSeparator_chainIdMutationChangesSeparator()
-        public
-    {
+    function test_E712_HASH_2_A_NMEIP_E712_2_LOEIP_GDS_6_getDomainSeparator_chainIdMutationChangesSeparator() public {
         // Setup: snapshot the baseline separator before mutating the chain id.
         bytes32 baseline = harness.getDomainSeparatorViaLibrary();
         uint256 originalChainId = block.chainid;
@@ -173,9 +171,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     }
 
     /// @dev Verifies `LibOrganizationEIP712.getDomainSeparator` changes when the verifying contract changes.
-    function test_E712_HASH_2_B_NMEIP_E712_3_LOEIP_GDS_7_getDomainSeparator_verifierMutationChangesSeparator()
-        public
-    {
+    function test_E712_HASH_2_B_NMEIP_E712_3_LOEIP_GDS_7_getDomainSeparator_verifierMutationChangesSeparator() public {
         // Setup: deploy a second harness with a different verifying-contract address.
         LibOrganizationEIP712Harness otherHarness = new LibOrganizationEIP712Harness();
 

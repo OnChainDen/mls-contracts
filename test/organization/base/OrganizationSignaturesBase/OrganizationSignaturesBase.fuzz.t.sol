@@ -101,5 +101,4 @@ contract OrganizationSignaturesBaseFuzzTest is Test {
         // Verify: reverted parent paths leave nonce state untouched, while later successful consumption still works.
         assertTrue(rollbackHarness.isNonceUsed(nonce), "later successful consume should still mark the nonce used");
     }
-
 }

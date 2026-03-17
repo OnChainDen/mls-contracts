@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {IOrganization} from "interfaces/IOrganization.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {
     OrganizationAccountFactoryBaseSuiteBase
@@ -36,9 +36,8 @@ contract OrganizationAccountFactoryBaseFuzzTest is OrganizationAccountFactoryBas
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        bytes32 mutatedCreate2Salt = create2Salt == bytes32(type(uint256).max)
-            ? bytes32(0)
-            : bytes32(uint256(create2Salt) + 1);
+        bytes32 mutatedCreate2Salt =
+            create2Salt == bytes32(type(uint256).max) ? bytes32(0) : bytes32(uint256(create2Salt) + 1);
 
         // Call: invoke `deployAccount` first from a non-guardian caller, then from the guardian with mismatched
         // operation data, and finally with the exact authorized tuple.
@@ -124,5 +123,4 @@ contract OrganizationAccountFactoryBaseFuzzTest is OrganizationAccountFactoryBas
             "only the whitelisted authorized implementation should persist"
         );
     }
-
 }

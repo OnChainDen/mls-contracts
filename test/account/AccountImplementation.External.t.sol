@@ -76,9 +76,9 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
      * @dev Verifies non-organization caller reverts with `OnlyOrganization`.
      */
     /// AI-AENT-1
-    function testFuzz_AI_AENT_1__AI_INV_1__AI_ET_1__OAT_AI_1__FAI_ORG_145_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization(
-        address caller
-    ) public {
+    function testFuzz_AI_AENT_1__AI_INV_1__AI_ET_1__OAT_AI_1__FAI_ORG_145_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization(address caller)
+        public
+    {
         vm.assume(caller != address(beacon));
 
         // Setup: deploy target call receiver and choose a non-organization caller.
@@ -218,9 +218,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature delegates `(account,hash,signature)` to organization contract.
      */
-    function test_AI_INV_3__AI_IVS_1__OAT_AI_5_isValidSignature_delegatesToOrganizationWithExpectedArguments()
-        public
-    {
+    function test_AI_INV_3__AI_IVS_1__OAT_AI_5_isValidSignature_delegatesToOrganizationWithExpectedArguments() public {
         // Setup: configure beacon mock to enforce exact delegated call arguments.
         bytes32 hash = keccak256("account-signature-delegate");
         bytes memory signature = hex"0102030405";
@@ -275,8 +273,9 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
         AccountReceiveReentrancyAttacker attacker = new AccountReceiveReentrancyAttacker();
         AccountCallRecorderTarget downstream = new AccountCallRecorderTarget();
         bytes memory nestedPayload = abi.encodeWithSelector(downstream.record.selector, bytes("nested"), uint256(77));
-        bytes memory payload =
-            abi.encodeCall(attacker.bounceAndReenter, (payable(address(account)), address(downstream), 0, nestedPayload));
+        bytes memory payload = abi.encodeCall(
+            attacker.bounceAndReenter, (payable(address(account)), address(downstream), 0, nestedPayload)
+        );
 
         vm.deal(address(account), 0.25 ether);
         uint256 balanceBefore = address(account).balance;

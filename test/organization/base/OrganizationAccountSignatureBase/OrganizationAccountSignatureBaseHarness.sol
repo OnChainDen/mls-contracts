@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
 import {OrganizationAccountSignatureBase} from "organization/base/OrganizationAccountSignatureBase.sol";
+import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
 import {OrganizationPolicyStateHarness} from "test/organization/shared/OrganizationPolicyStateHarness.sol";
 
 /**

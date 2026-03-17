@@ -87,7 +87,6 @@ contract CallOrderTracker {
     }
 }
 
-
 /**
  * @dev CalldataRecorderTarget — accepts arbitrary calldata and records the exact payload delivered to it.
  */
@@ -561,9 +560,8 @@ contract BatchedTransactionTest is Test {
         // address(this) directly as the next entry's `to`.
         //   [emptyTarget:20][len=4:8][0xdeadbeef:4][address(this):20][0:8]
         {
-            bytes memory crafted = abi.encodePacked(
-                address(emptyTarget), uint64(4), bytes4(0xdeadbeef), address(this), uint64(0)
-            );
+            bytes memory crafted =
+                abi.encodePacked(address(emptyTarget), uint64(4), bytes4(0xdeadbeef), address(this), uint64(0));
             (bool success, bytes memory returnData) = _executeBatchViaDelegatecall(crafted);
             assertFalse(success, "Attempt 1: should revert");
             bytes4 selector;
@@ -579,11 +577,7 @@ contract BatchedTransactionTest is Test {
         //   [emptyTarget:20][len=32:8][32B data][address(this):20][0:8]
         {
             bytes memory crafted = abi.encodePacked(
-                address(emptyTarget),
-                uint64(32),
-                bytes32(uint256(0xdeadbeefcafebabe)),
-                address(this),
-                uint64(0)
+                address(emptyTarget), uint64(32), bytes32(uint256(0xdeadbeefcafebabe)), address(this), uint64(0)
             );
             (bool success, bytes memory returnData) = _executeBatchViaDelegatecall(crafted);
             assertFalse(success, "Attempt 2: should revert");
@@ -754,5 +748,4 @@ contract BatchedTransactionTest is Test {
             assertEq(targets[i].lastMsgValue(), 0, "sub-calls must always execute with zero value");
         }
     }
-
 }

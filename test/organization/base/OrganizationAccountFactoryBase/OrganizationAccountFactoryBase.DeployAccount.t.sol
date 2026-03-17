@@ -182,7 +182,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     function test_NMAFB_AEP_3_deployAccount_sameCreate2Salt_differentAdminSalt_sameOrg_revertsCreate2Collision()
         public
     {
-        bytes32 create2Salt = bytes32(uint256(41032));
+        bytes32 create2Salt = bytes32(uint256(41_032));
 
         // Setup: configure a valid implementation and deploy once to occupy the CREATE2 slot.
         _setSingleAdminThresholdOne();
@@ -190,7 +190,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
 
         (AdminAuthParams memory firstAuth,) = _buildDeployAccountAuth({
             create2Salt: create2Salt,
-            salt: 51033,
+            salt: 51_033,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -202,7 +202,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
 
         (AdminAuthParams memory secondAuth,) = _buildDeployAccountAuth({
             create2Salt: create2Salt,
-            salt: 51034,
+            salt: 51_034,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -708,9 +708,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies all accounts under one organization share a single implementation pointer.
-    function test_ACCF_INV_5_OAFB_SAI_15_setAccountImplementation_allAccountsShareSingleImplementationPointer()
-        public
-    {
+    function test_ACCF_INV_5_OAFB_SAI_15_setAccountImplementation_allAccountsShareSingleImplementationPointer() public {
         // Setup: deploy two accounts under V1 and then move pointer to V2.
         _setSingleAdminThresholdOne();
         address implV1 = address(new OAFBAccountImplementationVersion1());

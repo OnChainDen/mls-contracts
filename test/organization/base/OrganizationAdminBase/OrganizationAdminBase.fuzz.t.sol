@@ -97,9 +97,7 @@ contract OrganizationAdminBaseFuzzTest is OrganizationAdminBaseSuiteBase {
         // Call: invoke the selected base entry point from a non-guardian caller.
         _expectOnlyGuardianRevert(NON_GUARDIAN);
         vm.prank(NON_GUARDIAN);
-        _invokeModifyAdminsPath(
-            useRejectPath, operationData, buildArray(candidate), buildEmptyAddressArray(), 1, auth
-        );
+        _invokeModifyAdminsPath(useRejectPath, operationData, buildArray(candidate), buildEmptyAddressArray(), 1, auth);
 
         // Verify: the caller gate should reject the call before consuming the bound nonce or mutating admin state.
         assertFalse(harness.getUsedNonce(nonce), "guardian gate should leave nonce unused");

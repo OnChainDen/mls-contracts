@@ -11,7 +11,7 @@ import {ApproverType, Policy} from "types/PolicyTypes.sol";
  * @dev Cross-library group tests that assert policy authorization fails closed when group state is stale or absent.
  */
 contract LibOrganizationGroupsPolicyAuthorizationTest is LibOrganizationPolicySuiteBase {
-    uint256 internal constant AUTHORIZATION_GROUP_ID = 9_301;
+    uint256 internal constant AUTHORIZATION_GROUP_ID = 9301;
     bytes32 internal constant REVIEW_HASH = keccak256("lib-organization-groups-policy-review-hash");
 
     /**

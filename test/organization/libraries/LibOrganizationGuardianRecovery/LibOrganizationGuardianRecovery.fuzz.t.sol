@@ -216,9 +216,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
             boundedPendingTimelock,
             "finalize should configure recovery timelock"
         );
-        assertEq(
-            finalizedState.pendingInit.pendingRecoveryAddress, address(0), "finalize should clear pending address"
-        );
+        assertEq(finalizedState.pendingInit.pendingRecoveryAddress, address(0), "finalize should clear pending address");
         assertEq(finalizedState.pendingInit.pendingTimestamp, 0, "finalize should clear pending timestamp");
     }
 
@@ -471,9 +469,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
 
         // Setup: seed a pending deferred-init tuple, clear it twice through the helper, then seed active config.
         harness.resetGuardianRecoveryStorageViaHarness();
-        recoveryStateHarness.setGuardianRecoveryPendingInit(
-            pendingAddress, boundedPendingTimelock, pendingTimestamp
-        );
+        recoveryStateHarness.setGuardianRecoveryPendingInit(pendingAddress, boundedPendingTimelock, pendingTimestamp);
 
         harness.clearPendingGuardianRecoveryInitTimelockViaLibrary();
         harness.clearPendingGuardianRecoveryInitTimelockViaLibrary();

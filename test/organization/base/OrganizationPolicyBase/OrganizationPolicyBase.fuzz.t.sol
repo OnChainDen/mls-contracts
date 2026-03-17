@@ -167,9 +167,7 @@ contract OrganizationPolicyBaseFuzzTest is OrganizationPolicyBaseSuiteBase {
         }
 
         // Call: query `getPolicyUsage` with the mutated proof tuple, expecting policy verification to fail.
-        vm.expectRevert(
-            abi.encodeWithSelector(IOrganizationPolicy.PolicyVerificationFailed.selector, queriedPolicyId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationPolicy.PolicyVerificationFailed.selector, queriedPolicyId));
         harness.getPolicyUsage({
             policyId: queriedPolicyId,
             policy: queriedPolicy,

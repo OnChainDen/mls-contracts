@@ -9,11 +9,11 @@ import {
     OrganizationAccountTransactionBaseHarness
 } from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseHarness.sol";
 import {
-    LibOrganizationAccountTransactionHarness
-} from "test/organization/libraries/LibOrganizationAccountTransaction/LibOrganizationAccountTransactionHarness.sol";
-import {
     MockAccountForOrganizationTransaction
 } from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseMocks.sol";
+import {
+    LibOrganizationAccountTransactionHarness
+} from "test/organization/libraries/LibOrganizationAccountTransaction/LibOrganizationAccountTransactionHarness.sol";
 import {
     LibOrganizationAccountTransactionTestBase
 } from "test/organization/libraries/LibOrganizationAccountTransaction/LibOrganizationAccountTransactionTestBase.sol";
@@ -71,9 +71,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     function testFuzz_AT_FZ_2__FLOAT_APPROVE_88_validateApproval_expirationFuturePassPastFail(
         uint64 offsetSeconds,
         bool shouldBeFuture
-    )
-        public
-    {
+    ) public {
         // Setup: build payload with fuzzed relative expiration.
         bytes memory data = abi.encodeWithSelector(bytes4(0x71717171), uint256(1));
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
@@ -120,9 +118,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     function testFuzz_NMFZ_3__FOATB_ENTRY_95__SAG_FUZ_6_executeRejectReplayAcrossMixedEntryPointsAlwaysReverts(
         uint256 saltRaw,
         bool rejectFirst
-    )
-        public
-    {
+    ) public {
         // Setup: deploy a fresh organization/account pair, configure one auto-approve policy, and bind both execute
         // and reject signatures to the same account-transaction tuple under one salt.
         uint256 salt = bound(saltRaw, 1, type(uint256).max);
@@ -572,9 +568,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies random undeployed accounts are always rejected by base execution path.
-    function testFuzz_AT_FZ_10__FOATB_ENTRY_94_executeAccountTransaction_randomUndeployedAccount_revertsAccountNotDeployed(
-        address account
-    )
+    function testFuzz_AT_FZ_10__FOATB_ENTRY_94_executeAccountTransaction_randomUndeployedAccount_revertsAccountNotDeployed(address account)
         public
     {
         // Setup: constrain random account to non-zero and leave it undeployed.
@@ -645,21 +639,14 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
             address(harness), INITIATOR_PK_1, ACCOUNT, DESTINATION, 0, data, salt, expiration, DEFAULT_POLICY_ID, true
         );
         bytes memory rejectionSignature = _signInitiatorTx(
-            address(harness),
-            INITIATOR_PK_1,
-            ACCOUNT,
-            DESTINATION,
-            0,
-            data,
-            salt,
-            expiration,
-            DEFAULT_POLICY_ID,
-            false
+            address(harness), INITIATOR_PK_1, ACCOUNT, DESTINATION, 0, data, salt, expiration, DEFAULT_POLICY_ID, false
         );
 
         // Call: misuse the rejection signature in the approval path, expecting recovery against the approval hash to
         // fail closed.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.PolicyDoesNotApply.selector, DEFAULT_POLICY_ID));
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationAccountTransaction.PolicyDoesNotApply.selector, DEFAULT_POLICY_ID)
+        );
         harness.validateTransactionApprovalOrRevertViaLibrary(
             ACCOUNT, DESTINATION, 0, data, salt, expiration, DEFAULT_POLICY_ID, rejectionSignature, bytes(""), proofs
         );
@@ -668,7 +655,16 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
         // hash.
         vm.expectRevert(IOrganizationAccountTransaction.TransactionRejectionNotAllowed.selector);
         harness.validateTransactionRejectionOrRevertViaLibrary(
-            ACCOUNT, DESTINATION, 0, data, salt, expiration, DEFAULT_POLICY_ID, approvalSignature, approvalSignature, proofs
+            ACCOUNT,
+            DESTINATION,
+            0,
+            data,
+            salt,
+            expiration,
+            DEFAULT_POLICY_ID,
+            approvalSignature,
+            approvalSignature,
+            proofs
         );
 
         // Verify: the role-correct signatures still succeed for their intended flows after the failed cross-role

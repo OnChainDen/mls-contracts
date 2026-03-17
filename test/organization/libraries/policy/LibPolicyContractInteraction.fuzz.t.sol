@@ -71,5 +71,4 @@ contract LibPolicyContractInteractionFuzzTest is PolicyLibrariesFuzzTestBase {
         assertFalse(wrongSelectorAllowed, "selector mutation should invalidate the proof");
         assertFalse(wrongConstraintsAllowed, "constraints-hash mutation should invalidate the proof");
     }
-
 }

@@ -49,9 +49,7 @@ contract OrganizationAdminOperationNonceInvariants is OrganizationAdminBaseSuite
         });
         operationData = opData;
         executedNonce = harness.computeNonce({
-            operationType: OperationType.ModifyAdmins,
-            operationData: operationData,
-            salt: usedSalt
+            operationType: OperationType.ModifyAdmins, operationData: operationData, salt: usedSalt
         });
 
         // Call: execute modifyAdmins to consume the admin-operation nonce.
@@ -77,9 +75,7 @@ contract OrganizationAdminOperationNonceInvariants is OrganizationAdminBaseSuite
     function invariant_NMINV_3_sameNonceValueDoesNotShareUsageAcrossOrganizations_adminOperation() public view {
         // Call: derive the matching admin-operation tuple on a fresh organization harness.
         uint256 sameTupleNonceOnSecondOrg = secondOrganization.computeNonce({
-            operationType: OperationType.ModifyAdmins,
-            operationData: operationData,
-            salt: usedSalt
+            operationType: OperationType.ModifyAdmins, operationData: operationData, salt: usedSalt
         });
 
         // Verify: nonce validity remains isolated per organization even when tuple derivation matches.

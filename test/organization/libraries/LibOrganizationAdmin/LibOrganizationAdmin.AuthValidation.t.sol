@@ -1142,9 +1142,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` keeps out-of-order signer nonces
     /// unused.
-    function test_NMADM_AUTH_10_ADMIN_INV_6_validateAdminAuth_outOfOrderSigners_revertAndDoNotConsumeNonce()
-        public
-    {
+    function test_NMADM_AUTH_10_ADMIN_INV_6_validateAdminAuth_outOfOrderSigners_revertAndDoNotConsumeNonce() public {
         uint256 salt = 39;
 
         // Setup: configure threshold-two auth, then intentionally pack the signer set in descending address order.

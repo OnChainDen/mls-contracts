@@ -2,9 +2,9 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {MerkleUtils} from "libraries/MerkleUtils.sol";
 import {BatchedTransaction} from "../../../src/safe-module/BatchedTransaction.sol";
 import {SafeExecutorModule} from "../../../src/safe-module/SafeExecutorModule.sol";
+import {MerkleUtils} from "libraries/MerkleUtils.sol";
 import {SignatureTestHelpers} from "test/helpers/SignatureTestHelpers.sol";
 import {
     MockERC20ForAccountTransaction,
@@ -14,9 +14,7 @@ import {
 import {
     InitializationSuiteBase
 } from "test/organization/base/OrganizationInitializationBase/OrganizationInitializationBaseSuiteBase.sol";
-import {
-    OrganizationImplementationHarness
-} from "test/organization/shared/OrganizationUpgradeHarnesses.sol";
+import {OrganizationImplementationHarness} from "test/organization/shared/OrganizationUpgradeHarnesses.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {ContractType, GroupModification, InitializationParams, OperationType} from "types/CommonTypes.sol";
 import {
@@ -218,7 +216,7 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
         policy.config.token.tokenAddress = address(token);
         policy.config.token.hasAmountThreshold = true;
         policy.config.token.amountThreshold = 251;
-        (policy.roots.customDestinationsRoot, ) = _buildSingleAddressRootAndProof(recipient);
+        (policy.roots.customDestinationsRoot,) = _buildSingleAddressRootAndProof(recipient);
 
         ValidationProofs memory proofs = _setPoliciesViaModule(organization, module, ERC20_POLICY_ID, policy, 19_823);
         address account = _deployAccountViaModule(organization, module, bytes32(uint256(19_824)), 19_825);
@@ -311,10 +309,7 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
      * @return safe Deployed Safe proxy address.
      * @return module Enabled Safe executor module authorized for `adminSigner`.
      */
-    function _deployGuardianSafeModule(uint256 saltNonce)
-        internal
-        returns (address safe, SafeExecutorModule module)
-    {
+    function _deployGuardianSafeModule(uint256 saltNonce) internal returns (address safe, SafeExecutorModule module) {
         address singleton = _deployCreationCodeFixture(SAFE_L2_CREATION_CODE_PATH);
         address proxyFactory = _deployCreationCodeFixture(SAFE_PROXY_FACTORY_CREATION_CODE_PATH);
         BatchedTransaction batchedTransaction = new BatchedTransaction();
@@ -582,15 +577,7 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
         address[] memory owners = new address[](1);
         owners[0] = adminSigner;
         bytes memory initializer = abi.encodeWithSelector(
-            ISafeSetup.setup.selector,
-            owners,
-            1,
-            address(0),
-            bytes(""),
-            address(0),
-            address(0),
-            0,
-            payable(address(0))
+            ISafeSetup.setup.selector, owners, 1, address(0), bytes(""), address(0), address(0), 0, payable(address(0))
         );
 
         safe = ISafeProxyFactory(proxyFactory).createProxyWithNonce(singleton, initializer, saltNonce);
@@ -605,29 +592,11 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
         bytes memory enableModuleData = abi.encodeWithSignature("enableModule(address)", address(module));
         ISafeModuleTx safeProxy = ISafeModuleTx(safe);
         bytes32 txHash = safeProxy.getTransactionHash(
-            safe,
-            0,
-            enableModuleData,
-            0,
-            0,
-            0,
-            0,
-            address(0),
-            address(0),
-            safeProxy.nonce()
+            safe, 0, enableModuleData, 0, 0, 0, 0, address(0), address(0), safeProxy.nonce()
         );
 
         bool success = safeProxy.execTransaction(
-            safe,
-            0,
-            enableModuleData,
-            0,
-            0,
-            0,
-            0,
-            address(0),
-            payable(address(0)),
-            _signSafeHash(ADMIN_PK_1, txHash)
+            safe, 0, enableModuleData, 0, 0, 0, 0, address(0), payable(address(0)), _signSafeHash(ADMIN_PK_1, txHash)
         );
 
         assertTrue(success, "safe should enable the executor module");
@@ -718,7 +687,16 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
         signature = _signHash(
             REVIEWER_PK_1,
             _computeReviewTransactionHash(
-                organization, account, to, value, data, salt, expirationTimestamp, policyId, isApproval, initiatorSignature
+                organization,
+                account,
+                to,
+                value,
+                data,
+                salt,
+                expirationTimestamp,
+                policyId,
+                isApproval,
+                initiatorSignature
             )
         );
     }

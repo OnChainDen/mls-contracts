@@ -60,5 +60,4 @@ contract LibOrganizationPolicyFuzzTest is LibOrganizationPolicySuiteBase {
         // afterwards.
         assertEq(harness.getPoliciesRoot(), nextRoot, "explicit setPolicies should replace the stored root exactly");
     }
-
 }
