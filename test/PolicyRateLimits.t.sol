@@ -297,6 +297,13 @@ contract PolicyRateLimitsTest is Test {
         );
         assertFalse(overflow, "Should fail within same anchor-aligned window");
 
+        // One second before the anchor-aligned boundary — still in window 0
+        vm.warp(999_000 + 3599);
+        bool beforeBoundary = LibOrganizationPolicy.checkAndUpdateRateLimit(
+            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1
+        );
+        assertFalse(beforeBoundary, "Should still fail one second before anchor-aligned boundary");
+
         // Advance to next anchor-aligned boundary
         vm.warp(999_000 + 3600);
         bool afterReset = LibOrganizationPolicy.checkAndUpdateRateLimit(
