@@ -56,7 +56,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
         policy.config.rateLimit.initiatorScope = RateLimitScope.PerEntity;
 
         uint256 amount = 42;
-        bytes memory data = _encodeERC20Transfer(RECIPIENT, amount);
+        bytes memory data = _encodeErc20Transfer(RECIPIENT, amount);
 
         // Call: run rate-limit validation/update helper.
         harness.validateAndUpdateRateLimitOrRevertViaLibrary(
@@ -126,7 +126,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 1;
         policy.config.rateLimit.timeIntervalLimit = 10;
-        bytes memory data = _encodeERC20Transfer(RECIPIENT, 11);
+        bytes memory data = _encodeErc20Transfer(RECIPIENT, 11);
 
         // Verify: helper reverts when usage would exceed limit.
         vm.expectRevert(
@@ -182,7 +182,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
         policy.config.rateLimit.destinationScope = RateLimitScope.PerEntity;
         policy.config.rateLimit.sourceScope = RateLimitScope.PerEntity;
         policy.config.rateLimit.initiatorScope = RateLimitScope.PerEntity;
-        bytes memory data = _encodeERC20Transfer(RECIPIENT, 500);
+        bytes memory data = _encodeErc20Transfer(RECIPIENT, 500);
 
         // Call: run helper on ERC-20 transfer shaped transaction.
         harness.validateAndUpdateRateLimitOrRevertViaLibrary(

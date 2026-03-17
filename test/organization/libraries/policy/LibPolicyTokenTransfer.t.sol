@@ -28,7 +28,7 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
         // Call: execute `isTokenTransferAllowedByPolicyViaPolicyLibrary` with the happy-path payload.
         bool allowed = harness.isTokenTransferAllowedByPolicyViaPolicyLibrary(
-            policy, token, 0, _encodeERC20Transfer(recipient, amount), destinationProof
+            policy, token, 0, _encodeErc20Transfer(recipient, amount), destinationProof
         );
         // Verify: assert the expected success result and state updates.
         assertTrue(allowed, "valid token transfer should be allowed");
@@ -48,7 +48,7 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
         // Call: execute `isTokenTransferAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.isTokenTransferAllowedByPolicyViaPolicyLibrary(
-            policy, actualToken, 0, _encodeERC20Transfer(recipient, 1), new bytes32[](0)
+            policy, actualToken, 0, _encodeErc20Transfer(recipient, 1), new bytes32[](0)
         );
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "non-configured token should be rejected");
@@ -69,7 +69,7 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
         // Call: execute `isTokenTransferAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.isTokenTransferAllowedByPolicyViaPolicyLibrary(
-            policy, token, 0, _encodeERC20Transfer(recipient, 51), new bytes32[](0)
+            policy, token, 0, _encodeErc20Transfer(recipient, 51), new bytes32[](0)
         );
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "amount above threshold should be rejected");
@@ -94,7 +94,7 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
         // Call: execute `isTokenTransferAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.isTokenTransferAllowedByPolicyViaPolicyLibrary(
-            policy, token, 0, _encodeERC20Transfer(recipient, 1), proofForDifferentRecipient
+            policy, token, 0, _encodeErc20Transfer(recipient, 1), proofForDifferentRecipient
         );
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "destination not in custom list should be rejected");
@@ -116,7 +116,7 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
             policy, nativeRecipient, 1 ether, bytes(""), new bytes32[](0)
         );
         bool erc20Allowed = harness.isTokenTransferAllowedByPolicyViaPolicyLibrary(
-            policy, token, 0, _encodeERC20Transfer(erc20Recipient, 10), new bytes32[](0)
+            policy, token, 0, _encodeErc20Transfer(erc20Recipient, 10), new bytes32[](0)
         );
 
         // Verify: assert the expected success result and state updates.
@@ -141,7 +141,7 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
             policy, nativeRecipient, 1, bytes(""), new bytes32[](0)
         );
         bool erc20Allowed = harness.isTokenTransferAllowedByPolicyViaPolicyLibrary(
-            policy, token, 0, _encodeERC20Transfer(address(0xB606), 1), new bytes32[](0)
+            policy, token, 0, _encodeErc20Transfer(address(0xB606), 1), new bytes32[](0)
         );
 
         // Verify: assert each variant returns the expected branch outcome.
@@ -164,10 +164,10 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
         // Call: run `isTokenTransferAllowedByPolicyViaPolicyLibrary` across the prepared variants.
         bool configuredAllowed = harness.isTokenTransferAllowedByPolicyViaPolicyLibrary(
-            policy, configuredToken, 0, _encodeERC20Transfer(recipient, 1), new bytes32[](0)
+            policy, configuredToken, 0, _encodeErc20Transfer(recipient, 1), new bytes32[](0)
         );
         bool otherAllowed = harness.isTokenTransferAllowedByPolicyViaPolicyLibrary(
-            policy, otherToken, 0, _encodeERC20Transfer(recipient, 1), new bytes32[](0)
+            policy, otherToken, 0, _encodeErc20Transfer(recipient, 1), new bytes32[](0)
         );
         bool nativeAllowed =
             harness.isTokenTransferAllowedByPolicyViaPolicyLibrary(policy, recipient, 1, bytes(""), new bytes32[](0));
@@ -195,13 +195,13 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
         // Call: execute `isTokenTransferAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool wrongToken = harness.isTokenTransferAllowedByPolicyViaPolicyLibrary(
-            policy, address(0xBAD0), 0, _encodeERC20Transfer(allowedRecipient, 1), new bytes32[](0)
+            policy, address(0xBAD0), 0, _encodeErc20Transfer(allowedRecipient, 1), new bytes32[](0)
         );
         bool highAmount = harness.isTokenTransferAllowedByPolicyViaPolicyLibrary(
-            policy, token, 0, _encodeERC20Transfer(allowedRecipient, 11), new bytes32[](0)
+            policy, token, 0, _encodeErc20Transfer(allowedRecipient, 11), new bytes32[](0)
         );
         bool wrongDestination = harness.isTokenTransferAllowedByPolicyViaPolicyLibrary(
-            policy, token, 0, _encodeERC20Transfer(recipient, 1), new bytes32[](0)
+            policy, token, 0, _encodeErc20Transfer(recipient, 1), new bytes32[](0)
         );
 
         // Verify: assert that the request is denied and state remains unchanged.
@@ -245,7 +245,7 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
         // Call: execute `isTokenAllowedByPolicyViaPolicyLibrary` with the happy-path payload.
         bool allowed =
-            harness.isTokenAllowedByPolicyViaPolicyLibrary(policy, token, _encodeERC20Transfer(address(0xB603), 1));
+            harness.isTokenAllowedByPolicyViaPolicyLibrary(policy, token, _encodeErc20Transfer(address(0xB603), 1));
         // Verify: assert the expected success result and state updates.
         assertTrue(allowed, "erc20 transfer should use to-address as token identity");
     }
@@ -259,7 +259,7 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
         // Call: execute `isTokenAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.isTokenAllowedByPolicyViaPolicyLibrary(
-            policy, address(0xAA05), _encodeERC20Transfer(address(0xB604), 1)
+            policy, address(0xAA05), _encodeErc20Transfer(address(0xB604), 1)
         );
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "non-matching token should be rejected");
@@ -272,7 +272,7 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
         policy.config.token.anyToken = false;
         policy.config.token.tokenAddress = address(0xAA06);
 
-        bytes memory data = _encodeERC20Transfer(address(0xB605), 77);
+        bytes memory data = _encodeErc20Transfer(address(0xB605), 77);
         // Call: execute `isTokenAllowedByPolicyViaPolicyLibrary` with the happy-path payload.
         bool first = harness.isTokenAllowedByPolicyViaPolicyLibrary(policy, address(0xAA06), data);
         bool second = harness.isTokenAllowedByPolicyViaPolicyLibrary(policy, address(0xAA06), data);
@@ -303,7 +303,7 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
         // Call: execute `isTokenAmountAllowedByPolicyViaPolicyLibrary` with the happy-path payload.
         bool allowed =
-            harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, _encodeERC20Transfer(address(0xB606), 100), 0);
+            harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, _encodeErc20Transfer(address(0xB606), 100), 0);
         // Verify: assert the expected success result and state updates.
         assertTrue(allowed, "amount below threshold should pass");
     }
@@ -317,7 +317,7 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
         // Call: execute `isTokenAmountAllowedByPolicyViaPolicyLibrary` with the happy-path payload.
         bool allowed =
-            harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, _encodeERC20Transfer(address(0xB607), 100), 0);
+            harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, _encodeErc20Transfer(address(0xB607), 100), 0);
         // Verify: assert the expected success result and state updates.
         assertTrue(allowed, "amount equal to threshold should pass");
     }
@@ -331,7 +331,7 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
         // Call: execute `isTokenAmountAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool allowed =
-            harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, _encodeERC20Transfer(address(0xB608), 101), 0);
+            harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, _encodeErc20Transfer(address(0xB608), 101), 0);
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "amount above threshold should fail");
     }

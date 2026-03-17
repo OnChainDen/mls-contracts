@@ -31,9 +31,18 @@ abstract contract OrganizationAccountTransactionBase is OrganizationModifiers, I
         bytes calldata reviewSignatures,
         ValidationProofs calldata proofs
     ) external override onlyGuardian {
-        uint256 nonce = _validateApprovalAndConsumeNonce(
-            account, to, value, data, salt, expirationTimestamp, policyId, initiatorSignature, reviewSignatures, proofs
-        );
+        uint256 nonce = _validateApprovalAndConsumeNonce({
+            account: account,
+            to: to,
+            value: value,
+            data: data,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            policyId: policyId,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: reviewSignatures,
+            proofs: proofs
+        });
 
         // Emit event before external call (CEI pattern) - if execution fails, transaction reverts
         emit AccountTransactionExecuted({
@@ -64,9 +73,18 @@ abstract contract OrganizationAccountTransactionBase is OrganizationModifiers, I
         bytes calldata reviewSignatures,
         ValidationProofs calldata proofs
     ) external override onlyGuardian {
-        uint256 nonce = _validateRejectionAndConsumeNonce(
-            account, to, value, data, salt, expirationTimestamp, policyId, initiatorSignature, reviewSignatures, proofs
-        );
+        uint256 nonce = _validateRejectionAndConsumeNonce({
+            account: account,
+            to: to,
+            value: value,
+            data: data,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            policyId: policyId,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: reviewSignatures,
+            proofs: proofs
+        });
 
         emit AccountTransactionRejected({
             account: account, to: to, value: value, data: data, nonce: nonce, policyId: policyId

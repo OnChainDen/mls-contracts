@@ -59,6 +59,8 @@ contract AccountImplementation is IAccount {
         returns (bytes4 magicValue)
     {
         address organization = LibAccountOrganizationAddressStorage.getOrganizationAddress();
+        // Intentional low-level staticcall to avoid bubbling organization reverts and to return ERC-1271 invalid value.
+        // slither-disable-next-line low-level-calls
         (bool success, bytes memory result) = organization.staticcall(
             abi.encodeCall(IOrganizationAccountSignature.isValidSignatureForAccount, (address(this), hash, signature))
         );

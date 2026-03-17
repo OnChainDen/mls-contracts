@@ -25,7 +25,7 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
     function test_getActualDestination_contractInteraction_returnsTo() public {
         // Setup: configure a valid fixture for contract interaction (non-token calldata) returns `to`.
         address to = address(0xD502);
-        bytes memory data = _encodeERC20Approve(address(0xAAAA), 123);
+        bytes memory data = _encodeErc20Approve(address(0xAAAA), 123);
 
         // Call: execute `getActualDestinationViaPolicyLibrary` with the happy-path payload.
         address actual = harness.getActualDestinationViaPolicyLibrary(to, data, 0);
@@ -38,7 +38,7 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
         // Setup: configure a valid fixture for ERC-20 transfer returns recipient extracted from calldata.
         address token = address(0xD503);
         address recipient = address(0xD5AA);
-        bytes memory data = _encodeERC20Transfer(recipient, 100);
+        bytes memory data = _encodeErc20Transfer(recipient, 100);
 
         // Call: execute `getActualDestinationViaPolicyLibrary` with the happy-path payload.
         address actual = harness.getActualDestinationViaPolicyLibrary(token, data, 0);
@@ -52,7 +52,7 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
         // Setup: configure a valid fixture for this behavior.
         address token = address(0xD504);
         address recipient = address(0xD5AB);
-        bytes memory data = _encodeERC20Transfer(recipient, 100);
+        bytes memory data = _encodeErc20Transfer(recipient, 100);
 
         // Call: execute `getActualDestinationViaPolicyLibrary` with the happy-path payload.
         address actual = harness.getActualDestinationViaPolicyLibrary(token, data, 1);
@@ -157,7 +157,7 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
         (bytes32 root, bytes32[] memory proof) = _buildAddressRootAndProof(allowedDestinations, 0);
 
         Policy memory policy = _customDestinationPolicy(root);
-        bytes memory data = _encodeERC20Transfer(recipient, 5);
+        bytes memory data = _encodeErc20Transfer(recipient, 5);
 
         // Call: execute `isDestinationAllowedByPolicyViaPolicyLibrary` with the happy-path payload.
         bool allowed = harness.isDestinationAllowedByPolicyViaPolicyLibrary(policy, token, 0, data, proof);
@@ -173,7 +173,7 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
         (bytes32 root, bytes32[] memory proof) = _buildAddressRootAndProof(allowedDestinations, 0);
 
         Policy memory policy = _customDestinationPolicy(root);
-        bytes memory data = _encodeERC20Approve(address(0xBBBB), 7);
+        bytes memory data = _encodeErc20Approve(address(0xBBBB), 7);
 
         // Call: execute `isDestinationAllowedByPolicyViaPolicyLibrary` with the happy-path payload.
         bool allowed = harness.isDestinationAllowedByPolicyViaPolicyLibrary(policy, target, 0, data, proof);
@@ -273,7 +273,7 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
         (bytes32 root, bytes32[] memory proofForRecipient) = _buildAddressRootAndProof(allowedDestinations, 0);
 
         Policy memory policy = _customDestinationPolicy(root);
-        bytes memory transferData = _encodeERC20Transfer(recipient, 1);
+        bytes memory transferData = _encodeErc20Transfer(recipient, 1);
 
         // Call: execute `isDestinationAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool allowed =
@@ -292,7 +292,7 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
         (bytes32 root, bytes32[] memory proofForSpender) = _buildAddressRootAndProof(allowedDestinations, 0);
 
         Policy memory policy = _customDestinationPolicy(root);
-        bytes memory approveData = _encodeERC20Approve(spender, 10);
+        bytes memory approveData = _encodeErc20Approve(spender, 10);
 
         // Call: execute `isDestinationAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool allowed =
@@ -312,7 +312,7 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
         (bytes32 root, bytes32[] memory proofForEncodedValue) = _buildAddressRootAndProof(allowedDestinations, 0);
 
         Policy memory policy = _customDestinationPolicy(root);
-        bytes memory transferFromData = _encodeERC20TransferFrom(encodedFrom, encodedTo, 1);
+        bytes memory transferFromData = _encodeErc20TransferFrom(encodedFrom, encodedTo, 1);
 
         // Call: execute `isDestinationAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.isDestinationAllowedByPolicyViaPolicyLibrary(

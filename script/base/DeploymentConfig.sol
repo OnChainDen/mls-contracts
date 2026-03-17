@@ -30,6 +30,8 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
     /// @return The cached TOML content
     function _toml() internal returns (string memory) {
         if (bytes(_tomlContent).length == 0) {
+            // Intentionally read local deployment configuration from disk for script execution.
+            // forge-lint: disable-next-line(unsafe-cheatcode)
             _tomlContent = vm.readFile("deployment.toml");
         }
         return _tomlContent;
@@ -274,7 +276,7 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
 
     /// @dev Returns the expected Guardian Executor EOA address based on current chain (prod vs nonprod)
     /// @return guardianExecutor Expected Guardian Executor EOA address for Guardian Safe module
-    function getExpectedGuardianExecutorEOAAddress() internal returns (address guardianExecutor) {
+    function getExpectedGuardianExecutorEoaAddress() internal returns (address guardianExecutor) {
         string memory toml = _toml();
         string memory env = _isProductionChain() ? "prod" : "nonprod";
         string memory key = string(abi.encodePacked(".safe.", env, ".guardian_executor_eoa"));

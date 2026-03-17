@@ -26,7 +26,7 @@ contract LibPolicyTokenTransferFuzzTest is PolicyLibrariesFuzzTestBase {
         policy.config.token.hasAmountThreshold = true;
         policy.config.token.amountThreshold = threshold;
 
-        bytes memory data = useNativeTransfer ? bytes("") : _encodeERC20Transfer(recipient, threshold);
+        bytes memory data = useNativeTransfer ? bytes("") : _encodeErc20Transfer(recipient, threshold);
         uint256 value = useNativeTransfer ? threshold : 0;
 
         // Call: evaluate the exact-threshold transfer amount.

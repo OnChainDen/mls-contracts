@@ -605,7 +605,7 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         uint256 expirationTimestamp = block.timestamp + 1 hours;
         bytes32 operationHash =
             organization.getAdminOperationHash(operationType, operationData, salt, expirationTimestamp, true);
-        bytes memory signatures = _buildSortedEOASignatures(operationHash, buildUint256Array(ADMIN_PK_1));
+        bytes memory signatures = _buildSortedEoaSignatures(operationHash, buildUint256Array(ADMIN_PK_1));
         auth = AdminAuthParams({salt: salt, expirationTimestamp: expirationTimestamp, signatures: signatures});
     }
 
@@ -636,7 +636,7 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
     /// @param operationHash Operation hash signed by each test admin key.
     /// @param privateKeys Private keys used to produce EOA signatures.
     /// @return signatures Concatenated signatures sorted by signer address.
-    function _buildSortedEOASignatures(bytes32 operationHash, uint256[] memory privateKeys)
+    function _buildSortedEoaSignatures(bytes32 operationHash, uint256[] memory privateKeys)
         internal
         view
         returns (bytes memory signatures)

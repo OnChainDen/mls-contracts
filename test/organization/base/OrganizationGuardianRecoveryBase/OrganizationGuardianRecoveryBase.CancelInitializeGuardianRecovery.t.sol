@@ -197,7 +197,7 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
         harness.cancelInitializeGuardianRecovery(staleCancelAuth);
 
         bytes memory currentData = abi.encode(GUARDIAN_RECOVERY_ADDRESS_B, 3 days);
-        AdminAuthParams memory wrongOpTypeAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory wrongOpTypeAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.FinalizeInitializeGuardianRecovery,
             operationData: currentData,
             isApproval: true,

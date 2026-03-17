@@ -4,8 +4,6 @@ pragma solidity 0.8.33;
 
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
-import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
-
 import {
     LibOrganizationEIP712Harness
 } from "test/organization/libraries/LibOrganizationEIP712/LibOrganizationEIP712Harness.sol";
@@ -108,7 +106,7 @@ contract LibOrganizationEIP712FuzzTest is LibOrganizationEIP712TestBase {
         uint256 originalChainId = block.chainid;
         bytes32 expectedDomain = _manualDomainSeparator(address(harness), chainId);
         bytes32 expectedTypedDataHash = _manualTypedDataHash(address(harness), chainId, structHash);
-        bytes32 expectedOZ = MessageHashUtils.toTypedDataHash(expectedDomain, structHash);
+        bytes32 expectedOz = MessageHashUtils.toTypedDataHash(expectedDomain, structHash);
 
         // Call: compute the domain separator and typed-data hash at the fuzzed chain id.
         vm.chainId(chainId);
@@ -119,6 +117,6 @@ contract LibOrganizationEIP712FuzzTest is LibOrganizationEIP712TestBase {
         // Verify: helper outputs match independent manual and OpenZeppelin reference encoders.
         assertEq(actualDomain, expectedDomain, "domain separator should match independent reference");
         assertEq(actualTypedDataHash, expectedTypedDataHash, "typed-data hash should match manual prefix composition");
-        assertEq(actualTypedDataHash, expectedOZ, "typed-data hash should match OpenZeppelin reference");
+        assertEq(actualTypedDataHash, expectedOz, "typed-data hash should match OpenZeppelin reference");
     }
 }

@@ -24,7 +24,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         uint256 salt = 11;
         uint256 expiration = block.timestamp + 1 hours;
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -57,7 +57,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         uint256 salt = 12;
         uint256 expiration = block.timestamp;
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -126,7 +126,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         uint256 salt = 13;
         uint256 expiration = block.timestamp - 1;
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -187,7 +187,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         uint256 salt = 15;
         uint256 expiration = block.timestamp + 1 hours;
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -219,7 +219,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         uint256 salt = 16;
         uint256 expiration = block.timestamp + 1 hours;
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -251,7 +251,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         uint256 salt = 17;
         uint256 expiration = block.timestamp + 1 hours;
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -529,7 +529,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         uint256 salt = 25;
         uint256 expiration = block.timestamp + 1 hours;
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -620,7 +620,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         uint256 salt = 26;
         uint256 expiration = block.timestamp + 1 hours;
-        AdminAuthParams memory approvalAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory approvalAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -654,7 +654,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         uint256 salt = 27;
         uint256 expiration = block.timestamp + 1 hours;
-        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: false,
@@ -752,7 +752,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         uint256 salt = 30;
         uint256 expiration = block.timestamp + 1 hours;
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -789,7 +789,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         uint256 salt = 31;
         uint256 expiration = block.timestamp + 1 hours;
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -823,7 +823,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         uint256 salt = 32;
         uint256 expiration = block.timestamp + 1 hours;
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -865,7 +865,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         uint256 salt = 32_001;
         uint256 expiration = block.timestamp + 1 hours;
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -894,7 +894,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         // Setup: configure one-admin auth and precompute the nonce tied to an already-expired payload.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -930,7 +930,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         // Setup: require two admin signatures while signing the payload with only one admin key.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -987,12 +987,14 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         public
     {
         bytes memory signedOperationData = baseOperationData;
+        // casting string literal to bytes32 is safe because "mutated-operation" fits within 32 bytes
+        // forge-lint: disable-next-line(unsafe-typecast)
         bytes memory mutatedOperationData = abi.encode(bytes32("mutated-operation"), uint256(456));
         uint256 salt = 36;
 
         // Setup: sign the baseline payload, then call validation with different operation data under the same salt.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: signedOperationData,
             isApproval: true,
@@ -1033,7 +1035,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         // Setup: sign the payload for `ModifyAdmins`, then call validation under `ModifyMembers` with the same bytes
         // and salt.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -1187,7 +1189,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         // Setup: configure one-admin auth and build distinct approval/rejection signatures for the same operation
         // tuple.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
-        AdminAuthParams memory approvalAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory approvalAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -1195,7 +1197,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
             expirationTimestamp: expiration,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: false,
@@ -1235,7 +1237,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         // Setup: configure one-admin auth and sign the same payload bytes for two different admin operation domains.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
-        AdminAuthParams memory modifyAdminsAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory modifyAdminsAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -1243,7 +1245,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
             expirationTimestamp: expiration,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        AdminAuthParams memory modifyMembersAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory modifyMembersAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyMembers,
             operationData: baseOperationData,
             isApproval: true,
@@ -1283,7 +1285,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         // Setup: configure one-admin auth and sign the same operation tuple twice with different salts.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
-        AdminAuthParams memory authA = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory authA = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -1291,7 +1293,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
             expirationTimestamp: expiration,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        AdminAuthParams memory authB = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory authB = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,

@@ -191,7 +191,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     {
         // Setup: choose a deterministic struct hash and build independent manual references.
         bytes32 expectedManual = _manualTypedDataHash(address(harness), block.chainid, BASE_STRUCT_HASH);
-        bytes32 expectedOZ =
+        bytes32 expectedOz =
             MessageHashUtils.toTypedDataHash(_manualDomainSeparator(address(harness), block.chainid), BASE_STRUCT_HASH);
 
         // Call: compute the typed-data hash through the library wrapper.
@@ -199,7 +199,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
 
         // Verify: the helper matches both documented prefix composition and OpenZeppelin's reference helper.
         assertEq(actual, expectedManual, "typed-data hash should match documented prefix composition");
-        assertEq(actual, expectedOZ, "typed-data hash should match OpenZeppelin reference");
+        assertEq(actual, expectedOz, "typed-data hash should match OpenZeppelin reference");
     }
 
     /// @dev Verifies `LibOrganizationEIP712.computeTypedDataHash` changes when the struct hash changes.

@@ -60,7 +60,7 @@ abstract contract OrganizationUpgradesCrossFileSuiteBase is OrganizationImplemen
         builtOperationData = operationData;
         bytes32 operationHash = OrganizationAdminStateHarness(organization)
             .getAdminOperationHash(operationType, operationData, salt, expirationTimestamp, isApproval);
-        bytes memory signatures = _buildSortedEOASignatures(operationHash, privateKeys);
+        bytes memory signatures = _buildSortedEoaSignatures(operationHash, privateKeys);
         auth = AdminAuthParams({salt: salt, expirationTimestamp: expirationTimestamp, signatures: signatures});
     }
 }

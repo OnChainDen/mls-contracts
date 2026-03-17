@@ -101,7 +101,7 @@ abstract contract OrganizationTxRecoveryBaseSuiteBase is OrganizationAdminTestBa
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
         operationData = abi.encode(recoveryAddress, timelockDurationSeconds);
-        auth = _buildAdminAuthParamsForEOA({
+        auth = _buildAdminAuthParamsForEoa({
             operationType: operationType,
             operationData: operationData,
             isApproval: isApproval,

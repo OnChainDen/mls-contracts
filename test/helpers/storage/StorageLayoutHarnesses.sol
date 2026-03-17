@@ -476,7 +476,7 @@ contract TestBeacon is IBeacon {
  */
 contract StorageLayoutInvariantHandler {
     /// @dev Harness instance under invariant fuzzing.
-    StorageLayoutHarness public immutable harness;
+    StorageLayoutHarness public immutable HARNESS;
 
     /// @dev Tracked implementation key for whitelist mapping assertions.
     address public constant TRACKED_IMPLEMENTATION = address(0xA110CE);
@@ -618,7 +618,7 @@ contract StorageLayoutInvariantHandler {
      * @param harness_ Harness contract to mutate during invariant fuzzing.
      */
     constructor(StorageLayoutHarness harness_) {
-        harness = harness_;
+        HARNESS = harness_;
         _seedExpectedAndStorage();
     }
 
@@ -631,7 +631,7 @@ contract StorageLayoutInvariantHandler {
     function writeImplementationWhitelist(uint8 contractTypeRaw, address implementation, bool isWhitelisted) external {
         ContractType contractType = ContractType(contractTypeRaw % 2);
 
-        harness.setImplementationWhitelisted(contractType, implementation, isWhitelisted);
+        HARNESS.setImplementationWhitelisted(contractType, implementation, isWhitelisted);
 
         if (implementation == TRACKED_IMPLEMENTATION) {
             if (contractType == ContractType.Account) {
@@ -649,8 +649,8 @@ contract StorageLayoutInvariantHandler {
      * @param accountImplementation Account implementation scalar.
      */
     function writeAccountFactory(address account, bool isDeployed, address accountImplementation) external {
-        harness.setDeployedAccount(account, isDeployed);
-        harness.setAccountImplementation(accountImplementation);
+        HARNESS.setDeployedAccount(account, isDeployed);
+        HARNESS.setAccountImplementation(accountImplementation);
 
         if (account == TRACKED_ACCOUNT) {
             expectedTrackedAccountDeployed = isDeployed;
@@ -663,7 +663,7 @@ contract StorageLayoutInvariantHandler {
      * @param durationSeconds Timelock value.
      */
     function writeAdminOperationTimelock(uint256 durationSeconds) external {
-        harness.setAdminOperationTimelockDurationSeconds(durationSeconds);
+        HARNESS.setAdminOperationTimelockDurationSeconds(durationSeconds);
         expectedAdminOperationTimelockDurationSeconds = durationSeconds;
     }
 
@@ -675,9 +675,9 @@ contract StorageLayoutInvariantHandler {
      * @param votingThreshold Scalar votingThreshold value.
      */
     function writeAdmin(address admin, bool isAdminStatus, uint256 adminCount, uint256 votingThreshold) external {
-        harness.setAdminStatus(admin, isAdminStatus);
-        harness.setAdminCount(adminCount);
-        harness.setVotingThreshold(votingThreshold);
+        HARNESS.setAdminStatus(admin, isAdminStatus);
+        HARNESS.setAdminCount(adminCount);
+        HARNESS.setVotingThreshold(votingThreshold);
 
         if (admin == TRACKED_ADMIN) {
             expectedTrackedAdminStatus = isAdminStatus;
@@ -691,7 +691,7 @@ contract StorageLayoutInvariantHandler {
      * @param deployerAddress Deployer scalar value.
      */
     function writeDeployer(address deployerAddress) external {
-        harness.setDeployerAddress(deployerAddress);
+        HARNESS.setDeployerAddress(deployerAddress);
         expectedDeployerAddress = deployerAddress;
     }
 
@@ -706,9 +706,9 @@ contract StorageLayoutInvariantHandler {
     function writeGroups(uint256 groupId, address member, bool isGroupStatus, bool isGroupMemberStatus, bool wasDeleted)
         external
     {
-        harness.setGroupExists(groupId, isGroupStatus);
-        harness.setGroupMember(groupId, member, isGroupMemberStatus);
-        harness.setWasGroupDeleted(groupId, wasDeleted);
+        HARNESS.setGroupExists(groupId, isGroupStatus);
+        HARNESS.setGroupMember(groupId, member, isGroupMemberStatus);
+        HARNESS.setWasGroupDeleted(groupId, wasDeleted);
 
         if (groupId == TRACKED_GROUP_ID) {
             expectedTrackedGroupExists = isGroupStatus;
@@ -733,7 +733,7 @@ contract StorageLayoutInvariantHandler {
         address pendingGuardian,
         uint256 pendingGuardianUpdateTimestamp
     ) external {
-        harness.setGuardianState(guardian, isReady, pendingGuardian, pendingGuardianUpdateTimestamp);
+        HARNESS.setGuardianState(guardian, isReady, pendingGuardian, pendingGuardianUpdateTimestamp);
 
         expectedGuardian = guardian;
         expectedGuardianReadyForAcceptance = isReady;
@@ -747,7 +747,7 @@ contract StorageLayoutInvariantHandler {
      * @param isMemberStatus Member mapping value.
      */
     function writeMembers(address member, bool isMemberStatus) external {
-        harness.setMemberStatus(member, isMemberStatus);
+        HARNESS.setMemberStatus(member, isMemberStatus);
 
         if (member == TRACKED_MEMBER) {
             expectedTrackedMemberStatus = isMemberStatus;
@@ -762,8 +762,8 @@ contract StorageLayoutInvariantHandler {
      * @param usageAmount Usage mapping value.
      */
     function writePolicy(bytes32 policiesRoot, bytes32 usageKey, uint256 timeWindow, uint256 usageAmount) external {
-        harness.setPoliciesRoot(policiesRoot);
-        harness.setPolicyUsage(usageKey, timeWindow, usageAmount);
+        HARNESS.setPoliciesRoot(policiesRoot);
+        HARNESS.setPolicyUsage(usageKey, timeWindow, usageAmount);
 
         expectedPoliciesRoot = policiesRoot;
         if (usageKey == TRACKED_POLICY_USAGE_KEY && timeWindow == TRACKED_POLICY_WINDOW) {
@@ -777,7 +777,7 @@ contract StorageLayoutInvariantHandler {
      * @param isUsed Nonce mapping value.
      */
     function writeSignatures(uint256 nonce, bool isUsed) external {
-        harness.setUsedNonce(nonce, isUsed);
+        HARNESS.setUsedNonce(nonce, isUsed);
 
         if (nonce == TRACKED_NONCE) {
             expectedTrackedNonceUsed = isUsed;
@@ -790,7 +790,7 @@ contract StorageLayoutInvariantHandler {
      * @param authorizedUpgradeImplementation Authorized target scalar value.
      */
     function writeUpgrade(address whitelistAddress, address authorizedUpgradeImplementation) external {
-        harness.setUpgradeState(whitelistAddress, authorizedUpgradeImplementation);
+        HARNESS.setUpgradeState(whitelistAddress, authorizedUpgradeImplementation);
 
         expectedUpgradeWhitelistAddress = whitelistAddress;
         expectedAuthorizedUpgradeImplementation = authorizedUpgradeImplementation;
@@ -825,7 +825,7 @@ contract StorageLayoutInvariantHandler {
             )
         });
 
-        harness.setTxRecoveryState(txRecoveryState);
+        HARNESS.setTxRecoveryState(txRecoveryState);
 
         expectedTxRecoveryAddress = recoveryAddress;
         expectedTxRecoveryEnabled = isEnabled;
@@ -868,7 +868,7 @@ contract StorageLayoutInvariantHandler {
             )
         });
 
-        harness.setGuardianRecoveryState(guardianRecoveryState);
+        HARNESS.setGuardianRecoveryState(guardianRecoveryState);
 
         expectedGuardianRecoveryAddress = recoveryAddress;
         expectedGuardianRecoveryReadyForAcceptance = isUpdateReadyForAcceptance;
@@ -924,40 +924,40 @@ contract StorageLayoutInvariantHandler {
         expectedGuardianPendingInitTimelockDurationSeconds = 8 days;
         expectedGuardianPendingInitTimestamp = 999_111;
 
-        harness.setImplementationWhitelisted(ContractType.Account, TRACKED_IMPLEMENTATION, expectedWhitelistAccount);
-        harness.setImplementationWhitelisted(
+        HARNESS.setImplementationWhitelisted(ContractType.Account, TRACKED_IMPLEMENTATION, expectedWhitelistAccount);
+        HARNESS.setImplementationWhitelisted(
             ContractType.Organization, TRACKED_IMPLEMENTATION, expectedWhitelistOrganization
         );
 
-        harness.setDeployedAccount(TRACKED_ACCOUNT, expectedTrackedAccountDeployed);
-        harness.setAccountImplementation(expectedAccountImplementation);
+        HARNESS.setDeployedAccount(TRACKED_ACCOUNT, expectedTrackedAccountDeployed);
+        HARNESS.setAccountImplementation(expectedAccountImplementation);
 
-        harness.setAdminOperationTimelockDurationSeconds(expectedAdminOperationTimelockDurationSeconds);
-        harness.setAdminStatus(TRACKED_ADMIN, expectedTrackedAdminStatus);
-        harness.setAdminCount(expectedAdminCount);
-        harness.setVotingThreshold(expectedVotingThreshold);
+        HARNESS.setAdminOperationTimelockDurationSeconds(expectedAdminOperationTimelockDurationSeconds);
+        HARNESS.setAdminStatus(TRACKED_ADMIN, expectedTrackedAdminStatus);
+        HARNESS.setAdminCount(expectedAdminCount);
+        HARNESS.setVotingThreshold(expectedVotingThreshold);
 
-        harness.setDeployerAddress(expectedDeployerAddress);
+        HARNESS.setDeployerAddress(expectedDeployerAddress);
 
-        harness.setGroupExists(TRACKED_GROUP_ID, expectedTrackedGroupExists);
-        harness.setGroupMember(TRACKED_GROUP_ID, TRACKED_MEMBER, expectedTrackedGroupMember);
-        harness.setWasGroupDeleted(TRACKED_GROUP_ID, expectedTrackedGroupWasDeleted);
+        HARNESS.setGroupExists(TRACKED_GROUP_ID, expectedTrackedGroupExists);
+        HARNESS.setGroupMember(TRACKED_GROUP_ID, TRACKED_MEMBER, expectedTrackedGroupMember);
+        HARNESS.setWasGroupDeleted(TRACKED_GROUP_ID, expectedTrackedGroupWasDeleted);
 
-        harness.setGuardianState(
+        HARNESS.setGuardianState(
             expectedGuardian,
             expectedGuardianReadyForAcceptance,
             expectedPendingGuardian,
             expectedPendingGuardianUpdateTimestamp
         );
 
-        harness.setMemberStatus(TRACKED_MEMBER, expectedTrackedMemberStatus);
+        HARNESS.setMemberStatus(TRACKED_MEMBER, expectedTrackedMemberStatus);
 
-        harness.setPoliciesRoot(expectedPoliciesRoot);
-        harness.setPolicyUsage(TRACKED_POLICY_USAGE_KEY, TRACKED_POLICY_WINDOW, expectedTrackedPolicyUsage);
+        HARNESS.setPoliciesRoot(expectedPoliciesRoot);
+        HARNESS.setPolicyUsage(TRACKED_POLICY_USAGE_KEY, TRACKED_POLICY_WINDOW, expectedTrackedPolicyUsage);
 
-        harness.setUsedNonce(TRACKED_NONCE, expectedTrackedNonceUsed);
+        HARNESS.setUsedNonce(TRACKED_NONCE, expectedTrackedNonceUsed);
 
-        harness.setUpgradeState(expectedUpgradeWhitelistAddress, expectedAuthorizedUpgradeImplementation);
+        HARNESS.setUpgradeState(expectedUpgradeWhitelistAddress, expectedAuthorizedUpgradeImplementation);
 
         TxRecoveryState memory txRecoveryState = TxRecoveryState({
             recoveryAddress: expectedTxRecoveryAddress,
@@ -970,7 +970,7 @@ contract StorageLayoutInvariantHandler {
                 expectedTxPendingInitTimestamp
             )
         });
-        harness.setTxRecoveryState(txRecoveryState);
+        HARNESS.setTxRecoveryState(txRecoveryState);
 
         GuardianRecoveryState memory guardianRecoveryState = GuardianRecoveryState({
             recoveryAddress: expectedGuardianRecoveryAddress,
@@ -984,7 +984,7 @@ contract StorageLayoutInvariantHandler {
                 expectedGuardianPendingInitTimestamp
             )
         });
-        harness.setGuardianRecoveryState(guardianRecoveryState);
+        HARNESS.setGuardianRecoveryState(guardianRecoveryState);
     }
 
     /**

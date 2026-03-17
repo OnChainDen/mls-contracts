@@ -13,14 +13,14 @@ import {ContractType} from "types/CommonTypes.sol";
  */
 contract LibOrganizationAccountFactoryInvariantHandler {
     /// @dev Target harness under invariant fuzzing.
-    LibOrganizationAccountFactoryHarness public immutable harness;
+    LibOrganizationAccountFactoryHarness public immutable HARNESS;
 
     /// @dev Whitelist mock used to toggle implementation authorization.
-    ImplementationWhitelistMock public immutable whitelist;
+    ImplementationWhitelistMock public immutable WHITELIST;
 
     /// @dev Two valid implementation candidates (both with runtime code).
-    address public immutable implementationA;
-    address public immutable implementationB;
+    address public immutable IMPLEMENTATION_A;
+    address public immutable IMPLEMENTATION_B;
 
     /// @dev Tracks whether a successful implementation update happened while not whitelisted.
     bool public successfulSetWithoutWhitelist;
@@ -41,17 +41,17 @@ contract LibOrganizationAccountFactoryInvariantHandler {
         address implementationA_,
         address implementationB_
     ) {
-        harness = harness_;
-        whitelist = whitelist_;
-        implementationA = implementationA_;
-        implementationB = implementationB_;
+        HARNESS = harness_;
+        WHITELIST = whitelist_;
+        IMPLEMENTATION_A = implementationA_;
+        IMPLEMENTATION_B = implementationB_;
     }
 
     /**
      * @dev Attempts account deployment for fuzzed salt.
      */
     function deployAccount(bytes32 salt) external {
-        try harness.deployAccountViaLibrary(salt) returns (address deployed) {
+        try HARNESS.deployAccountViaLibrary(salt) returns (address deployed) {
             if (!isTrackedDeployedAccount[deployed]) {
                 isTrackedDeployedAccount[deployed] = true;
                 trackedDeployedAccounts.push(deployed);
@@ -69,11 +69,11 @@ contract LibOrganizationAccountFactoryInvariantHandler {
      * @dev Attempts implementation update using a toggled whitelist status.
      */
     function setAccountImplementation(uint256 implementationSeed, bool whitelistImplementation) external {
-        address implementation = implementationSeed % 2 == 0 ? implementationA : implementationB;
+        address implementation = implementationSeed % 2 == 0 ? IMPLEMENTATION_A : IMPLEMENTATION_B;
 
-        whitelist.setImplementationWhitelisted(ContractType.Account, implementation, whitelistImplementation);
+        WHITELIST.setImplementationWhitelisted(ContractType.Account, implementation, whitelistImplementation);
 
-        try harness.setAccountImplementationViaLibrary(implementation) {
+        try HARNESS.setAccountImplementationViaLibrary(implementation) {
             if (!whitelistImplementation) {
                 successfulSetWithoutWhitelist = true;
             }
@@ -84,7 +84,7 @@ contract LibOrganizationAccountFactoryInvariantHandler {
      * @dev Observes deployment tracking for arbitrary addresses and records true states.
      */
     function observeDeploymentStatus(address account) external {
-        if (harness.isAccountDeployedByOrganizationViaLibrary(account) && !isTrackedObservedTrueAccount[account]) {
+        if (HARNESS.isAccountDeployedByOrganizationViaLibrary(account) && !isTrackedObservedTrueAccount[account]) {
             isTrackedObservedTrueAccount[account] = true;
             trackedObservedTrueAccounts.push(account);
         }

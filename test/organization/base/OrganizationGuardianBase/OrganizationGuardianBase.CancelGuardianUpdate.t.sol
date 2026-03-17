@@ -196,7 +196,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3906);
         bytes memory operationData = abi.encode(NEW_GUARDIAN_A);
         uint256 salt = 3008;
-        AdminAuthParams memory wrongAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory wrongAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.InitiateUpdateGuardian,
             operationData: operationData,
             isApproval: true,

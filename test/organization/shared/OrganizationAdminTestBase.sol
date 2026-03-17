@@ -107,7 +107,7 @@ abstract contract OrganizationAdminTestBase is Test, SignatureTestHelpers, Array
     /**
      * @dev Builds sorted packed EOA signatures for `operationHash`.
      */
-    function _buildSortedEOASignatures(bytes32 operationHash, uint256[] memory privateKeys)
+    function _buildSortedEoaSignatures(bytes32 operationHash, uint256[] memory privateKeys)
         internal
         view
         returns (bytes memory)
@@ -150,7 +150,7 @@ abstract contract OrganizationAdminTestBase is Test, SignatureTestHelpers, Array
     /**
      * @dev Builds auth params signed by EOA admins for a specific operation.
      */
-    function _buildAdminAuthParamsForEOA(
+    function _buildAdminAuthParamsForEoa(
         OperationType operationType,
         bytes memory operationData,
         bool isApproval,
@@ -166,7 +166,7 @@ abstract contract OrganizationAdminTestBase is Test, SignatureTestHelpers, Array
             expirationTimestamp: expirationTimestamp,
             isApproval: isApproval
         });
-        bytes memory signatures = _buildSortedEOASignatures(operationHash, privateKeys);
+        bytes memory signatures = _buildSortedEoaSignatures(operationHash, privateKeys);
         return AdminAuthParams({salt: salt, expirationTimestamp: expirationTimestamp, signatures: signatures});
     }
 

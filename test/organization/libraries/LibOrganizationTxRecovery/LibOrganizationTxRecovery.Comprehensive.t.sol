@@ -1032,8 +1032,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
             })
         );
 
-        bytes memory validEOA = _signHash(RECOVERY_PK, MESSAGE_HASH);
-        bytes memory wrongEOA = _signHash(OTHER_PK, MESSAGE_HASH);
+        bytes memory validEoa = _signHash(RECOVERY_PK, MESSAGE_HASH);
+        bytes memory wrongEoa = _signHash(OTHER_PK, MESSAGE_HASH);
         bytes memory malformedShort = hex"1b";
         bytes memory malformedLength = abi.encodePacked(uint8(27), bytes32(uint256(1)));
         bytes memory highS = _makeHighSSignature(RECOVERY_PK, MESSAGE_HASH);
@@ -1045,8 +1045,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         MockERC1271ShortReturnSigner shortReturnContract = new MockERC1271ShortReturnSigner();
 
         // Call
-        assertTrue(harness.isValidRecoverySignature(MESSAGE_HASH, validEOA), "valid EOA signature should pass");
-        assertFalse(harness.isValidRecoverySignature(MESSAGE_HASH, wrongEOA), "wrong EOA signer should fail");
+        assertTrue(harness.isValidRecoverySignature(MESSAGE_HASH, validEoa), "valid EOA signature should pass");
+        assertFalse(harness.isValidRecoverySignature(MESSAGE_HASH, wrongEoa), "wrong EOA signer should fail");
         assertFalse(harness.isValidRecoverySignature(MESSAGE_HASH, malformedShort), "malformed short should fail");
         assertFalse(harness.isValidRecoverySignature(MESSAGE_HASH, malformedLength), "malformed length should fail");
         assertFalse(harness.isValidRecoverySignature(MESSAGE_HASH, highS), "high-s signature should fail");
@@ -1133,10 +1133,10 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         );
 
         assertFalse(
-            harness.isValidRecoverySignature(keccak256("different-hash"), validEOA),
+            harness.isValidRecoverySignature(keccak256("different-hash"), validEoa),
             "same signature over different hash should fail"
         );
-        bool disabledResult = harness.isValidRecoverySignature(MESSAGE_HASH, validEOA);
+        bool disabledResult = harness.isValidRecoverySignature(MESSAGE_HASH, validEoa);
 
         harness.setTxRecoveryState(
             TxRecoveryState({
@@ -1149,7 +1149,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 })
             })
         );
-        bool enabledResult = harness.isValidRecoverySignature(MESSAGE_HASH, validEOA);
+        bool enabledResult = harness.isValidRecoverySignature(MESSAGE_HASH, validEoa);
 
         // Verify
         assertEq(disabledResult, enabledResult, "isValidRecoverySignature should be independent of isEnabled state");
@@ -1701,8 +1701,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
     {
         // Setup: build valid EOA and ERC-1271 recovery signers plus wrong EOA and wrong contract signers for the
         // negative branches.
-        bytes memory validEOASignature = _signHash(RECOVERY_PK, MESSAGE_HASH);
-        bytes memory wrongEOASignature = _signHash(OTHER_PK, MESSAGE_HASH);
+        bytes memory validEoaSignature = _signHash(RECOVERY_PK, MESSAGE_HASH);
+        bytes memory wrongEoaSignature = _signHash(OTHER_PK, MESSAGE_HASH);
         MockERC1271ValidSigner validContract = new MockERC1271ValidSigner();
         bytes memory validContractSignature = _buildContractSignature(address(validContract), hex"CAFE");
         MockERC1271ValidSigner wrongContract = new MockERC1271ValidSigner();
@@ -1720,8 +1720,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 })
             })
         );
-        bool eoaFirst = harness.isValidRecoverySignature(MESSAGE_HASH, validEOASignature);
-        bool eoaWrong = harness.isValidRecoverySignature(MESSAGE_HASH, wrongEOASignature);
+        bool eoaFirst = harness.isValidRecoverySignature(MESSAGE_HASH, validEoaSignature);
+        bool eoaWrong = harness.isValidRecoverySignature(MESSAGE_HASH, wrongEoaSignature);
 
         harness.setTxRecoveryState(
             TxRecoveryState({
@@ -1734,7 +1734,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 })
             })
         );
-        bool eoaSecond = harness.isValidRecoverySignature(MESSAGE_HASH, validEOASignature);
+        bool eoaSecond = harness.isValidRecoverySignature(MESSAGE_HASH, validEoaSignature);
 
         // Call: validate the ERC-1271 path with both enabled states.
         harness.setTxRecoveryState(

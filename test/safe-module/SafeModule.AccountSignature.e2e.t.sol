@@ -30,14 +30,14 @@ contract AccountSignatureOrganizationBeacon is
     IBeacon,
     IOrganizationAccountSignature
 {
-    address internal immutable beaconImplementation;
+    address internal immutable BEACON_IMPLEMENTATION;
 
     /**
      * @dev Stores the account implementation returned from `implementation()`.
      * @param initialImplementation Account implementation used by the `BeaconProxy`.
      */
     constructor(address initialImplementation) {
-        beaconImplementation = initialImplementation;
+        BEACON_IMPLEMENTATION = initialImplementation;
     }
 
     /**
@@ -45,7 +45,7 @@ contract AccountSignatureOrganizationBeacon is
      * @return implementationAddress Account implementation address for the `BeaconProxy`.
      */
     function implementation() external view returns (address implementationAddress) {
-        implementationAddress = beaconImplementation;
+        implementationAddress = BEACON_IMPLEMENTATION;
     }
 
     /**

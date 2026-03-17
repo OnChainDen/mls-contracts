@@ -5,7 +5,7 @@ pragma solidity 0.8.33;
 import {
     LibPolicyParameterConstraintsSuiteBase
 } from "test/organization/libraries/policy/LibPolicyParameterConstraints/LibPolicyParameterConstraintsSuiteBase.sol";
-import {ConstraintType, ParamType, ParameterConstraint} from "types/PolicyTypes.sol";
+import {ConstraintType} from "types/PolicyTypes.sol";
 
 /**
  * @dev Section 8.6 tests for `_isIntParameterAllowedByConstraint`.

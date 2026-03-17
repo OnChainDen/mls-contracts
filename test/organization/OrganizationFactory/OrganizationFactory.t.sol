@@ -132,6 +132,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         InitializationParams memory params = _defaultInitializationParams();
         params.members = new address[](10_000);
         for (uint256 i = 0; i < params.members.length; ++i) {
+            // casting to uint160 is safe because 0x10000 + i stays well within uint160 range
+            // forge-lint: disable-next-line(unsafe-typecast)
             params.members[i] = address(uint160(0x10000 + i));
         }
         params.admins = buildArray(params.members[0]);

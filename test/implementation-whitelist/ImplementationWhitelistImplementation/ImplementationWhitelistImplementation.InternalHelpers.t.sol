@@ -4,9 +4,6 @@ pragma solidity 0.8.33;
 
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {
-    ImplementationWhitelistHarness
-} from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistHarnesses.sol";
-import {
     ImplementationWhitelistSuiteBase
 } from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistSuiteBase.sol";
 import {ContractType} from "types/CommonTypes.sol";

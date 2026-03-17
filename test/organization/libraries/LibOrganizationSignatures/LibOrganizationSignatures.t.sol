@@ -79,6 +79,8 @@ contract LibOrganizationSignaturesTest is Test {
         // Setup: fill a large payload so hashing covers a non-trivial calldata size.
         bytes memory largeOperationData = new bytes(4096);
         for (uint256 i = 0; i < largeOperationData.length; i++) {
+            // casting to uint8 is safe because truncation is intentional for byte-filling test data
+            // forge-lint: disable-next-line(unsafe-typecast)
             largeOperationData[i] = bytes1(uint8(i));
         }
 

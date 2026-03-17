@@ -55,7 +55,7 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
-            3001, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+            3001, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 10), initiator1, proofs
         );
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "invalid policy proof must fail closed");
@@ -84,7 +84,7 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
-            3002, SOURCE_ACCOUNT_2, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+            3002, SOURCE_ACCOUNT_2, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 10), initiator1, proofs
         );
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "source mismatch should fail");
@@ -110,7 +110,7 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
-            3003, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator2, proofs
+            3003, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 10), initiator2, proofs
         );
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "unauthorized initiator should fail");
@@ -165,18 +165,18 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
         // Call: run `isTransactionAllowedByPolicyViaLibrary` across the prepared variants.
         bool validAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
-            3005, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+            3005, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 10), initiator1, proofs
         );
         // Verify: assert each variant returns the expected branch outcome.
         assertTrue(validAllowed, "matching token/destination should be allowed");
 
         bool wrongToken = harness.isTransactionAllowedByPolicyViaLibrary(
-            3005, SOURCE_ACCOUNT, address(0xBAD), 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+            3005, SOURCE_ACCOUNT, address(0xBAD), 0, _encodeErc20Transfer(RECIPIENT, 10), initiator1, proofs
         );
         assertFalse(wrongToken, "disallowed token contract should fail");
 
         bool wrongDestination = harness.isTransactionAllowedByPolicyViaLibrary(
-            3005, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(OTHER_RECIPIENT, 10), initiator1, proofs
+            3005, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(OTHER_RECIPIENT, 10), initiator1, proofs
         );
         assertFalse(wrongDestination, "disallowed recipient should fail");
     }
@@ -202,13 +202,13 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` for equal-threshold and above-threshold transfers.
         bool equalThresholdAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
-            3015, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+            3015, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 10), initiator1, proofs
         );
         bool belowThresholdAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
-            3015, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 9), initiator1, proofs
+            3015, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 9), initiator1, proofs
         );
         bool aboveThresholdAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
-            3015, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 11), initiator1, proofs
+            3015, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 11), initiator1, proofs
         );
 
         // Verify: equality is allowed while transfers above threshold fail closed in the top-level policy path.
@@ -269,7 +269,7 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         assertTrue(validAllowed, "valid contract interaction should pass");
 
         bool tokenTransferInput = harness.isTransactionAllowedByPolicyViaLibrary(
-            3006, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+            3006, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 10), initiator1, proofs
         );
         assertFalse(tokenTransferInput, "token-transfer input should fail contract-interaction policy");
 
@@ -423,13 +423,13 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         );
         assertFalse(
             harness.isTransactionAllowedByPolicyViaLibrary(
-                3011, SOURCE_ACCOUNT, TOKEN_CONTRACT, 1, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+                3011, SOURCE_ACCOUNT, TOKEN_CONTRACT, 1, _encodeErc20Transfer(RECIPIENT, 10), initiator1, proofs
             ),
             "erc20-like calldata with non-zero top-level value should fail token-transfer branch"
         );
         assertFalse(
             harness.isTransactionAllowedByPolicyViaLibrary(
-                3011, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Approve(RECIPIENT, 10), initiator1, proofs
+                3011, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Approve(RECIPIENT, 10), initiator1, proofs
             ),
             "approve selector should fail token-transfer branch"
         );
@@ -439,7 +439,7 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
                 SOURCE_ACCOUNT,
                 TOKEN_CONTRACT,
                 0,
-                _encodeERC20TransferFrom(SOURCE_ACCOUNT, RECIPIENT, 10),
+                _encodeErc20TransferFrom(SOURCE_ACCOUNT, RECIPIENT, 10),
                 initiator1,
                 proofs
             ),
@@ -481,7 +481,7 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             constraints: ""
         });
 
-        bytes memory validTransfer = _encodeERC20Transfer(RECIPIENT, 10);
+        bytes memory validTransfer = _encodeErc20Transfer(RECIPIENT, 10);
         // Call: run `isTransactionAllowedByPolicyViaLibrary` across the prepared variants.
         bool first = harness.isTransactionAllowedByPolicyViaLibrary(
             3012, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, validTransfer, initiator1, proofs
@@ -494,7 +494,7 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         assertEq(first, second, "result should be deterministic");
 
         bool partialFailure = harness.isTransactionAllowedByPolicyViaLibrary(
-            3012, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(OTHER_RECIPIENT, 10), initiator1, proofs
+            3012, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(OTHER_RECIPIENT, 10), initiator1, proofs
         );
         assertFalse(partialFailure, "single failed sub-check must fail full validation");
     }
@@ -526,7 +526,7 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         });
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` with the happy-path payload.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
-            3013, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+            3013, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 10), initiator1, proofs
         );
         assertTrue(allowed, "single-leaf policy and destination trees should accept empty proofs");
     }

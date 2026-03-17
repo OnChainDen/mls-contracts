@@ -241,7 +241,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
 
         bytes memory operationData = _encodeOperationDataForSetAccountImplementation(accountImplementationV1);
 
-        AdminAuthParams memory wrongTypeAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory wrongTypeAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.DeployAccount,
             operationData: operationData,
             isApproval: true,

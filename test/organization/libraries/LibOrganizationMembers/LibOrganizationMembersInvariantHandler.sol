@@ -14,13 +14,13 @@ import {
  */
 contract LibOrganizationMembersInvariantHandler is ArrayBuilders, BitmaskHelpers {
     /// @dev Harness under test.
-    LibOrganizationMembersHarness public immutable harness;
+    LibOrganizationMembersHarness public immutable HARNESS;
 
     /// @dev Tracked addresses used by stateful mutation methods.
     address[] internal trackedAddresses;
 
     /// @dev Deterministic sentinel that should remain a non-member throughout stateful execution.
-    address public immutable sentinelNonMember;
+    address public immutable SENTINEL_NON_MEMBER;
 
     /// @dev Set to true if an idempotent add-existing probe reverts or mutates state unexpectedly.
     bool public addExistingViolation;
@@ -38,8 +38,8 @@ contract LibOrganizationMembersInvariantHandler is ArrayBuilders, BitmaskHelpers
         address member3_,
         address member4_
     ) {
-        harness = harness_;
-        sentinelNonMember = address(0xE4E4);
+        HARNESS = harness_;
+        SENTINEL_NON_MEMBER = address(0xE4E4);
 
         trackedAddresses.push(admin1_);
         trackedAddresses.push(admin2_);
@@ -47,15 +47,15 @@ contract LibOrganizationMembersInvariantHandler is ArrayBuilders, BitmaskHelpers
         trackedAddresses.push(member4_);
 
         // Baseline: two admins that are also members, plus one non-admin member candidate.
-        harness.setMemberStatus(admin1_, true);
-        harness.setMemberStatus(admin2_, true);
-        harness.setMemberStatus(member3_, true);
-        harness.setMemberStatus(member4_, false);
+        HARNESS.setMemberStatus(admin1_, true);
+        HARNESS.setMemberStatus(admin2_, true);
+        HARNESS.setMemberStatus(member3_, true);
+        HARNESS.setMemberStatus(member4_, false);
 
-        harness.setAdminStatus(admin1_, true);
-        harness.setAdminStatus(admin2_, true);
-        harness.setAdminCount(2);
-        harness.setVotingThreshold(1);
+        HARNESS.setAdminStatus(admin1_, true);
+        HARNESS.setAdminStatus(admin2_, true);
+        HARNESS.setAdminCount(2);
+        HARNESS.setVotingThreshold(1);
     }
 
     /**
@@ -83,7 +83,7 @@ contract LibOrganizationMembersInvariantHandler is ArrayBuilders, BitmaskHelpers
 
         // Use low-level call so expected reverts do not halt invariant exploration.
         (bool success,) =
-            address(harness).call(abi.encodeCall(harness.modifyMembersViaLibrary, (membersToAdd, membersToRemove)));
+            address(HARNESS).call(abi.encodeCall(HARNESS.modifyMembersViaLibrary, (membersToAdd, membersToRemove)));
         if (success) {
             // Intentionally no-op: handler absorbs revert/success to keep invariant exploration running.
         }
@@ -114,8 +114,8 @@ contract LibOrganizationMembersInvariantHandler is ArrayBuilders, BitmaskHelpers
 
         uint256 newVotingThreshold = thresholdSeed % 6;
         // Use low-level call so expected reverts do not halt invariant exploration.
-        (bool success,) = address(harness)
-            .call(abi.encodeCall(harness.modifyAdminsViaLibrary, (adminsToAdd, adminsToRemove, newVotingThreshold)));
+        (bool success,) = address(HARNESS)
+            .call(abi.encodeCall(HARNESS.modifyAdminsViaLibrary, (adminsToAdd, adminsToRemove, newVotingThreshold)));
         if (success) {
             // Intentionally no-op: handler absorbs revert/success to keep invariant exploration running.
         }
@@ -127,14 +127,14 @@ contract LibOrganizationMembersInvariantHandler is ArrayBuilders, BitmaskHelpers
     function exerciseIdempotentAddExisting() external {
         // admin1 is initialized as a member and member-removal guards prevent demotion while admin.
         address existingMember = trackedAddresses[0];
-        bool beforeIsMember = harness.isMember(existingMember);
+        bool beforeIsMember = HARNESS.isMember(existingMember);
         if (!beforeIsMember) return;
 
-        (bool success,) = address(harness)
+        (bool success,) = address(HARNESS)
             .call(
-                abi.encodeCall(harness.modifyMembersViaLibrary, (buildArray(existingMember), buildEmptyAddressArray()))
+                abi.encodeCall(HARNESS.modifyMembersViaLibrary, (buildArray(existingMember), buildEmptyAddressArray()))
             );
-        bool afterIsMember = harness.isMember(existingMember);
+        bool afterIsMember = HARNESS.isMember(existingMember);
 
         if (!success || beforeIsMember != afterIsMember) {
             addExistingViolation = true;
@@ -145,15 +145,15 @@ contract LibOrganizationMembersInvariantHandler is ArrayBuilders, BitmaskHelpers
      * @dev Probe operation: remove a deterministic non-member and record any violation.
      */
     function exerciseIdempotentRemoveNonMember() external {
-        bool beforeIsMember = harness.isMember(sentinelNonMember);
+        bool beforeIsMember = HARNESS.isMember(SENTINEL_NON_MEMBER);
 
-        (bool success,) = address(harness)
+        (bool success,) = address(HARNESS)
             .call(
                 abi.encodeCall(
-                    harness.modifyMembersViaLibrary, (buildEmptyAddressArray(), buildArray(sentinelNonMember))
+                    HARNESS.modifyMembersViaLibrary, (buildEmptyAddressArray(), buildArray(SENTINEL_NON_MEMBER))
                 )
             );
-        bool afterIsMember = harness.isMember(sentinelNonMember);
+        bool afterIsMember = HARNESS.isMember(SENTINEL_NON_MEMBER);
 
         if (!success || beforeIsMember != afterIsMember) {
             removeNonMemberViolation = true;

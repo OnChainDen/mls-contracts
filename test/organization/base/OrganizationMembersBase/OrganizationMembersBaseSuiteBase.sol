@@ -40,7 +40,7 @@ abstract contract OrganizationMembersBaseSuiteBase is OrganizationAdminTestBase 
         // OrganizationMembersBase signs hashes of arrays, not raw arrays directly.
         operationData = _encodeOperationDataForModifyMembers(membersToAdd, membersToRemove);
         // Build signatures against the exact base-contract payload encoding.
-        auth = _buildAdminAuthParamsForEOA({
+        auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyMembers,
             operationData: operationData,
             isApproval: isApproval,
@@ -65,7 +65,7 @@ abstract contract OrganizationMembersBaseSuiteBase is OrganizationAdminTestBase 
         // OrganizationAdminBase signs hashes of arrays + threshold, not raw arrays directly.
         operationData = _encodeOperationDataForModifyAdmins(adminsToAdd, adminsToRemove, newVotingThreshold);
         // Build signatures against the exact base-contract payload encoding.
-        auth = _buildAdminAuthParamsForEOA({
+        auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             isApproval: isApproval,

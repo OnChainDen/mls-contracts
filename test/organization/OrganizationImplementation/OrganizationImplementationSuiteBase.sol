@@ -144,7 +144,7 @@ abstract contract OrganizationImplementationSuiteBase is OrganizationAdminTestBa
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
         operationData = _encodeOperationDataForUpgrade(newImplementation, migrationData);
-        auth = _buildAdminAuthParamsForEOA({
+        auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.Upgrade,
             operationData: operationData,
             isApproval: isApproval,

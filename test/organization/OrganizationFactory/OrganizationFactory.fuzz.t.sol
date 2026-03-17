@@ -3,12 +3,10 @@
 pragma solidity 0.8.33;
 
 import {IOrganization} from "interfaces/IOrganization.sol";
-import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
 import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {TimelockUtils} from "libraries/TimelockUtils.sol";
-import {OrganizationFactoryHarness} from "test/organization/OrganizationFactory/OrganizationFactoryHarnesses.sol";
 import {
     InitializationSuiteBase
 } from "test/organization/base/OrganizationInitializationBase/OrganizationInitializationBaseSuiteBase.sol";

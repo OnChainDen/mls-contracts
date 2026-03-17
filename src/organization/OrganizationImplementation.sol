@@ -151,7 +151,9 @@ contract OrganizationImplementation is
      * @param newImplementation The new implementation address whose authorization is being checked.
      */
     function _authorizeUpgrade(address newImplementation) internal view override {
-        address authorizedUpgradeImplementation = LibOrganizationUpgradeStorage.layout().authorizedUpgradeImplementation;
+        // forgefmt: disable-next-item
+        address authorizedUpgradeImplementation =
+            LibOrganizationUpgradeStorage.layout().authorizedUpgradeImplementation;
         // Check that a target has been authorized and that the authorized target matches this UUPS hook call.
         if (authorizedUpgradeImplementation == address(0) || authorizedUpgradeImplementation != newImplementation) {
             revert UnauthorizedUpgrade();

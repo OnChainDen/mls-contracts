@@ -350,7 +350,7 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
         returns (AdminAuthParams memory auth, bytes memory operationData)
     {
         operationData = _encodeOperationDataForModifyMembers(membersToAdd, membersToRemove);
-        auth = _buildAdminAuthParamsForEOA({
+        auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyMembers,
             operationData: operationData,
             isApproval: true,

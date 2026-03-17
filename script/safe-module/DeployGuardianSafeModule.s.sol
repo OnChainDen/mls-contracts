@@ -140,7 +140,7 @@ contract DeployGuardianSafeModule is BaseDeployScript {
     /// @dev Validates that the provided executor address matches the expected Guardian executor address
     /// @param executorAddress The executor address to validate
     function _validateExecutorAddressOrRevert(address executorAddress) internal {
-        address expectedGuardian = getExpectedGuardianExecutorEOAAddress();
+        address expectedGuardian = getExpectedGuardianExecutorEoaAddress();
         require(
             executorAddress == expectedGuardian,
             "Invalid executor address - must match Guardian executor in deployment.toml"

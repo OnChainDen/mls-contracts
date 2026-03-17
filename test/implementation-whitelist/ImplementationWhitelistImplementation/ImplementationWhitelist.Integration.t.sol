@@ -5,10 +5,6 @@ pragma solidity 0.8.33;
 import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgradeable.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {
-    ImplementationWhitelistHarness,
-    ImplementationWhitelistV2Harness
-} from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistHarnesses.sol";
-import {
     ImplementationWhitelistSuiteBase
 } from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistSuiteBase.sol";
 import {ContractType} from "types/CommonTypes.sol";

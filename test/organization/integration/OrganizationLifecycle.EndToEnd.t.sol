@@ -440,7 +440,11 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
             abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardian.selector, NON_GUARDIAN, GUARDIAN)
         );
         vm.prank(NON_GUARDIAN);
-        organization.setPolicies(bytes32(uint256(1)), "ipfs://unauthorized", AdminAuthParams(0, 0, bytes("")));
+        organization.setPolicies(
+            bytes32(uint256(1)),
+            "ipfs://unauthorized",
+            AdminAuthParams({salt: 0, expirationTimestamp: 0, signatures: bytes("")})
+        );
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -1209,7 +1213,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         uint256 expirationTimestamp = block.timestamp + 30 days;
         bytes32 operationHash =
             organization.getAdminOperationHash(operationType, operationData, salt, expirationTimestamp, isApproval);
-        bytes memory signatures = _buildSortedEOASignatures(operationHash, _singlePrivateKeyArray(ADMIN_PK_1));
+        bytes memory signatures = _buildSortedEoaSignatures(operationHash, _singlePrivateKeyArray(ADMIN_PK_1));
         auth = AdminAuthParams({salt: salt, expirationTimestamp: expirationTimestamp, signatures: signatures});
     }
 
@@ -1486,7 +1490,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
     /// @param operationHash Hash signed by each admin.
     /// @param privateKeys Admin private keys used to sign `operationHash`.
     /// @return signatures Concatenated canonical signatures.
-    function _buildSortedEOASignatures(bytes32 operationHash, uint256[] memory privateKeys)
+    function _buildSortedEoaSignatures(bytes32 operationHash, uint256[] memory privateKeys)
         internal
         view
         returns (bytes memory signatures)

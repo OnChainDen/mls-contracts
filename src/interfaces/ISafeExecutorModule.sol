@@ -64,12 +64,14 @@ interface ISafeExecutorModule is IERC1271 {
      * @notice Returns the Safe this module is authorized to execute transactions for
      * @return The Safe address
      */
+    // solhint-disable-next-line func-name-mixedcase
     function SAFE() external view returns (address);
 
     /**
      * @notice Returns the EOA authorized to execute transactions via this module
      * @return The authorized executor address
      */
+    // solhint-disable-next-line func-name-mixedcase
     function AUTHORIZED_EXECUTOR() external view returns (address);
 
     /**
@@ -77,5 +79,6 @@ interface ISafeExecutorModule is IERC1271 {
      * @dev This is the only address that can be called via delegatecall
      * @return The BatchedTransaction address
      */
+    // solhint-disable-next-line func-name-mixedcase
     function BATCHED_TRANSACTION() external view returns (address);
 }

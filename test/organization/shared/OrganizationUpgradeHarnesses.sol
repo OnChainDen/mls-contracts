@@ -226,6 +226,7 @@ contract OrganizationImplementationNonUUPS {}
  * @dev UUPS implementation returning an incompatible UUID.
  */
 contract OrganizationImplementationWrongUUID is UUPSUpgradeable {
+    // forge-lint: disable-next-line(mixed-case-function)
     function proxiableUUID() public pure override returns (bytes32) {
         return bytes32(uint256(123));
     }
@@ -249,14 +250,14 @@ contract ValidationOrderWhitelistMock {
     error AuthorizedTargetSetBeforeValidation(address authorizedTarget);
     error ValidationRevertedBeforeFlagSet();
 
-    OrganizationImplementationHarness internal immutable organization;
+    OrganizationImplementationHarness internal immutable ORGANIZATION;
 
     constructor(OrganizationImplementationHarness organization_) {
-        organization = organization_;
+        ORGANIZATION = organization_;
     }
 
     function validateIsImplementationWhitelistedOrRevert(ContractType, address) external view {
-        (, address authorizedTarget) = organization.getUpgradeState();
+        (, address authorizedTarget) = ORGANIZATION.getUpgradeState();
         if (authorizedTarget != address(0)) {
             revert AuthorizedTargetSetBeforeValidation(authorizedTarget);
         }

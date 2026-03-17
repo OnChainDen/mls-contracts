@@ -88,7 +88,7 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
         accountTransactionRejectAuth = AdminAuthParams({
             salt: 5101,
             expirationTimestamp: expiration,
-            signatures: _buildSortedEOASignatures(accountTransactionRejectHash, buildUint256Array(ADMIN_PK_1))
+            signatures: _buildSortedEoaSignatures(accountTransactionRejectHash, buildUint256Array(ADMIN_PK_1))
         });
         accountTransactionRejectNonce =
             rejectHarness.computeNonce(OperationType.AccountTransaction, rejectOperationData, 5101);
@@ -103,7 +103,7 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
         accountTransactionRejectionRejectAuth = AdminAuthParams({
             salt: 5102,
             expirationTimestamp: expiration,
-            signatures: _buildSortedEOASignatures(accountTransactionRejectionRejectHash, buildUint256Array(ADMIN_PK_1))
+            signatures: _buildSortedEoaSignatures(accountTransactionRejectionRejectHash, buildUint256Array(ADMIN_PK_1))
         });
         accountTransactionRejectionRejectNonce =
             rejectHarness.computeNonce(OperationType.AccountTransactionRejection, rejectOperationData, 5102);

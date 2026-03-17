@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
 
 import {
@@ -310,7 +309,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
-        bytes memory data = _encodeERC20Transfer(RECIPIENT, 101);
+        bytes memory data = _encodeErc20Transfer(RECIPIENT, 101);
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 7, expiration, true);
 
@@ -334,7 +333,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
-        bytes memory data = _encodeERC20Transfer(RECIPIENT, 42);
+        bytes memory data = _encodeErc20Transfer(RECIPIENT, 42);
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 8, expiration, true);
 
@@ -405,7 +404,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
-        bytes memory data = _encodeERC20Transfer(RECIPIENT, 11);
+        bytes memory data = _encodeErc20Transfer(RECIPIENT, 11);
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 10, expiration, true);
 
@@ -432,7 +431,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
-        bytes memory data = _encodeERC20Transfer(RECIPIENT, 600);
+        bytes memory data = _encodeErc20Transfer(RECIPIENT, 600);
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 40, expiration, true);
 
@@ -446,7 +445,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         policy.config.rateLimit.timeIntervalLimit = 400;
         ValidationProofs memory loweredProofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
-        bytes memory secondData = _encodeERC20Transfer(RECIPIENT, 1);
+        bytes memory secondData = _encodeErc20Transfer(RECIPIENT, 1);
         bytes memory secondInitiatorSignature =
             _signDefaultInitiatorTx(harness, TOKEN, secondData, 41, expiration, true);
 
@@ -659,7 +658,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
-        bytes memory data = _encodeERC20Transfer(RECIPIENT, 500);
+        bytes memory data = _encodeErc20Transfer(RECIPIENT, 500);
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 15, expiration, true);
 
@@ -696,7 +695,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         // Call: execute a first successful transfer, then attempt a second transfer in the same window.
         {
-            bytes memory data = _encodeERC20Transfer(RECIPIENT, 0);
+            bytes memory data = _encodeErc20Transfer(RECIPIENT, 0);
             uint256 expiration = block.timestamp + 1 days;
             bytes memory firstInitiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 29, expiration, true);
             _validateApproval(harness, TOKEN, data, 29, expiration, firstInitiatorSignature, bytes(""), proofs);
@@ -706,7 +705,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         assertEq(policyStateHarness.getPolicyUsage(usageKey, window), 1, "first Any token transfer should consume one");
 
         {
-            bytes memory data = _encodeERC20Transfer(RECIPIENT, 0);
+            bytes memory data = _encodeErc20Transfer(RECIPIENT, 0);
             uint256 expiration = block.timestamp + 1 days;
             bytes memory secondInitiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 30, expiration, true);
 
@@ -1223,7 +1222,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
             policy.config.rateLimit.timeIntervalLimit = 1;
             ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
-            bytes memory data = _encodeERC20Transfer(RECIPIENT, 1000);
+            bytes memory data = _encodeErc20Transfer(RECIPIENT, 1000);
             uint256 expiration = block.timestamp + 1 days;
             bytes memory initiatorSignature = _signInitiatorTx({
                 txHarness: harness,
@@ -1463,7 +1462,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
-        bytes memory data = _encodeERC20Transfer(RECIPIENT, 10);
+        bytes memory data = _encodeErc20Transfer(RECIPIENT, 10);
         uint256 expiration = block.timestamp + 2 days;
         bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 2001, expiration, true);
 
@@ -1487,7 +1486,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
-        bytes memory data = _encodeERC20Transfer(RECIPIENT, 42);
+        bytes memory data = _encodeErc20Transfer(RECIPIENT, 42);
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 2002, expiration, true);
 
@@ -1513,13 +1512,13 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
         // Exhaust budget in window 0
-        bytes memory data1 = _encodeERC20Transfer(RECIPIENT, 100);
+        bytes memory data1 = _encodeErc20Transfer(RECIPIENT, 100);
         uint256 expiration = block.timestamp + 2 days;
         bytes memory sig1 = _signDefaultInitiatorTx(harness, TOKEN, data1, 2003, expiration, true);
         _validateApproval(harness, TOKEN, data1, 2003, expiration, sig1, bytes(""), proofs);
 
         // Second tx in same window should revert
-        bytes memory data2 = _encodeERC20Transfer(RECIPIENT, 1);
+        bytes memory data2 = _encodeErc20Transfer(RECIPIENT, 1);
         bytes memory sig2 = _signDefaultInitiatorTx(harness, TOKEN, data2, 2004, expiration, true);
         vm.expectRevert(
             abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, DEFAULT_POLICY_ID)
@@ -1528,7 +1527,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         // Warp to next anchor-aligned boundary
         vm.warp(500_000 + 3600);
-        bytes memory data3 = _encodeERC20Transfer(RECIPIENT, 100);
+        bytes memory data3 = _encodeErc20Transfer(RECIPIENT, 100);
         bytes memory sig3 = _signDefaultInitiatorTx(harness, TOKEN, data3, 2005, expiration, true);
         _validateApproval(harness, TOKEN, data3, 2005, expiration, sig3, bytes(""), proofs);
 

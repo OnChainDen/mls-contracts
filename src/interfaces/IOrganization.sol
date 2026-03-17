@@ -17,8 +17,6 @@ import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.s
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
-// solhint-disable-next-line no-unused-import
-import {InitializationParams, OperationType} from "types/CommonTypes.sol";
 
 /**
  * @title IOrganization

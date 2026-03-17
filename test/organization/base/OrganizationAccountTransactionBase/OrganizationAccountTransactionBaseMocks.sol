@@ -15,7 +15,7 @@ interface OrganizationNonceReader {
  */
 contract MockAccountForOrganizationTransaction is IAccount {
     /// @dev Bound organization that is allowed to call `executeTransaction`.
-    address public immutable organization;
+    address public immutable ORGANIZATION;
 
     /// @dev Controls whether `executeTransaction` reverts before attempting the downstream call.
     bool public shouldRevertExecution;
@@ -34,7 +34,7 @@ contract MockAccountForOrganizationTransaction is IAccount {
     bytes public reentrantRevertData;
 
     constructor(address organization_) {
-        organization = organization_;
+        ORGANIZATION = organization_;
     }
 
     /**
@@ -69,11 +69,11 @@ contract MockAccountForOrganizationTransaction is IAccount {
         external
         override
     {
-        if (msg.sender != organization) {
+        if (msg.sender != ORGANIZATION) {
             revert OnlyOrganization();
         }
 
-        if (assertNonceConsumedOnEntry && !OrganizationNonceReader(organization).getUsedNonce(nonce)) {
+        if (assertNonceConsumedOnEntry && !OrganizationNonceReader(ORGANIZATION).getUsedNonce(nonce)) {
             revert TransactionExecutionFailed();
         }
 
@@ -86,7 +86,7 @@ contract MockAccountForOrganizationTransaction is IAccount {
 
         if (reentrantCallData.length != 0) {
             delete reentrantRevertData;
-            (bool reentrySucceeded, bytes memory revertData) = organization.call(reentrantCallData);
+            (bool reentrySucceeded, bytes memory revertData) = ORGANIZATION.call(reentrantCallData);
             if (reentrySucceeded) {
                 revert TransactionExecutionFailed();
             }
@@ -107,7 +107,7 @@ contract MockAccountForOrganizationTransaction is IAccount {
 
     /// @inheritdoc IAccount
     function getOrganizationAddress() external view override returns (address) {
-        return organization;
+        return ORGANIZATION;
     }
 
     /// @dev ERC-1271 placeholder implementation for interface completeness.
@@ -205,13 +205,13 @@ contract MockRevertingDestination {
  */
 contract MockERC1271NonceConsumedSigner is IERC1271 {
     /// @dev Organization contract exposing nonce-usage state.
-    address public immutable organization;
+    address public immutable ORGANIZATION;
 
     /// @dev Nonce that must be consumed for signatures to be considered valid.
     uint256 public observedNonce;
 
     constructor(address organization_) {
-        organization = organization_;
+        ORGANIZATION = organization_;
     }
 
     /**
@@ -225,7 +225,7 @@ contract MockERC1271NonceConsumedSigner is IERC1271 {
      * @dev Returns ERC-1271 magic value only if the observed nonce is already consumed.
      */
     function isValidSignature(bytes32, bytes memory) external view override returns (bytes4) {
-        if (OrganizationNonceReader(organization).getUsedNonce(observedNonce)) {
+        if (OrganizationNonceReader(ORGANIZATION).getUsedNonce(observedNonce)) {
             return IERC1271.isValidSignature.selector;
         }
         return bytes4(0xffffffff);

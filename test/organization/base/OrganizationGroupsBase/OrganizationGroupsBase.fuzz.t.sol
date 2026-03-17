@@ -7,7 +7,7 @@ import {
     OrganizationGroupsBaseSuiteBase
 } from "test/organization/base/OrganizationGroupsBase/OrganizationGroupsBaseSuiteBase.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
-import {GroupModification, OperationType} from "types/CommonTypes.sol";
+import {GroupModification} from "types/CommonTypes.sol";
 
 /**
  * @dev Fuzz tests for `OrganizationGroupsBase`.

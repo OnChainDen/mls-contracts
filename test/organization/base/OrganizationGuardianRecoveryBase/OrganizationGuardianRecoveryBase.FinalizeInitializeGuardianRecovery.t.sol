@@ -4,7 +4,6 @@ pragma solidity 0.8.33;
 
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationAdminOperationTimelock} from "interfaces/organization/IOrganizationAdminOperationTimelock.sol";
-import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {
     OrganizationGuardianRecoveryBaseHarness
@@ -369,7 +368,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         bytes memory operationData = abi.encode(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
-        AdminAuthParams memory wrongAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory wrongAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.CancelInitializeGuardianRecovery,
             operationData: operationData,
             isApproval: true,
@@ -431,7 +430,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         AdminAuthParams memory secondAuth = AdminAuthParams({
             salt: 12_016,
             expirationTimestamp: block.timestamp + 1 days,
-            signatures: _buildSortedEOASignatures(secondOperationHash, buildUint256Array(ADMIN_PK_1))
+            signatures: _buildSortedEoaSignatures(secondOperationHash, buildUint256Array(ADMIN_PK_1))
         });
         uint256 firstNonce =
             _computeRecoveryNonce(OperationType.FinalizeInitializeGuardianRecovery, operationData, 12_015);

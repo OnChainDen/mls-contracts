@@ -20,7 +20,6 @@ import {
 import {
     ApproverType,
     ConstraintType,
-    DestinationType,
     ParamType,
     ParameterConstraint,
     Policy,
@@ -273,7 +272,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         policy.config.token.hasAmountThreshold = true;
         policy.config.token.amountThreshold = 100;
 
-        bytes memory data = _encodeERC20Transfer(address(0xF901), 100);
+        bytes memory data = _encodeErc20Transfer(address(0xF901), 100);
         // Call: execute `isTokenAmountAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool allowed = checkHarness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, data, 0);
         // Verify: assert the expected success result and state updates.

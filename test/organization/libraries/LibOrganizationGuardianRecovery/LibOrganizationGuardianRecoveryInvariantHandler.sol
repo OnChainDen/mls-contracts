@@ -15,7 +15,7 @@ import {GuardianRecoveryState, TxRecoveryState} from "types/RecoveryTypes.sol";
  */
 contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
     /// @dev Harness under invariant testing.
-    LibOrganizationGuardianRecoveryHarness public immutable harness;
+    LibOrganizationGuardianRecoveryHarness public immutable HARNESS;
 
     /// @dev Sticky violation flags consumed by invariant assertions.
     bool public recoveryTouchedNormalFlowViolation;
@@ -34,7 +34,7 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
     uint256 private configuredTimelock;
 
     constructor(LibOrganizationGuardianRecoveryHarness harness_) {
-        harness = harness_;
+        HARNESS = harness_;
         // Invariant target selection should treat this as a fuzz handler, not a test contract.
         IS_TEST = false;
     }
@@ -44,7 +44,7 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
      */
     function initiateRecovery(uint256 seed) external {
         address candidate = _candidate(seed);
-        _runRecoveryUpdateMutation(abi.encodeCall(harness.initiateRecoveryGuardianUpdateViaLibrary, (candidate)));
+        _runRecoveryUpdateMutation(abi.encodeCall(HARNESS.initiateRecoveryGuardianUpdateViaLibrary, (candidate)));
     }
 
     /**
@@ -52,19 +52,19 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
      */
     function finalizeRecovery(bool warpToPendingTimestamp) external {
         if (warpToPendingTimestamp) {
-            uint256 pendingTimestamp = harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp;
+            uint256 pendingTimestamp = HARNESS.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp;
             if (pendingTimestamp != 0 && block.timestamp < pendingTimestamp) {
                 vm.warp(pendingTimestamp);
             }
         }
-        _runRecoveryUpdateMutation(abi.encodeCall(harness.finalizeRecoveryGuardianUpdateViaLibrary, ()));
+        _runRecoveryUpdateMutation(abi.encodeCall(HARNESS.finalizeRecoveryGuardianUpdateViaLibrary, ()));
     }
 
     /**
      * @dev Attempts recovery-update cancel.
      */
     function cancelRecovery() external {
-        _runRecoveryUpdateMutation(abi.encodeCall(harness.cancelRecoveryGuardianUpdateViaLibrary, ()));
+        _runRecoveryUpdateMutation(abi.encodeCall(HARNESS.cancelRecoveryGuardianUpdateViaLibrary, ()));
     }
 
     /**
@@ -82,7 +82,7 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
         uint256 boundedTimelock =
             bound(timelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS);
         _runDeferredInitMutation(
-            abi.encodeCall(harness.initiateInitializeGuardianRecoveryViaLibrary, (recoveryAddress, boundedTimelock))
+            abi.encodeCall(HARNESS.initiateInitializeGuardianRecoveryViaLibrary, (recoveryAddress, boundedTimelock))
         );
     }
 
@@ -91,19 +91,19 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
      */
     function finalizeDeferredInit(bool warpToPendingTimestamp) external {
         if (warpToPendingTimestamp) {
-            uint256 pendingTimestamp = harness.getGuardianRecoveryStateViaStorage().pendingInit.pendingTimestamp;
+            uint256 pendingTimestamp = HARNESS.getGuardianRecoveryStateViaStorage().pendingInit.pendingTimestamp;
             if (pendingTimestamp != 0 && block.timestamp < pendingTimestamp) {
                 vm.warp(pendingTimestamp);
             }
         }
-        _runDeferredInitMutation(abi.encodeCall(harness.finalizeInitializeGuardianRecoveryViaLibrary, ()));
+        _runDeferredInitMutation(abi.encodeCall(HARNESS.finalizeInitializeGuardianRecoveryViaLibrary, ()));
     }
 
     /**
      * @dev Attempts deferred-init cancel.
      */
     function cancelDeferredInit() external {
-        _runDeferredInitMutation(abi.encodeCall(harness.cancelInitializeGuardianRecoveryViaLibrary, ()));
+        _runDeferredInitMutation(abi.encodeCall(HARNESS.cancelInitializeGuardianRecoveryViaLibrary, ()));
     }
 
     /**
@@ -111,7 +111,7 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
      */
     function initiateNormal(uint256 seed) external {
         address candidate = _candidate(seed);
-        _runNormalFlowMutation(abi.encodeCall(harness.initiateGuardianUpdateViaLibrary, (candidate)));
+        _runNormalFlowMutation(abi.encodeCall(HARNESS.initiateGuardianUpdateViaLibrary, (candidate)));
     }
 
     /**
@@ -119,26 +119,26 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
      */
     function finalizeNormal(bool warpToPendingTimestamp) external {
         if (warpToPendingTimestamp) {
-            uint256 pendingTimestamp = harness.getPendingGuardianUpdateTimestampViaLibrary();
+            uint256 pendingTimestamp = HARNESS.getPendingGuardianUpdateTimestampViaLibrary();
             if (pendingTimestamp != 0 && block.timestamp < pendingTimestamp) {
                 vm.warp(pendingTimestamp);
             }
         }
-        _runNormalFlowMutation(abi.encodeCall(harness.finalizeGuardianUpdateViaLibrary, ()));
+        _runNormalFlowMutation(abi.encodeCall(HARNESS.finalizeGuardianUpdateViaLibrary, ()));
     }
 
     /**
      * @dev Attempts normal guardian update cancel.
      */
     function cancelNormal() external {
-        _runNormalFlowMutation(abi.encodeCall(harness.cancelGuardianUpdateViaLibrary, ()));
+        _runNormalFlowMutation(abi.encodeCall(HARNESS.cancelGuardianUpdateViaLibrary, ()));
     }
 
     /**
      * @dev Attempts normal guardian update accept.
      */
     function acceptNormal() external {
-        _runNormalFlowMutation(abi.encodeCall(harness.acceptGuardianViaLibrary, ()));
+        _runNormalFlowMutation(abi.encodeCall(HARNESS.acceptGuardianViaLibrary, ()));
     }
 
     /**
@@ -149,27 +149,27 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
     }
 
     function _runRecoveryUpdateMutation(bytes memory callData) internal {
-        address guardianBefore = harness.getGuardianViaLibrary();
-        address normalPendingBefore = harness.getPendingGuardianViaLibrary();
-        uint256 normalPendingTsBefore = harness.getPendingGuardianUpdateTimestampViaLibrary();
-        bool normalReadyBefore = harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary();
-        GuardianRecoveryState memory recoveryBefore = harness.getGuardianRecoveryStateViaStorage();
-        TxRecoveryState memory txBefore = harness.getTxRecoveryStateViaStorage();
+        address guardianBefore = HARNESS.getGuardianViaLibrary();
+        address normalPendingBefore = HARNESS.getPendingGuardianViaLibrary();
+        uint256 normalPendingTsBefore = HARNESS.getPendingGuardianUpdateTimestampViaLibrary();
+        bool normalReadyBefore = HARNESS.getIsGuardianUpdateReadyForAcceptanceViaLibrary();
+        GuardianRecoveryState memory recoveryBefore = HARNESS.getGuardianRecoveryStateViaStorage();
+        TxRecoveryState memory txBefore = HARNESS.getTxRecoveryStateViaStorage();
 
-        (bool success,) = address(harness).call(callData);
+        (bool success,) = address(HARNESS).call(callData);
 
-        GuardianRecoveryState memory recoveryAfter = harness.getGuardianRecoveryStateViaStorage();
-        TxRecoveryState memory txAfter = harness.getTxRecoveryStateViaStorage();
+        GuardianRecoveryState memory recoveryAfter = HARNESS.getGuardianRecoveryStateViaStorage();
+        TxRecoveryState memory txAfter = HARNESS.getTxRecoveryStateViaStorage();
 
-        if (success && harness.getGuardianViaLibrary() != guardianBefore) {
+        if (success && HARNESS.getGuardianViaLibrary() != guardianBefore) {
             guardianChangedOutsideRecoveryAcceptViolation = true;
         }
 
         if (
             success
-                && (harness.getPendingGuardianViaLibrary() != normalPendingBefore
-                    || harness.getPendingGuardianUpdateTimestampViaLibrary() != normalPendingTsBefore
-                    || harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary() != normalReadyBefore)
+                && (HARNESS.getPendingGuardianViaLibrary() != normalPendingBefore
+                    || HARNESS.getPendingGuardianUpdateTimestampViaLibrary() != normalPendingTsBefore
+                    || HARNESS.getIsGuardianUpdateReadyForAcceptanceViaLibrary() != normalReadyBefore)
         ) {
             recoveryTouchedNormalFlowViolation = true;
         }
@@ -191,7 +191,7 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
 
         if (
             // forge-lint: disable-next-line(unsafe-typecast)
-            success && bytes4(callData) == bytes4(abi.encodeCall(harness.finalizeRecoveryGuardianUpdateViaLibrary, ()))
+            success && bytes4(callData) == bytes4(abi.encodeCall(HARNESS.finalizeRecoveryGuardianUpdateViaLibrary, ()))
                 && (recoveryBefore.pendingGuardian == address(0)
                     || block.timestamp < recoveryBefore.pendingGuardianTimestamp)
         ) {
@@ -202,14 +202,14 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
     }
 
     function _runRecoveryAcceptMutation() internal {
-        address guardianBefore = harness.getGuardianViaLibrary();
-        GuardianRecoveryState memory recoveryBefore = harness.getGuardianRecoveryStateViaStorage();
-        TxRecoveryState memory txBefore = harness.getTxRecoveryStateViaStorage();
+        address guardianBefore = HARNESS.getGuardianViaLibrary();
+        GuardianRecoveryState memory recoveryBefore = HARNESS.getGuardianRecoveryStateViaStorage();
+        TxRecoveryState memory txBefore = HARNESS.getTxRecoveryStateViaStorage();
 
-        (bool success,) = address(harness).call(abi.encodeCall(harness.acceptGuardianRecoveryViaLibrary, ()));
+        (bool success,) = address(HARNESS).call(abi.encodeCall(HARNESS.acceptGuardianRecoveryViaLibrary, ()));
 
-        GuardianRecoveryState memory recoveryAfter = harness.getGuardianRecoveryStateViaStorage();
-        TxRecoveryState memory txAfter = harness.getTxRecoveryStateViaStorage();
+        GuardianRecoveryState memory recoveryAfter = HARNESS.getGuardianRecoveryStateViaStorage();
+        TxRecoveryState memory txAfter = HARNESS.getTxRecoveryStateViaStorage();
 
         if (success) {
             if (
@@ -233,10 +233,10 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
                 acceptMutatedRecoveryConfigViolation = true;
             }
 
-            if (harness.getGuardianViaLibrary() == guardianBefore) {
+            if (HARNESS.getGuardianViaLibrary() == guardianBefore) {
                 // This is allowed when pendingGuardian == current guardian.
             }
-        } else if (harness.getGuardianViaLibrary() != guardianBefore) {
+        } else if (HARNESS.getGuardianViaLibrary() != guardianBefore) {
             guardianChangedOutsideRecoveryAcceptViolation = true;
         }
 
@@ -248,16 +248,16 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
     }
 
     function _runDeferredInitMutation(bytes memory callData) internal {
-        address guardianBefore = harness.getGuardianViaLibrary();
-        GuardianRecoveryState memory recoveryBefore = harness.getGuardianRecoveryStateViaStorage();
-        TxRecoveryState memory txBefore = harness.getTxRecoveryStateViaStorage();
+        address guardianBefore = HARNESS.getGuardianViaLibrary();
+        GuardianRecoveryState memory recoveryBefore = HARNESS.getGuardianRecoveryStateViaStorage();
+        TxRecoveryState memory txBefore = HARNESS.getTxRecoveryStateViaStorage();
 
-        (bool success,) = address(harness).call(callData);
+        (bool success,) = address(HARNESS).call(callData);
 
-        GuardianRecoveryState memory recoveryAfter = harness.getGuardianRecoveryStateViaStorage();
-        TxRecoveryState memory txAfter = harness.getTxRecoveryStateViaStorage();
+        GuardianRecoveryState memory recoveryAfter = HARNESS.getGuardianRecoveryStateViaStorage();
+        TxRecoveryState memory txAfter = HARNESS.getTxRecoveryStateViaStorage();
 
-        if (success && harness.getGuardianViaLibrary() != guardianBefore) {
+        if (success && HARNESS.getGuardianViaLibrary() != guardianBefore) {
             guardianChangedOutsideRecoveryAcceptViolation = true;
         }
 
@@ -278,13 +278,13 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
     }
 
     function _runNormalFlowMutation(bytes memory callData) internal {
-        GuardianRecoveryState memory recoveryBefore = harness.getGuardianRecoveryStateViaStorage();
-        TxRecoveryState memory txBefore = harness.getTxRecoveryStateViaStorage();
+        GuardianRecoveryState memory recoveryBefore = HARNESS.getGuardianRecoveryStateViaStorage();
+        TxRecoveryState memory txBefore = HARNESS.getTxRecoveryStateViaStorage();
 
-        (bool success,) = address(harness).call(callData);
+        (bool success,) = address(HARNESS).call(callData);
 
-        GuardianRecoveryState memory recoveryAfter = harness.getGuardianRecoveryStateViaStorage();
-        TxRecoveryState memory txAfter = harness.getTxRecoveryStateViaStorage();
+        GuardianRecoveryState memory recoveryAfter = HARNESS.getGuardianRecoveryStateViaStorage();
+        TxRecoveryState memory txAfter = HARNESS.getTxRecoveryStateViaStorage();
 
         if (
             success
@@ -310,7 +310,7 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
     }
 
     function _trackConfigImmutability() internal {
-        GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
+        GuardianRecoveryState memory state = HARNESS.getGuardianRecoveryStateViaStorage();
         if (state.recoveryAddress != address(0)) {
             if (!hasSeenConfiguredState) {
                 hasSeenConfiguredState = true;

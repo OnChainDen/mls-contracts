@@ -6,10 +6,7 @@ import {AccountImplementation} from "account/AccountImplementation.sol";
 import {Test, Vm} from "forge-std/Test.sol";
 
 import {IOrganization} from "interfaces/IOrganization.sol";
-import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
-import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationAdminOperationTimelock} from "interfaces/organization/IOrganizationAdminOperationTimelock.sol";
-import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
 import {OrganizationProxy} from "organization/OrganizationProxy.sol";
 import {ArrayBuilders} from "test/helpers/ArrayBuilders.sol";
 import {

@@ -2064,7 +2064,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
         operationData = _encodeOperationDataForModifyMembers(membersToAdd, membersToRemove);
-        auth = _buildAdminAuthParamsForEOA({
+        auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyMembers,
             operationData: operationData,
             isApproval: isApproval,

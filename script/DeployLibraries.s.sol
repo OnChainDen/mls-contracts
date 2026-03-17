@@ -100,16 +100,16 @@ contract DeployLibraries is BaseDeployScript {
         Logger.logSection("Verify Independent Libraries Linked in LibOrganizationInitialization");
         bytes memory initInitCode = type(LibOrganizationInitialization).creationCode;
         LinkedLibraryInfo[] memory initLibs = new LinkedLibraryInfo[](3);
-        initLibs[0] = LinkedLibraryInfo(expected.adminAddress, "LibOrganizationAdmin");
-        initLibs[1] = LinkedLibraryInfo(expected.membersAddress, "LibOrganizationMembers");
-        initLibs[2] = LinkedLibraryInfo(expected.groupsAddress, "LibOrganizationGroups");
+        initLibs[0] = LinkedLibraryInfo({expectedAddress: expected.adminAddress, name: "LibOrganizationAdmin"});
+        initLibs[1] = LinkedLibraryInfo({expectedAddress: expected.membersAddress, name: "LibOrganizationMembers"});
+        initLibs[2] = LinkedLibraryInfo({expectedAddress: expected.groupsAddress, name: "LibOrganizationGroups"});
         LinkedLibrariesUtils.validateLinkedLibrariesOrRevert(initInitCode, initLibs);
 
         // Validate Policy is linked in LibOrganizationAccountSignature and deployed
         Logger.logSection("Verify LibOrganizationPolicy Linked in LibOrganizationAccountSignature");
         bytes memory accountSigInitCode = type(LibOrganizationAccountSignature).creationCode;
         LinkedLibraryInfo[] memory policyLib = new LinkedLibraryInfo[](1);
-        policyLib[0] = LinkedLibraryInfo(expected.policyAddress, "LibOrganizationPolicy");
+        policyLib[0] = LinkedLibraryInfo({expectedAddress: expected.policyAddress, name: "LibOrganizationPolicy"});
         LinkedLibrariesUtils.validateLinkedLibrariesOrRevert(accountSigInitCode, policyLib);
 
         // Start broadcasting transactions

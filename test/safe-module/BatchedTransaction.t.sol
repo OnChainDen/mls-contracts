@@ -193,6 +193,8 @@ contract BatchedTransactionTest is Test {
         payload = new bytes(length);
 
         for (uint256 i = 0; i < length; i++) {
+            // casting to uint8 is safe because truncation is intentional for byte-level XOR entropy
+            // forge-lint: disable-next-line(unsafe-typecast)
             payload[i] = bytes1(uint8(entropy[i % entropy.length]) ^ uint8(index + i));
         }
     }

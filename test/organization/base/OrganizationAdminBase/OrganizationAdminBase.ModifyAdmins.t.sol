@@ -21,7 +21,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
      * @param hash Operation hash used during verification
      * @return signer Recovered signer address, or `address(0)` if recovery fails
      */
-    function _recoverEOASigner(bytes memory signature, bytes32 hash) internal pure returns (address signer) {
+    function _recoverEoaSigner(bytes memory signature, bytes32 hash) internal pure returns (address signer) {
         require(signature.length == 65, "invalid signature length");
 
         uint8 v;
@@ -360,7 +360,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         uint256 salt = 2004;
         uint256 expiration = block.timestamp + 1 hours;
 
-        AdminAuthParams memory wrongAuth = _buildAdminAuthParamsForEOA({
+        AdminAuthParams memory wrongAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyMembers,
             operationData: operationData,
             isApproval: true,
@@ -418,7 +418,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             expirationTimestamp: block.timestamp + 1 hours,
             isApproval: true
         });
-        address recoveredSigner = _recoverEOASigner(rejectionAuth.signatures, approvalOperationHash);
+        address recoveredSigner = _recoverEoaSigner(rejectionAuth.signatures, approvalOperationHash);
 
         // Verify: using rejection-domain signatures for an approval execution should fail live signer validation and
         // leave the nonce unused.

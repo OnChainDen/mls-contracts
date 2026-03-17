@@ -100,6 +100,7 @@ contract ImplementationWhitelistWrongUUID is UUPSUpgradeable {
      * @dev Returns an intentionally incorrect UUID for negative upgrade-path testing.
      * @return uuid Incompatible UUID value expected to fail UUPS compatibility checks.
      */
+    // forge-lint: disable-next-line(mixed-case-function)
     function proxiableUUID() public pure override returns (bytes32 uuid) {
         uuid = bytes32(uint256(0xDEAD));
     }

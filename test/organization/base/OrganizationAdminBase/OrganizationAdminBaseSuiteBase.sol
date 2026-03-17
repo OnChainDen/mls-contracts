@@ -41,7 +41,7 @@ abstract contract OrganizationAdminBaseSuiteBase is OrganizationAdminTestBase {
         // OrganizationAdminBase signs hashes of arrays + threshold, not raw arrays directly.
         operationData = _encodeOperationDataForModifyAdmins(adminsToAdd, adminsToRemove, newVotingThreshold);
         // Build signatures against the exact base-contract payload encoding.
-        auth = _buildAdminAuthParamsForEOA({
+        auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             isApproval: isApproval,

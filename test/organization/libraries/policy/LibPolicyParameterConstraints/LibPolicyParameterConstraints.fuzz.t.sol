@@ -57,6 +57,8 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
         bytes memory bytesData = _encodeSingleBytesArg(dynamicBytesValue);
         bytes memory stringData = _encodeSingleStringArg(dynamicStringValue);
         bytes32 boolHeadValue = boolValue ? bytes32(uint256(1)) : bytes32(0);
+        // casting int256 to uint256 is safe because this is an intentional bit-level reinterpretation for ABI encoding
+        // forge-lint: disable-next-line(unsafe-typecast)
         bytes32 intHeadValue = bytes32(uint256(intValue));
 
         // Call: evaluate one matching example for every supported parameter-kind and constraint-kind combination.
@@ -148,6 +150,8 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
         bool uintOneOf = harness.isUintParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.OneOf, abi.encode(bytes32(uint256(1))), bytes32(uint256(uintValue))
         );
+        // casting int256 to uint256 is safe because this is an intentional bit-level reinterpretation for ABI encoding
+        // forge-lint: disable-next-item(unsafe-typecast)
         bool intOneOf = harness.isIntParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.OneOf, abi.encode(bytes32(uint256(1))), bytes32(uint256(intValue))
         );
