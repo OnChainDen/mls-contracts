@@ -298,10 +298,10 @@ contract ManageGuardianSafeModule is BaseDeployScript {
     ///      will never have more than a handful of modules, so pagination is unnecessary.
     function _findPrevModule(address safeAddress, address moduleAddress) internal view returns (address prevModule) {
         // SENTINEL_MODULES = address(0x1)
-        address SENTINEL = address(0x1);
-        (address[] memory modules,) = ISafe(safeAddress).getModulesPaginated(SENTINEL, 100);
+        address sentinel = address(0x1);
+        (address[] memory modules,) = ISafe(safeAddress).getModulesPaginated(sentinel, 100);
 
-        prevModule = SENTINEL;
+        prevModule = sentinel;
         for (uint256 i = 0; i < modules.length; i++) {
             if (modules[i] == moduleAddress) {
                 return prevModule;
