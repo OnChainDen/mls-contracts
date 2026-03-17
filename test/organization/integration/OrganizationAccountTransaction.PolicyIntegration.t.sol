@@ -421,6 +421,43 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         assertEq(policyStateHarness.getPolicyUsage(tokenKey, window), 0, "token-contract key should remain untouched");
     }
 
+    /// @dev Verifies that lowering a policy's rate limit below already-consumed usage rejects subsequent transactions.
+    function test_loweringRateLimitBelowConsumedUsage_revertsRateLimitExceeded() public {
+        // Setup: register a token-transfer policy with a 1000-unit rate limit and consume 600 units.
+        Policy memory policy =
+            _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
+        policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        policy.config.rateLimit.timeIntervalHours = 1;
+        policy.config.rateLimit.timeIntervalLimit = 1000;
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+
+        bytes memory data = _encodeERC20Transfer(RECIPIENT, 600);
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 40, expiration, true);
+
+        _validateApproval(harness, TOKEN, data, 40, expiration, initiatorSignature, bytes(""), proofs);
+
+        bytes32 usageKey = _computeUsageKey(DEFAULT_POLICY_ID, policy, ACCOUNT, RECIPIENT, initiator1);
+        uint256 window = _computeTimeWindow(policy);
+        assertEq(policyStateHarness.getPolicyUsage(usageKey, window), 600, "Usage should be 600 after first transfer");
+
+        // Re-register the same policy with a lowered limit (400), below the 600 already consumed.
+        policy.config.rateLimit.timeIntervalLimit = 400;
+        ValidationProofs memory loweredProofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+
+        bytes memory secondData = _encodeERC20Transfer(RECIPIENT, 1);
+        bytes memory secondInitiatorSignature =
+            _signDefaultInitiatorTx(harness, TOKEN, secondData, 41, expiration, true);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, DEFAULT_POLICY_ID)
+        );
+        _validateApproval(
+            harness, TOKEN, secondData, 41, expiration, secondInitiatorSignature, bytes(""), loweredProofs
+        );
+    }
+
     /// @dev Verifies that auto reject requires authorized initiator signature.
     function test_LOAT_VAAROR_4__OAT_RAT_1_autoRejectRequiresAuthorizedInitiatorSignature() public {
         // Setup: assemble inputs expected to hit the guarded failure path for auto reject requires authorized initiator
