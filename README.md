@@ -355,6 +355,8 @@ Rate limits can be scoped in different ways for each of these dimensions:
 - For **Token Transfer** policies: Usage is tracked as the cumulative token amount transferred within the time window.
 - For **Contract Interaction** policies: Usage is tracked as the count of transactions (each transaction counts as 1).
 
+> **Note:** Changing a policy's **Anchor Timestamp** or **Time Interval (Hours)** resets all tracked usage for that policy. This is because usage is keyed in part by these fields, so a new configuration starts with a clean usage slate. Changing the **Interval Limit** does *not* reset usage — the new limit takes effect immediately against already-tracked usage within the current window.
+
 See `src/types/PolicyTypes.sol` (specifically `RateLimitType`, `RateLimitScope`, and `RateLimitConfig`) and `src/organization/libraries/policy/LibPolicyRateLimits.sol` for implementation details.
 
 ![User interface for editing a Policy's rate limit](docs/images/MLSWalletDemoPolicyRateLimitsScreenshot.png)

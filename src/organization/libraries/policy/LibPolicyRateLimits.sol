@@ -129,7 +129,10 @@ library LibPolicyRateLimits {
 
     /**
      * @dev Computes the usage key for rate limit tracking.
-     *      The usage key is a hash of the policy ID and scoped entities.
+     *      The usage key is a hash of the policy ID, anchor timestamp, time interval hours,
+     *      and scoped entities. Including anchorTimestamp and timeIntervalHours ensures that
+     *      changing either field on a policy resets tracked usage to zero, preventing
+     *      stale-usage collisions from a previous configuration.
      *      If a scope is AcrossAll, address(0) is used for that component.
      *      If a scope is PerEntity, the actual address is used.
      * @param policyId The policy ID
@@ -157,6 +160,15 @@ library LibPolicyRateLimits {
         address scopedInitiator =
             policy.config.rateLimit.initiatorScope == RateLimitScope.PerEntity ? initiator : address(0);
 
-        return keccak256(abi.encode(policyId, scopedAccount, scopedDestination, scopedInitiator));
+        return keccak256(
+            abi.encode(
+                policyId,
+                policy.config.rateLimit.anchorTimestamp,
+                policy.config.rateLimit.timeIntervalHours,
+                scopedAccount,
+                scopedDestination,
+                scopedInitiator
+            )
+        );
     }
 }

@@ -43,7 +43,16 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
         address scopedInitiator =
             policy.config.rateLimit.initiatorScope == RateLimitScope.PerEntity ? initiator : address(0);
 
-        return keccak256(abi.encode(policyId, scopedAccount, scopedDestination, scopedInitiator));
+        return keccak256(
+            abi.encode(
+                policyId,
+                policy.config.rateLimit.anchorTimestamp,
+                policy.config.rateLimit.timeIntervalHours,
+                scopedAccount,
+                scopedDestination,
+                scopedInitiator
+            )
+        );
     }
 
     /// @dev Builds a baseline time-interval-limited policy.
