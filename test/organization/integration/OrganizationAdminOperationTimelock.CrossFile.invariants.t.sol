@@ -37,9 +37,11 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
      */
     function initiateGuardianUpdate(uint256 seed) external {
         if (HARNESS.getPendingGuardianViaLibrary() != address(0)) {
+            // forge-lint: disable-next-line(unchecked-call)
             address(HARNESS).call(abi.encodeCall(HARNESS.cancelGuardianUpdateViaLibrary, ()));
         }
 
+        // forge-lint: disable-next-line(unchecked-call)
         address(HARNESS).call(abi.encodeCall(HARNESS.initiateGuardianUpdateViaLibrary, (_candidate(seed))));
     }
 
@@ -53,6 +55,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
             vm.warp(pendingTimestamp);
         }
 
+        // forge-lint: disable-next-line(unchecked-call)
         address(HARNESS).call(abi.encodeCall(HARNESS.finalizeGuardianUpdateViaLibrary, ()));
     }
 
@@ -60,6 +63,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
      * @dev Attempts guardian-update cancellation.
      */
     function cancelGuardianUpdate() external {
+        // forge-lint: disable-next-line(unchecked-call)
         address(HARNESS).call(abi.encodeCall(HARNESS.cancelGuardianUpdateViaLibrary, ()));
     }
 
@@ -71,6 +75,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
     function initiateGuardianRecoveryDeferredInit(uint256 seed, uint256 timelockDurationSeconds) external {
         GuardianRecoveryState memory state = HARNESS.getGuardianRecoveryStateViaStorage();
         if (state.pendingInit.pendingTimestamp != 0) {
+            // forge-lint: disable-next-line(unchecked-call)
             address(HARNESS).call(abi.encodeCall(HARNESS.cancelInitializeGuardianRecoveryViaLibrary, ()));
         }
 
@@ -79,6 +84,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
             TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
             TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
         );
+        // forge-lint: disable-next-item(unchecked-call)
         address(HARNESS)
             .call(
                 abi.encodeCall(
@@ -97,6 +103,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
             vm.warp(pendingTimestamp);
         }
 
+        // forge-lint: disable-next-line(unchecked-call)
         address(HARNESS).call(abi.encodeCall(HARNESS.finalizeInitializeGuardianRecoveryViaLibrary, ()));
     }
 
@@ -104,6 +111,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
      * @dev Attempts deferred guardian-recovery cancellation.
      */
     function cancelGuardianRecoveryDeferredInit() external {
+        // forge-lint: disable-next-line(unchecked-call)
         address(HARNESS).call(abi.encodeCall(HARNESS.cancelInitializeGuardianRecoveryViaLibrary, ()));
     }
 
@@ -115,6 +123,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
     function initiateTxRecoveryDeferredInit(uint256 seed, uint256 timelockDurationSeconds) external {
         TxRecoveryState memory state = HARNESS.getTxRecoveryStateViaStorage();
         if (state.pendingInit.pendingTimestamp != 0) {
+            // forge-lint: disable-next-line(unchecked-call)
             address(HARNESS).call(abi.encodeCall(HARNESS.cancelInitializeTxRecoveryViaLibrary, ()));
         }
 
@@ -123,6 +132,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
             TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
             TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
         );
+        // forge-lint: disable-next-item(unchecked-call)
         address(HARNESS)
             .call(abi.encodeCall(HARNESS.initiateInitializeTxRecoveryViaLibrary, (_candidate(seed), boundedTimelock)));
     }
@@ -137,6 +147,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
             vm.warp(pendingTimestamp);
         }
 
+        // forge-lint: disable-next-line(unchecked-call)
         address(HARNESS).call(abi.encodeCall(HARNESS.finalizeInitializeTxRecoveryViaLibrary, ()));
     }
 
@@ -144,6 +155,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
      * @dev Attempts deferred tx-recovery cancellation.
      */
     function cancelTxRecoveryDeferredInit() external {
+        // forge-lint: disable-next-line(unchecked-call)
         address(HARNESS).call(abi.encodeCall(HARNESS.cancelInitializeTxRecoveryViaLibrary, ()));
     }
 
@@ -153,6 +165,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
      */
     function attemptSameBlockGuardianFinalize(uint256 seed) external {
         if (HARNESS.getPendingGuardianViaLibrary() != address(0)) {
+            // forge-lint: disable-next-line(unchecked-call)
             address(HARNESS).call(abi.encodeCall(HARNESS.cancelGuardianUpdateViaLibrary, ()));
         }
 
@@ -175,6 +188,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
     function attemptSameBlockGuardianRecoveryFinalize(uint256 seed) external {
         GuardianRecoveryState memory state = HARNESS.getGuardianRecoveryStateViaStorage();
         if (state.pendingInit.pendingTimestamp != 0) {
+            // forge-lint: disable-next-line(unchecked-call)
             address(HARNESS).call(abi.encodeCall(HARNESS.cancelInitializeGuardianRecoveryViaLibrary, ()));
         }
 
@@ -202,6 +216,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
     function attemptSameBlockTxRecoveryFinalize(uint256 seed) external {
         TxRecoveryState memory state = HARNESS.getTxRecoveryStateViaStorage();
         if (state.pendingInit.pendingTimestamp != 0) {
+            // forge-lint: disable-next-line(unchecked-call)
             address(HARNESS).call(abi.encodeCall(HARNESS.cancelInitializeTxRecoveryViaLibrary, ()));
         }
 
