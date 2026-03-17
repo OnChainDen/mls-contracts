@@ -226,6 +226,30 @@ contract PolicyRateLimitsTest is Test {
         assertTrue(account2First, "Account 2 first transaction should be within limit");
     }
 
+    function test_checkAndUpdateRateLimit_rejectsAfterLimitLoweredBelowCurrentUsage() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+
+        // Consume 600 of the 1000 limit
+        bool first = LibOrganizationPolicy.checkAndUpdateRateLimit(
+            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 600
+        );
+        assertTrue(first, "Should succeed under original limit");
+
+        // Simulate policy update: lower limit to 400, below the 600 already consumed
+        policy.config.rateLimit.timeIntervalLimit = 400;
+
+        // Even a zero-amount transaction should be rejected since currentUsage (600) > newLimit (400)
+        bool zeroAmount = LibOrganizationPolicy.checkAndUpdateRateLimit(
+            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 0
+        );
+        assertFalse(zeroAmount, "Should reject zero-amount when existing usage exceeds lowered limit");
+
+        bool nonZeroAmount = LibOrganizationPolicy.checkAndUpdateRateLimit(
+            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 50
+        );
+        assertFalse(nonZeroAmount, "Should reject non-zero amount when existing usage exceeds lowered limit");
+    }
+
     // ================================
     // getCurrentUsage Tests
     // ================================
