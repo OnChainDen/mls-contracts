@@ -52,7 +52,7 @@
 | 14 | ERC-1271 signature where contract returns wrong magic value — (false, address(0)) | [N] | P0 |
 | 15 | ERC-1271 signature where contract reverts — (false, address(0)) | [N] | P0 |
 | 16 | ERC-1271 signature with signer that is not a contract (EOA) — (false, address(0)) | [N] | P0 |
-| 17 | ERC-1271 signature with zero-length inner signature — (false, address(0)) | [E] | P0 |
+| 17 | ERC-1271 signature with zero-length inner signature accepted by signer contract — (true, signer) | [E] | P0 |
 | 18 | ERC-1271 signature with length field exceeding actual data — (false, address(0)) | [N] | P0 |
 | 19 | ERC-1271 signature with contract signer at address(0) — (false, address(0)) | [S] | P0 |
 | 20 | ERC-1271 header too short (< 23 bytes after v=0) — (false, address(0)) | [N] | P0 |
@@ -88,7 +88,7 @@
 | 34 | ERC-1271 signature where contract returns wrong magic value — reverts `SignatureRecoveryFailed` | [N] | P0 |
 | 35 | ERC-1271 signature where contract reverts — reverts `SignatureRecoveryFailed` | [N] | P0 |
 | 36 | ERC-1271 signature with signer that is not a contract (EOA) — reverts `SignatureRecoveryFailed` | [N] | P0 |
-| 37 | ERC-1271 signature with zero-length inner signature — reverts `SignatureRecoveryFailed` | [E] | P0 |
+| 37 | ERC-1271 signature with zero-length inner signature accepted by signer contract — returns signer | [E] | P0 |
 | 38 | ERC-1271 signature with length field exceeding actual data — reverts `SignatureRecoveryFailed` | [N] | P0 |
 | 39 | ERC-1271 signature with contract signer at address(0) — reverts `SignatureRecoveryFailed` | [S] | P0 |
 | 40 | ERC-1271 header too short (< 23 bytes after v=0) — reverts `SignatureRecoveryFailed` | [N] | P0 |
@@ -195,7 +195,7 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 77 | Header exactly at boundary of signatures array (offset + 23 == length) — returns false | [E] | P0 |
+| 77 | Header exactly at boundary of signatures array (offset + 23 == length, sigLength=0) — succeeds if signer accepts empty signature | [E] | P0 |
 | 78 | Full signature exactly at boundary (offset + 23 + sigLength == length) — succeeds | [E] | P0 |
 | 79 | Signer is address(0) — staticcall to 0x0 returns false gracefully | [S] | P0 |
 | 79.1 | offset + 23 > signatures.length (not enough bytes for header) — returns (false, address(0)) | [N] | P0 |
@@ -224,7 +224,7 @@
 | 84.3 | Contract reverts (staticcall success=false) — returns false | [N] | P0 |
 | 84.4 | Contract returns very large result (>1000 bytes) starting with magic — valid (length >= 32) | [E] | P0 |
 | 84.5 | Contract returns 31 bytes (one short of valid) — invalid | [E] | P0 |
-| 84.6 | Contract returns magic value right-padded differently (e.g., `0x1626ba7e00...01`) — still valid (only first 4 bytes decoded) | [E] | P0 |
+| 84.6 | Contract returns magic value right-padded differently (e.g., `0x1626ba7e00...01`) — invalid (returns false, no revert) | [E] | P0 |
 | 84.7 | Contract that attempts state modification during staticcall — reverts, returns false | [S] | P0 |
 | 84.8 | Fuzz: Random bytes4 return values — only `0x1626ba7e` (ERC1271_MAGIC_VALUE) produces true | [F] | P0 |
 
@@ -284,6 +284,7 @@
 | 100 | Empty data, value > 0 — returns true | [U] | P0 |
 | 101 | Empty data, value = 0 — returns false | [U] | P0 |
 | 102 | Non-empty data, value > 0 — returns false | [U] | P0 |
+| 102.1 | Non-empty data, value = 0 — returns false | [U] | P0 |
 
 #### `isTransactionERC20TokenTransfer(bytes calldata data, uint256 value)`
 
@@ -294,6 +295,7 @@
 | 105 | approve(address,uint256) selector — returns false (different selector) | [U] | P0 |
 | 106 | transferFrom selector — returns false | [U] | P0 |
 | 107 | Data too short (< 4 bytes) — returns false | [E] | P0 |
+| 107.1 | Fuzz: Random non-transfer selector with value = 0 — returns false | [F] | P0 |
 
 ### 3.2 Extraction Functions
 
@@ -321,7 +323,6 @@
 | 112 | ERC-20 transfer — returns `to` (token contract address) | [U] | P0 |
 | 112.1 | data is 1 byte (non-empty but minimal) — returns `to` regardless of content | [E] | P0 |
 | 112.2 | `to` == address(0), data non-empty — returns address(0), indistinguishable from native path | [E] | P0 |
-| 112.3 | `to` == address(0), data empty — returns address(0) via native path | [E] | P0 |
 | 112.4 | Fuzz: Random `to` address with random non-empty data — always returns `to` | [F] | P0 |
 | 112.5 | Fuzz: Random `to` address with empty data — always returns address(0) regardless of `to` | [F] | P0 |
 
@@ -329,7 +330,7 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 113 | Native transfer — returns `value` | [U] | P0 |
+| 113 | Native transfer (value > 0) — returns `value` | [U] | P0 |
 | 114 | ERC-20 transfer — extracts amount from calldata | [U] | P0 |
 | 115 | Amount is 0 — returns 0 | [E] | P0 |
 | 116 | Amount is type(uint256).max — returns max | [E] | P0 |
@@ -368,6 +369,7 @@
 | 122 | Exactly 4 bytes — returns those 4 bytes | [E] | P2 |
 | 123 | Known function selectors (transfer, approve, etc.) match | [U] | P2 |
 | 123.1 | Fuzz: Random calldata (>= 4 bytes) — always extracts correct first 4 bytes | [F] | P2 |
+| 123.2 | Data too short (< 4 bytes) — reverts with out-of-bounds slice | [N] | P2 |
 
 ---
 
