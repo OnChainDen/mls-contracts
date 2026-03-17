@@ -326,6 +326,8 @@ When using rate limiting, the following parameters can be configured:
 
 - **Interval Limit**: The maximum allowed usage within each time window. For token transfer policies, this is the cumulative token amount. For contract interaction policies, this is the number of times the contract can be called during the time interval.
 
+- **Anchor Timestamp** *(optional)*: A Unix timestamp that defines when time windows are anchored. Time windows repeat every `timeIntervalHours` starting from this anchor point. This allows aligning rate limit resets to meaningful boundaries such as midnight in a specific timezone or the start of a business week. When set to `0` (the default), windows align to the Unix epoch (January 1, 1970 00:00 UTC), which naturally produces hour-aligned and day-aligned boundaries for common intervals but an arbitrary alignment for intervals like 7 days. If the current time is before the anchor timestamp, the rate limit fails closed and all transactions subject to that rate limit are rejected.
+
 **Scoping Options:**
 
 Rate limits can be scoped in different ways for each of these dimensions:
@@ -344,10 +346,16 @@ Rate limits can be scoped in different ways for each of these dimensions:
 
 - *"5 transactions/day to each whitelisted address"*: Set `initiatorScope = AcrossAll`, `sourceScope = AcrossAll`, `destinationScope = PerEntity`. Each destination address has its own limit of 5 transactions per day.
 
+- *"$10,000/week per initiator, resetting every Monday at midnight Eastern Time"*: Set `timeIntervalHours = 168`, `anchorTimestamp` to any Monday 00:00 ET timestamp (e.g., `1709524800` for Monday March 4, 2024 00:00 ET / 05:00 UTC), `initiatorScope = PerEntity`, `sourceScope = AcrossAll`, `destinationScope = AcrossAll`. Each initiator has their own $10,000 weekly limit that resets every Monday at midnight ET.
+
+- *"100 transactions/day, resetting at noon UTC"*: Set `timeIntervalHours = 24`, `anchorTimestamp` to any noon UTC timestamp (e.g., `1709550000`), `initiatorScope = AcrossAll`, `sourceScope = AcrossAll`, `destinationScope = AcrossAll`. The daily window resets at noon UTC instead of midnight.
+
 **Usage Tracking:**
 
 - For **Token Transfer** policies: Usage is tracked as the cumulative token amount transferred within the time window.
 - For **Contract Interaction** policies: Usage is tracked as the count of transactions (each transaction counts as 1).
+
+> **Note:** Changing a policy's **Anchor Timestamp** or **Time Interval (Hours)** resets all tracked usage for that policy. This is because usage is keyed in part by these fields, so a new configuration starts with a clean usage slate. Changing the **Interval Limit** does *not* reset usage — the new limit takes effect immediately against already-tracked usage within the current window.
 
 See `src/types/PolicyTypes.sol` (specifically `RateLimitType`, `RateLimitScope`, and `RateLimitConfig`) and `src/organization/libraries/policy/LibPolicyRateLimits.sol` for implementation details.
 

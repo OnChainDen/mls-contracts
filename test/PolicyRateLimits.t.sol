@@ -226,6 +226,30 @@ contract PolicyRateLimitsTest is Test {
         assertTrue(account2First, "Account 2 first transaction should be within limit");
     }
 
+    function test_checkAndUpdateRateLimit_rejectsAfterLimitLoweredBelowCurrentUsage() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+
+        // Consume 600 of the 1000 limit
+        bool first = LibOrganizationPolicy.checkAndUpdateRateLimit(
+            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 600
+        );
+        assertTrue(first, "Should succeed under original limit");
+
+        // Simulate policy update: lower limit to 400, below the 600 already consumed
+        policy.config.rateLimit.timeIntervalLimit = 400;
+
+        // Even a zero-amount transaction should be rejected since currentUsage (600) > newLimit (400)
+        bool zeroAmount = LibOrganizationPolicy.checkAndUpdateRateLimit(
+            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 0
+        );
+        assertFalse(zeroAmount, "Should reject zero-amount when existing usage exceeds lowered limit");
+
+        bool nonZeroAmount = LibOrganizationPolicy.checkAndUpdateRateLimit(
+            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 50
+        );
+        assertFalse(nonZeroAmount, "Should reject non-zero amount when existing usage exceeds lowered limit");
+    }
+
     // ================================
     // getCurrentUsage Tests
     // ================================
@@ -264,6 +288,133 @@ contract PolicyRateLimitsTest is Test {
         uint256 afterSecondUsage =
             LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
         assertEq(afterSecondUsage, 800, "Usage should be 800 after second transaction");
+    }
+
+    // ================================
+    // Anchor Timestamp Tests
+    // ================================
+
+    function test_computeTimeWindow_withAnchorTimestamp() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+        policy.config.rateLimit.anchorTimestamp = 500_000;
+
+        vm.warp(503_600);
+        uint256 expected = (503_600 - 500_000) / 3600;
+        uint256 actual = LibOrganizationPolicy.computeTimeWindow(policy);
+        assertEq(actual, expected, "Window should be calculated relative to anchor");
+    }
+
+    function test_computeTimeWindow_beforeAnchor_returnsZero() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+        policy.config.rateLimit.anchorTimestamp = 500_000;
+
+        vm.warp(499_999);
+        uint256 actual = LibOrganizationPolicy.computeTimeWindow(policy);
+        assertEq(actual, 0, "Window should be 0 when block.timestamp < anchor");
+    }
+
+    function test_computeTimeWindow_atAnchor_returnsZero() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+        policy.config.rateLimit.anchorTimestamp = 500_000;
+
+        vm.warp(500_000);
+        uint256 actual = LibOrganizationPolicy.computeTimeWindow(policy);
+        assertEq(actual, 0, "Window should be 0 when block.timestamp == anchor");
+    }
+
+    function test_checkAndUpdateRateLimit_withAnchor_resetsAtAnchorAlignedBoundary() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+        policy.config.rateLimit.anchorTimestamp = 999_000;
+
+        // Warp to anchor start, consume full budget
+        vm.warp(999_000);
+        bool first = LibOrganizationPolicy.checkAndUpdateRateLimit(
+            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1000
+        );
+        assertTrue(first, "First transaction at anchor should succeed");
+
+        // Same window, should fail
+        bool overflow = LibOrganizationPolicy.checkAndUpdateRateLimit(
+            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1
+        );
+        assertFalse(overflow, "Should fail within same anchor-aligned window");
+
+        // One second before the anchor-aligned boundary — still in window 0
+        vm.warp(999_000 + 3599);
+        bool beforeBoundary = LibOrganizationPolicy.checkAndUpdateRateLimit(
+            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1
+        );
+        assertFalse(beforeBoundary, "Should still fail one second before anchor-aligned boundary");
+
+        // Advance to next anchor-aligned boundary
+        vm.warp(999_000 + 3600);
+        bool afterReset = LibOrganizationPolicy.checkAndUpdateRateLimit(
+            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 500
+        );
+        assertTrue(afterReset, "Should succeed in new anchor-aligned window");
+    }
+
+    function test_checkAndUpdateRateLimit_beforeAnchor_returnsFalse() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+        policy.config.rateLimit.anchorTimestamp = 2_000_000;
+
+        bool withinLimit = LibOrganizationPolicy.checkAndUpdateRateLimit(
+            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 100
+        );
+        assertFalse(withinLimit, "Should return false when before anchor");
+    }
+
+    function test_getCurrentUsage_withAnchor_tracksCorrectly() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+        policy.config.rateLimit.anchorTimestamp = 500_000;
+
+        vm.warp(501_000);
+
+        LibOrganizationPolicy.checkAndUpdateRateLimit(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 42);
+
+        uint256 usage =
+            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        assertEq(usage, 42, "Usage should track correctly with non-zero anchor");
+    }
+
+    function test_getCurrentUsage_beforeAnchor_returnsZero() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+        policy.config.rateLimit.anchorTimestamp = 500_000;
+
+        vm.warp(499_999);
+        uint256 usage =
+            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        assertEq(usage, 0, "Usage should be 0 when block.timestamp < anchor");
+    }
+
+    function test_getCurrentUsage_atAnchor_tracksCorrectly() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+        policy.config.rateLimit.anchorTimestamp = 500_000;
+
+        vm.warp(500_000);
+        LibOrganizationPolicy.checkAndUpdateRateLimit(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 75);
+
+        uint256 usage =
+            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        assertEq(usage, 75, "Usage should track correctly at exact anchor timestamp");
+    }
+
+    function test_getCurrentUsage_withAnchor_resetsAcrossWindows() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+        policy.config.rateLimit.anchorTimestamp = 500_000;
+
+        vm.warp(500_000);
+        LibOrganizationPolicy.checkAndUpdateRateLimit(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 600);
+
+        uint256 window0Usage =
+            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        assertEq(window0Usage, 600, "Usage should be 600 in window 0");
+
+        // Advance to next anchor-aligned window
+        vm.warp(500_000 + 3600);
+        uint256 window1Usage =
+            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        assertEq(window1Usage, 0, "Usage should reset to 0 in new anchor-aligned window");
     }
 
     // ================================
@@ -313,6 +464,7 @@ contract PolicyRateLimitsTest is Test {
         policy.config.rateLimit.limitType = limitType;
         policy.config.rateLimit.timeIntervalHours = hours_;
         policy.config.rateLimit.timeIntervalLimit = limit;
+        policy.config.rateLimit.anchorTimestamp = 0;
         policy.config.rateLimit.initiatorScope = RateLimitScope.AcrossAll;
         policy.config.rateLimit.sourceScope = RateLimitScope.AcrossAll;
         policy.config.rateLimit.destinationScope = RateLimitScope.AcrossAll;

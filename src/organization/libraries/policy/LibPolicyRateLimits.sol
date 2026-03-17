@@ -46,6 +46,9 @@ library LibPolicyRateLimits {
         // Fail closed if the time interval is not configured (0 hours).
         if (policy.config.rateLimit.timeIntervalHours == 0) return false;
 
+        // Fail closed if the current time is before the anchor timestamp.
+        if (block.timestamp < policy.config.rateLimit.anchorTimestamp) return false;
+
         LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 
         bytes32 usageKey = computeUsageKey({
@@ -76,13 +79,17 @@ library LibPolicyRateLimits {
      * @return The current time window, or 0 if timeIntervalHours is 0
      */
     function computeTimeWindow(Policy memory policy) internal view returns (uint256) {
-        // Uses fixed time windows based on timeIntervalHours
         uint16 hours_ = policy.config.rateLimit.timeIntervalHours;
 
         // Avoid division by zero
         if (hours_ == 0) return 0;
 
-        return block.timestamp / (uint256(hours_) * SECONDS_PER_HOUR);
+        uint256 anchor = policy.config.rateLimit.anchorTimestamp;
+
+        // Before the anchor, no valid window exists
+        if (block.timestamp < anchor) return 0;
+
+        return (block.timestamp - anchor) / (uint256(hours_) * SECONDS_PER_HOUR);
     }
 
     /**
@@ -107,6 +114,9 @@ library LibPolicyRateLimits {
         // Return 0 if time interval is not configured
         if (policy.config.rateLimit.timeIntervalHours == 0) return 0;
 
+        // Return 0 if before the anchor timestamp
+        if (block.timestamp < policy.config.rateLimit.anchorTimestamp) return 0;
+
         LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 
         bytes32 usageKey = computeUsageKey({
@@ -119,7 +129,10 @@ library LibPolicyRateLimits {
 
     /**
      * @dev Computes the usage key for rate limit tracking.
-     *      The usage key is a hash of the policy ID and scoped entities.
+     *      The usage key is a hash of the policy ID, anchor timestamp, time interval hours,
+     *      and scoped entities. Including anchorTimestamp and timeIntervalHours ensures that
+     *      changing either field on a policy resets tracked usage to zero, preventing
+     *      stale-usage collisions from a previous configuration.
      *      If a scope is AcrossAll, address(0) is used for that component.
      *      If a scope is PerEntity, the actual address is used.
      * @param policyId The policy ID
@@ -147,6 +160,15 @@ library LibPolicyRateLimits {
         address scopedInitiator =
             policy.config.rateLimit.initiatorScope == RateLimitScope.PerEntity ? initiator : address(0);
 
-        return keccak256(abi.encode(policyId, scopedAccount, scopedDestination, scopedInitiator));
+        return keccak256(
+            abi.encode(
+                policyId,
+                policy.config.rateLimit.anchorTimestamp,
+                policy.config.rateLimit.timeIntervalHours,
+                scopedAccount,
+                scopedDestination,
+                scopedInitiator
+            )
+        );
     }
 }

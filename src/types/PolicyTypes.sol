@@ -205,6 +205,9 @@ struct TokenFilter {
  * @param limitType The type of rate limit (None or TimeInterval)
  * @param timeIntervalHours Duration of the time window in hours (for TimeInterval)
  * @param timeIntervalLimit Maximum cumulative amount/count per time window
+ * @param anchorTimestamp Unix timestamp anchor for time window alignment. Windows repeat every
+ *        `timeIntervalHours` starting from this anchor. Set to 0 for epoch-aligned windows (default behavior).
+ *        If the current time is before this anchor, the rate limit fails closed (rejects all transactions).
  * @param initiatorScope How limits are scoped per initiator
  * @param sourceScope How limits are scoped per source account
  * @param destinationScope How limits are scoped per destination address
@@ -213,6 +216,7 @@ struct RateLimitConfig {
     RateLimitType limitType;
     uint16 timeIntervalHours;
     uint256 timeIntervalLimit;
+    uint256 anchorTimestamp;
     RateLimitScope initiatorScope;
     RateLimitScope sourceScope;
     RateLimitScope destinationScope;

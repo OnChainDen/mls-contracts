@@ -196,4 +196,78 @@ contract LibPolicyRateLimitsFuzzTest is PolicyLibrariesFuzzTestBase {
         assertFalse(allowed, "near-overflow arithmetic should fail closed");
         assertEq(policyStateHarness.getPolicyUsage(usageKey, window), currentUsage);
     }
+
+    /// @dev Verifies `computeTimeWindow` with a non-zero anchor matches the formula
+    ///      `(block.timestamp - anchor) / (hours * 3600)`.
+    /// @param anchor The anchor timestamp to use.
+    /// @param rawHours The interval length in hours, bounded to a non-zero range.
+    function testFuzz_computeTimeWindow_withAnchor_matchesFormula(uint256 anchor, uint16 rawHours) public {
+        uint16 intervalHours = uint16(bound(uint256(rawHours), 1, 48));
+
+        vm.warp(10_000);
+        anchor = bound(anchor, 0, block.timestamp);
+
+        Policy memory policy = _timeIntervalPolicy(intervalHours, 100);
+        policy.config.rateLimit.anchorTimestamp = anchor;
+
+        uint256 expected = (block.timestamp - anchor) / (uint256(intervalHours) * 3600);
+        uint256 actual = harness.computeTimeWindowViaPolicyLibrary(policy);
+
+        assertEq(actual, expected, "anchor-adjusted window should match formula");
+    }
+
+    /// @dev Verifies `checkAndUpdateRateLimit` always fails closed when the anchor is in the future.
+    /// @param futureAnchor A timestamp strictly after `block.timestamp`.
+    /// @param usageAmount The attempted usage increment.
+    function testFuzz_checkAndUpdateRateLimit_beforeAnchor_alwaysFailsClosed(
+        uint256 futureAnchor,
+        uint256 usageAmount
+    ) public {
+        vm.warp(10_000);
+        futureAnchor = bound(futureAnchor, block.timestamp + 1, type(uint128).max);
+
+        uint256 policyId = 8801;
+        Policy memory policy = _timeIntervalPolicy(1, type(uint128).max);
+        policy.config.rateLimit.anchorTimestamp = futureAnchor;
+
+        bool allowed = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, address(0x8801), address(0x8802), address(0x8803), usageAmount
+        );
+
+        assertFalse(allowed, "before anchor should always fail closed");
+    }
+
+    /// @dev Verifies `checkAndUpdateRateLimit` increments usage correctly with a non-zero anchor.
+    /// @param anchor The anchor timestamp to use.
+    /// @param rawCurrentUsage The seeded usage already stored in the current time window.
+    /// @param rawIncrement The additional usage applied by the fuzzed call.
+    function testFuzz_checkAndUpdateRateLimit_withAnchor_withinLimitIncrementsExactly(
+        uint256 anchor,
+        uint96 rawCurrentUsage,
+        uint96 rawIncrement
+    ) public {
+        uint256 currentUsage = rawCurrentUsage;
+        uint256 usageAmount = rawIncrement;
+
+        vm.warp(100_000);
+        anchor = bound(anchor, 0, block.timestamp);
+
+        uint256 policyId = 8901;
+        Policy memory policy = _timeIntervalPolicy(1, currentUsage + usageAmount);
+        policy.config.rateLimit.anchorTimestamp = anchor;
+
+        address account = address(0x8901);
+        address destination = address(0x8902);
+        address initiator = address(0x8903);
+        bytes32 usageKey = harness.computeUsageKeyViaPolicyLibrary(policyId, policy, account, destination, initiator);
+        uint256 window = harness.computeTimeWindowViaPolicyLibrary(policy);
+        policyStateHarness.setPolicyUsage(usageKey, window, currentUsage);
+
+        bool allowed = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, account, destination, initiator, usageAmount
+        );
+
+        assertTrue(allowed, "within-limit usage with anchor should succeed");
+        assertEq(policyStateHarness.getPolicyUsage(usageKey, window), currentUsage + usageAmount);
+    }
 }
