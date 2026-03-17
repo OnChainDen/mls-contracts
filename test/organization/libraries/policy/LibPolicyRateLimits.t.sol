@@ -758,6 +758,57 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
         assertEq(usage, 0, "before anchor should return zero usage");
     }
 
+    /// @dev Verifies that getCurrentUsage reflects cumulative usage across multiple checkAndUpdateRateLimit calls
+    ///      within a single window.
+    function test_getCurrentUsage_cumulativeUsageWithinSingleWindow() public {
+        uint256 policyId = 9506;
+        Policy memory policy = _timeIntervalPolicy(1, 100);
+
+        vm.warp(3600);
+
+        harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, address(0xA1), address(0xB1), address(0xC1), 15
+        );
+        uint256 usageAfterFirst =
+            harness.getCurrentUsageViaPolicyLibrary(policyId, policy, address(0xA1), address(0xB1), address(0xC1));
+        assertEq(usageAfterFirst, 15, "Usage should be 15 after first update");
+
+        harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, address(0xA1), address(0xB1), address(0xC1), 25
+        );
+        uint256 usageAfterSecond =
+            harness.getCurrentUsageViaPolicyLibrary(policyId, policy, address(0xA1), address(0xB1), address(0xC1));
+        assertEq(usageAfterSecond, 40, "Usage should be cumulative (15 + 25 = 40)");
+
+        harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, address(0xA1), address(0xB1), address(0xC1), 10
+        );
+        uint256 usageAfterThird =
+            harness.getCurrentUsageViaPolicyLibrary(policyId, policy, address(0xA1), address(0xB1), address(0xC1));
+        assertEq(usageAfterThird, 50, "Usage should be cumulative (15 + 25 + 10 = 50)");
+    }
+
+    /// @dev Verifies that getCurrentUsage shows usage during an active window and resets to 0 in the next window.
+    function test_getCurrentUsage_resetsAcrossWindows() public {
+        uint256 policyId = 9507;
+        Policy memory policy = _timeIntervalPolicy(1, 100);
+
+        vm.warp(3600);
+
+        harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, address(0xA1), address(0xB1), address(0xC1), 60
+        );
+        uint256 window1Usage =
+            harness.getCurrentUsageViaPolicyLibrary(policyId, policy, address(0xA1), address(0xB1), address(0xC1));
+        assertEq(window1Usage, 60, "Usage should be 60 in window 1");
+
+        // Advance to window 2
+        vm.warp(7200);
+        uint256 window2Usage =
+            harness.getCurrentUsageViaPolicyLibrary(policyId, policy, address(0xA1), address(0xB1), address(0xC1));
+        assertEq(window2Usage, 0, "Usage should reset to 0 in new window");
+    }
+
     // ========== Helpers ==========
 
     function _timeIntervalPolicy(uint16 intervalHours, uint256 intervalLimit)
