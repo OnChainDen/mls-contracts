@@ -230,9 +230,9 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
         assertFalse(harness.getUsedNonce(mutatedNonce), "mutated payload nonce should remain unused");
     }
 
-    /// @dev Verifies `OrganizationGuardianBase.initiateGuardianUpdate` rejects a second pending guardian update until
-    /// the first lifecycle is cleared, without burning the signed nonce.
-    function test_downstreamPendingRevert_rollsBackNonceAndAllowsRetry_A() public {
+    /// @dev Verifies downstream `GuardianUpdateAlreadyPending` revert consumes the nonce and emits
+    /// `AdminOperationExecutionReverted`, blocking retries with the same signed payload.
+    function test_downstreamPendingRevert_consumesNonceAndBlocksRetry() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_B);
@@ -249,25 +249,30 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
         uint256 nonce = _computeGuardianNonce(OperationType.InitiateUpdateGuardian, operationData, 1010);
 
         // Call
-        vm.expectRevert(IOrganizationGuardian.GuardianUpdateAlreadyPending.selector);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.InitiateUpdateGuardian,
+            nonce,
+            abi.encodeWithSelector(IOrganizationGuardian.GuardianUpdateAlreadyPending.selector)
+        );
         vm.prank(GUARDIAN);
         harness.initiateGuardianUpdate(NEW_GUARDIAN_A, auth);
 
         // Verify
-        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on downstream revert");
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
 
         guardianStateHarness.setPendingGuardian(address(0));
         guardianStateHarness.setPendingGuardianUpdateTimestamp(0);
         guardianStateHarness.setIsGuardianUpdateReadyForAcceptance(false);
 
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce));
         vm.prank(GUARDIAN);
         harness.initiateGuardianUpdate(NEW_GUARDIAN_A, auth);
-        assertTrue(harness.getUsedNonce(nonce), "same signed request should succeed after fixing pending state");
-        assertEq(harness.pendingGuardian(), NEW_GUARDIAN_A, "pending guardian should be updated on retry");
     }
 
-    /// @dev Verifies downstream `InvalidGuardianAddress` revert rolls back nonce usage.
-    function test_downstreamInvalidGuardianRevert_rollsBackNonce_B() public {
+    /// @dev Verifies downstream `InvalidGuardianAddress` revert consumes the nonce and emits
+    /// `AdminOperationExecutionReverted`.
+    function test_downstreamInvalidGuardianRevert_consumesNonceAndEmitsRevertedEvent() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationData) = _buildInitiateGuardianUpdateAuth({
@@ -280,12 +285,17 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
         uint256 nonce = _computeGuardianNonce(OperationType.InitiateUpdateGuardian, operationData, 1011);
 
         // Call
-        vm.expectRevert(IOrganizationGuardian.InvalidGuardianAddress.selector);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.InitiateUpdateGuardian,
+            nonce,
+            abi.encodeWithSelector(IOrganizationGuardian.InvalidGuardianAddress.selector)
+        );
         vm.prank(GUARDIAN);
         harness.initiateGuardianUpdate(address(0), auth);
 
         // Verify
-        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on invalid guardian downstream revert");
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
     }
 
     /// @dev Verifies `OrganizationGuardianBase.initiateGuardianUpdate` reuses the same guardian value with a new salt

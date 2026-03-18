@@ -568,9 +568,9 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     }
 
     /**
-     * @dev Verifies `AccountTransactionExecuted` is emitted before the account execution event.
+     * @dev Verifies `AccountTransactionExecuted` is emitted after the account execution event.
      */
-    function test_executeAccountTransaction_emitsBeforeAccountExecuteTransactionCall() public {
+    function test_executeAccountTransaction_emitsAfterAccountExecuteTransactionCall() public {
         // Setup: deploy account and valid payload.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0xC0C0C0C0), uint256(7));
@@ -593,7 +593,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
             proofs: proofs
         });
 
-        // Verify: organization event precedes account event in emitted logs.
+        // Verify: account event precedes organization event in emitted logs.
         Vm.Log[] memory logs = vm.getRecordedLogs();
         bytes32 orgTopic = keccak256("AccountTransactionExecuted(address,address,uint256,bytes,uint256,uint256)");
         bytes32 accountTopic = keccak256("TransactionExecuted(address,uint256,bytes,uint256,uint256)");
@@ -612,7 +612,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
 
         assertTrue(orgIndex != type(uint256).max, "organization event must be emitted");
         assertTrue(accountIndex != type(uint256).max, "account event must be emitted");
-        assertTrue(orgIndex < accountIndex, "organization event must precede account event");
+        assertTrue(accountIndex < orgIndex, "account event must precede organization event");
     }
 
     /**
@@ -652,9 +652,9 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     }
 
     /**
-     * @dev Verifies account execution revert bubbles and nonce usage is rolled back.
+     * @dev Verifies account execution revert consumes nonce and emits failure event (partial revert).
      */
-    function test_executeAccountTransaction_accountExecutionReverts_rollsBackNonceUsage() public {
+    function test_executeAccountTransaction_accountExecutionReverts_consumesNonceAndEmitsRevertedEvent() public {
         // Setup: deploy account configured to revert on execute.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         account.setShouldRevertExecution(true);
@@ -663,8 +663,17 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
             _buildAutoApprovePayload(address(account), DESTINATION, 0, data, 9, DEFAULT_POLICY_ID);
         uint256 nonce = _computeNonce(address(account), DESTINATION, 0, data, DEFAULT_POLICY_ID, 9);
 
-        // Verify: account revert aborts whole transaction.
-        vm.expectRevert(IAccount.TransactionExecutionFailed.selector);
+        vm.expectEmit(true, true, true, true);
+        emit IOrganizationAccountTransaction.AccountTransactionExecutionReverted({
+            account: address(account),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            nonce: nonce,
+            policyId: DEFAULT_POLICY_ID,
+            revertData: abi.encodeWithSelector(IAccount.TransactionExecutionFailed.selector)
+        });
+
         vm.prank(GUARDIAN);
         // Call: execute payload against reverting account.
         harness.executeAccountTransaction({
@@ -680,8 +689,8 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
             proofs: proofs
         });
 
-        // Verify: nonce write is rolled back by full revert.
-        assertFalse(harness.getUsedNonce(nonce), "nonce must remain unused after revert");
+        // Verify: nonce is consumed despite execution revert (partial revert keeps nonce spent).
+        assertTrue(harness.getUsedNonce(nonce), "nonce must be consumed after partial revert");
     }
 
     /**
@@ -1179,9 +1188,9 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     }
 
     /**
-     * @dev Verifies external-call failure rolls back prior rate-limit usage updates.
+     * @dev Verifies external-call failure persists rate-limit usage and nonce consumption (partial revert).
      */
-    function test_executeAccountTransaction_executionFailure_rollsBackRateLimitUsage() public {
+    function test_executeAccountTransaction_executionFailure_persistsRateLimitUsage() public {
         // Setup: deploy account configured to revert after validation and use rate-limited policy.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         account.setShouldRevertExecution(true);
@@ -1209,8 +1218,19 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
 
         bytes32 usageKey = _computeUsageKey(DEFAULT_POLICY_ID, policy, address(account), DESTINATION, initiator1);
         uint256 window = _computeTimeWindow(policy);
+        uint256 nonce = _computeNonce(address(account), DESTINATION, 0, data, DEFAULT_POLICY_ID, 17);
 
-        vm.expectRevert(IAccount.TransactionExecutionFailed.selector);
+        vm.expectEmit(true, true, true, true);
+        emit IOrganizationAccountTransaction.AccountTransactionExecutionReverted({
+            account: address(account),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            nonce: nonce,
+            policyId: DEFAULT_POLICY_ID,
+            revertData: abi.encodeWithSelector(IAccount.TransactionExecutionFailed.selector)
+        });
+
         vm.prank(GUARDIAN);
         // Call: execute payload that passes validation but reverts in account execution.
         harness.executeAccountTransaction({
@@ -1226,8 +1246,9 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
             proofs: proofs
         });
 
-        // Verify: usage mutation is rolled back with full transaction revert.
-        assertEq(harness.getPolicyUsage(usageKey, window), 0, "rate-limit usage must rollback on revert");
+        // Verify: rate-limit usage and nonce persist despite execution revert (partial revert).
+        assertEq(harness.getPolicyUsage(usageKey, window), 1, "rate-limit usage must persist after partial revert");
+        assertTrue(harness.getUsedNonce(nonce), "nonce must be consumed after partial revert");
     }
 
     /**

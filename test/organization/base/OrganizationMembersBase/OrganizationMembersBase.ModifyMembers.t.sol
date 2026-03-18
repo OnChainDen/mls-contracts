@@ -114,12 +114,12 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         assertTrue(harness.isMember(memberB), "memberB should be a member");
     }
 
-    /// @dev Verifies that adding `address(0)` reverts with `InvalidMemberAddress`.
-    function test_modifyMembers_addZeroAddress_revertsInvalidMemberAddress() public {
+    /// @dev Verifies that adding `address(0)` consumes the nonce and emits `AdminOperationExecutionReverted`.
+    function test_modifyMembers_addZeroAddress_consumesNonceAndEmitsRevertedEvent() public {
         // Setup: configure members/admins for a valid baseline state.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
-        (AdminAuthParams memory auth,) = _buildModifyMembersAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildModifyMembersAuth({
             membersToAdd: buildArray(address(0)),
             membersToRemove: buildEmptyAddressArray(),
             salt: 4103,
@@ -128,13 +128,25 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Verify: zero-address adds must revert.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.InvalidMemberAddress.selector, address(0)));
+        uint256 nonce = harness.computeNonce({
+            operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4103
+        });
+
+        // Verify: the outer call succeeds but the execution step reverts internally, emitting the revert event.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.ModifyMembers,
+            nonce,
+            abi.encodeWithSelector(IOrganizationMembers.InvalidMemberAddress.selector, address(0))
+        );
         vm.prank(GUARDIAN);
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         harness.modifyMembers({
             membersToAdd: buildArray(address(0)), membersToRemove: buildEmptyAddressArray(), authParams: auth
         });
+
+        // Verify: nonce is consumed despite the downstream execution revert.
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
     }
 
     /// @dev Verifies that adding an already-existing member is idempotent and does not revert.
@@ -236,16 +248,16 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         assertFalse(harness.isMember(nonMember), "non-member should remain non-member");
     }
 
-    /// @dev Verifies `OrganizationMembersBase.modifyMembers` rejects removing a member whose admin role is still
-    /// active.
-    function test_modifyMembers_removeAdminMember_revertsMemberIsAdmin() public {
+    /// @dev Verifies `OrganizationMembersBase.modifyMembers` consumes the nonce and emits
+    /// `AdminOperationExecutionReverted` when removing a member whose admin role is still active.
+    function test_modifyMembers_removeAdminMember_consumesNonceAndEmitsRevertedEvent() public {
         address adminMember = address(0x40B);
         // Setup: configure members/admins for a valid baseline state.
         _setMembersAndAdmins({
             members: buildArray(admin1, adminMember), admins: buildArray(admin1, adminMember), threshold: 1
         });
 
-        (AdminAuthParams memory auth,) = _buildModifyMembersAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildModifyMembersAuth({
             membersToAdd: buildEmptyAddressArray(),
             membersToRemove: buildArray(adminMember),
             salt: 4110,
@@ -254,13 +266,27 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Verify: removing an admin from members must revert.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.MemberIsAdmin.selector, adminMember));
+        uint256 nonce = harness.computeNonce({
+            operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4110
+        });
+
+        // Verify: the outer call succeeds but the execution step reverts internally, emitting the revert event.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.ModifyMembers,
+            nonce,
+            abi.encodeWithSelector(IOrganizationMembers.MemberIsAdmin.selector, adminMember)
+        );
         vm.prank(GUARDIAN);
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         harness.modifyMembers({
             membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(adminMember), authParams: auth
         });
+
+        // Verify: nonce is consumed despite the downstream execution revert.
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
+        // Verify: admin member remains a member since the execution was rolled back.
+        assertTrue(harness.isMember(adminMember), "admin member should remain a member");
     }
 
     /// @dev Verifies that removing a member who is in a group still succeeds (group membership is not checked).
@@ -320,15 +346,16 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         }
     }
 
-    /// @dev Verifies again that an admin cannot be removed from members until admin status is removed.
-    function test_modifyMembers_adminMustBeDemotedBeforeMemberRemoval() public {
+    /// @dev Verifies that removing an admin member consumes the nonce and emits `AdminOperationExecutionReverted`
+    /// without actually removing the member.
+    function test_modifyMembers_adminMustBeDemotedBeforeMemberRemoval_consumesNonceAndEmitsRevertedEvent() public {
         address adminMember = address(0x40F);
         // Setup: configure members/admins for a valid baseline state.
         _setMembersAndAdmins({
             members: buildArray(admin1, adminMember), admins: buildArray(admin1, adminMember), threshold: 1
         });
 
-        (AdminAuthParams memory auth,) = _buildModifyMembersAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildModifyMembersAuth({
             membersToAdd: buildEmptyAddressArray(),
             membersToRemove: buildArray(adminMember),
             salt: 4114,
@@ -337,13 +364,27 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Verify: removing a member with active admin status must revert.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.MemberIsAdmin.selector, adminMember));
+        uint256 nonce = harness.computeNonce({
+            operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4114
+        });
+
+        // Verify: the outer call succeeds but the execution step reverts internally, emitting the revert event.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.ModifyMembers,
+            nonce,
+            abi.encodeWithSelector(IOrganizationMembers.MemberIsAdmin.selector, adminMember)
+        );
         vm.prank(GUARDIAN);
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         harness.modifyMembers({
             membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(adminMember), authParams: auth
         });
+
+        // Verify: nonce is consumed despite the downstream execution revert.
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
+        // Verify: admin member remains a member since the execution was rolled back.
+        assertTrue(harness.isMember(adminMember), "admin member should remain a member");
     }
 
     /// @dev Verifies `OrganizationMembersBase.modifyMembers` succeeds once the target address is demoted from admin
@@ -376,13 +417,14 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         assertFalse(harness.isMember(adminMember), "address should no longer be member");
     }
 
-    /// @dev Verifies integration behavior: admin additions require target addresses to already be members.
-    function test_modifyAdmins_integrationAddNonMember_revertsAdminNotMember() public {
+    /// @dev Verifies integration behavior: admin additions for non-members consume the nonce and emit
+    /// `AdminOperationExecutionReverted`.
+    function test_modifyAdmins_integrationAddNonMember_consumesNonceAndEmitsRevertedEvent() public {
         address nonMember = address(0x411);
         // Setup: configure members/admins for a valid baseline state.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
-        (AdminAuthParams memory auth,) = _buildModifyAdminsAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildModifyAdminsAuth({
             adminsToAdd: buildArray(nonMember),
             adminsToRemove: buildEmptyAddressArray(),
             newVotingThreshold: 1,
@@ -392,8 +434,16 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Verify: admin add for non-member must revert.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.AdminNotMember.selector, nonMember));
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: 5116});
+
+        // Verify: the outer call succeeds but the execution step reverts internally, emitting the revert event.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.ModifyAdmins,
+            nonce,
+            abi.encodeWithSelector(IOrganizationAdmin.AdminNotMember.selector, nonMember)
+        );
         vm.prank(GUARDIAN);
         // Call: invoke admin base-contract path to validate cross-module invariant.
         harness.modifyAdmins({
@@ -402,6 +452,11 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
             newVotingThreshold: 1,
             authParams: auth
         });
+
+        // Verify: nonce is consumed despite the downstream execution revert.
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
+        // Verify: non-member should not have been granted admin status.
+        assertFalse(harness.isAdmin(nonMember), "non-member should not become admin");
     }
 
     /// @dev Verifies `OrganizationMembersBase.modifyMembers` adds and removes members in one guardian-authorized
@@ -686,13 +741,13 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         assertFalse(harness.isMember(memberToRemove), "removed member should stay absent after the second execution");
     }
 
-    /// @dev Verifies `OrganizationMembersBase.modifyMembers` rolls back nonce consumption when the downstream member
-    /// mutation reverts.
-    function test_modifyMembers_downstreamRevert_rollsBackNonceAndAllowsRetry() public {
+    /// @dev Verifies `OrganizationMembersBase.modifyMembers` consumes the nonce on downstream revert, blocking retries
+    /// with the same signed payload.
+    function test_modifyMembers_downstreamRevert_consumesNonceAndBlocksRetry() public {
         address adminMember = address(0x425);
 
-        // Setup: prepare a signed removal for an address that is still an admin member so the first call reverts, and
-        // precompute the nonce tied to that exact signed `modifyMembers` payload.
+        // Setup: prepare a signed removal for an address that is still an admin member so the execution step reverts,
+        // and precompute the nonce tied to that exact signed `modifyMembers` payload.
         _setMembersAndAdmins({
             members: buildArray(admin1, adminMember), admins: buildArray(admin1, adminMember), threshold: 1
         });
@@ -709,32 +764,28 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
             operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4125
         });
 
-        // Call: hit the downstream `MemberIsAdmin` revert, demote the same address through `modifyAdmins`, then retry
-        // the unchanged signed member-removal request.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.MemberIsAdmin.selector, adminMember));
+        // Call: the outer call succeeds but the execution step reverts internally because the target is still an admin.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.ModifyMembers,
+            nonce,
+            abi.encodeWithSelector(IOrganizationMembers.MemberIsAdmin.selector, adminMember)
+        );
         vm.prank(GUARDIAN);
         harness.modifyMembers({
             membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(adminMember), authParams: auth
         });
 
-        assertFalse(harness.getUsedNonce(nonce), "downstream member revert should roll back nonce consumption");
+        // Verify: nonce is consumed despite the downstream execution revert.
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
+        // Verify: admin member remains a member since the execution was rolled back.
+        assertTrue(harness.isMember(adminMember), "admin member should remain a member");
 
-        _executeModifyAdmins({
-            adminsToAdd: buildEmptyAddressArray(),
-            adminsToRemove: buildArray(adminMember),
-            newVotingThreshold: 1,
-            salt: 5125,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
-
+        // Verify: retrying with the same signed payload fails because the nonce is already used.
+        _expectNonceAlreadyUsed(nonce);
         vm.prank(GUARDIAN);
         harness.modifyMembers({
             membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(adminMember), authParams: auth
         });
-
-        // Verify: the revert left the nonce unused, so the same signed member-removal request succeeds once the
-        // address is no longer an admin.
-        assertTrue(harness.getUsedNonce(nonce), "successful retry should consume the rolled-back nonce");
-        assertFalse(harness.isMember(adminMember), "demoted admin member should be removable on retry");
     }
 }

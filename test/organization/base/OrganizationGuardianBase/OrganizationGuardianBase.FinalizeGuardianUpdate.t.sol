@@ -247,9 +247,9 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         assertFalse(harness.getUsedNonce(nonceB), "mutated pending payload nonce should remain unused");
     }
 
-    /// @dev Verifies `OrganizationGuardianBase.finalizeGuardianUpdate` reverts before the admin timelock expires and
-    /// succeeds at the exact boundary without requiring new signatures.
-    function test_timelockRevert_rollsBackNonceAndAllowsRetry_A() public {
+    /// @dev Verifies downstream `TimelockNotExpired` revert consumes the nonce and emits
+    /// `AdminOperationExecutionReverted`, blocking retries with the same signed payload.
+    function test_timelockRevert_consumesNonceAndBlocksRetry() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2908);
@@ -264,7 +264,10 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         uint256 nonce = _computeGuardianNonce(OperationType.FinalizeUpdateGuardian, operationData, 2010);
 
         // Call
-        vm.expectRevert(
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.FinalizeUpdateGuardian,
+            nonce,
             abi.encodeWithSelector(
                 IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
             )
@@ -273,15 +276,16 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         harness.finalizeGuardianUpdate(auth);
 
         // Verify
-        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on downstream timelock revert");
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
         vm.warp(canFinalizeAt);
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce));
         vm.prank(GUARDIAN);
         harness.finalizeGuardianUpdate(auth);
-        assertTrue(harness.getUsedNonce(nonce), "same signed finalize request should succeed after timelock expiry");
     }
 
-    /// @dev Verifies `NoPendingGuardianUpdate` revert rolls back nonce usage.
-    function test_noPendingRevert_rollsBackNonce_B() public {
+    /// @dev Verifies downstream `NoPendingGuardianUpdate` revert consumes the nonce and emits
+    /// `AdminOperationExecutionReverted`.
+    function test_noPendingRevert_consumesNonceAndEmitsRevertedEvent() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationData) = _buildFinalizeGuardianUpdateAuth({
@@ -294,12 +298,17 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         uint256 nonce = _computeGuardianNonce(OperationType.FinalizeUpdateGuardian, operationData, 2011);
 
         // Call
-        vm.expectRevert(IOrganizationGuardian.NoPendingGuardianUpdate.selector);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.FinalizeUpdateGuardian,
+            nonce,
+            abi.encodeWithSelector(IOrganizationGuardian.NoPendingGuardianUpdate.selector)
+        );
         vm.prank(GUARDIAN);
         harness.finalizeGuardianUpdate(auth);
 
         // Verify
-        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on no-pending downstream revert");
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
     }
 
     /// @dev Verifies `OrganizationGuardianBase.finalizeGuardianUpdate` can finalize the same pending guardian twice

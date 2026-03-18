@@ -28,13 +28,32 @@ abstract contract OrganizationAdminBase is OrganizationModifiers, IOrganizationA
             abi.encode(keccak256(abi.encode(adminsToAdd)), keccak256(abi.encode(adminsToRemove)), newVotingThreshold);
 
         // Validate that the current admins have authorized this change (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+        uint256 nonce = LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
         });
 
+        // Execute via low-level self-call so that a revert does not bubble up.
+        // The nonce is already consumed, so it remains used regardless of execution outcome.
+        /* solhint-disable avoid-low-level-calls */
+        // slither-disable-next-line low-level-calls,reentrancy-events
+        (bool success, bytes memory revertData) = address(this)
+            .call(abi.encodeCall(this.executeModifyAdmins, (adminsToAdd, adminsToRemove, newVotingThreshold)));
+        /* solhint-enable avoid-low-level-calls */
+
+        if (!success) {
+            emit AdminOperationExecutionReverted(OperationType.ModifyAdmins, nonce, revertData);
+        }
+    }
+
+    /// @inheritdoc IOrganizationAdmin
+    function executeModifyAdmins(
+        address[] calldata adminsToAdd,
+        address[] calldata adminsToRemove,
+        uint256 newVotingThreshold
+    ) external onlySelf {
         LibOrganizationAdmin.modifyAdmins(adminsToAdd, adminsToRemove, newVotingThreshold);
     }
 

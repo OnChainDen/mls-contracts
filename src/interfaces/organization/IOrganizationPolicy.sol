@@ -65,6 +65,16 @@ interface IOrganizationPolicy {
     ) external;
 
     /**
+     * @notice Self-call execution step for setPolicies
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `setPolicies` to isolate execution reverts from the outer call frame, ensuring the
+     *      nonce remains consumed even if the state change fails.
+     * @param newPoliciesRoot The new merkle root containing all policies
+     * @param ipfsCid The IPFS CID where full policy data is stored for disaster recovery
+     */
+    function executeSetPolicies(bytes32 newPoliciesRoot, string calldata ipfsCid) external;
+
+    /**
      * @notice Returns the current global policies merkle root
      * @return The policies merkle root
      */

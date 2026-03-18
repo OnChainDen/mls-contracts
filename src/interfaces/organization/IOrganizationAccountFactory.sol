@@ -66,6 +66,25 @@ interface IOrganizationAccountFactory {
     function setAccountImplementation(address newImplementation, AdminAuthParams calldata authParams) external;
 
     /**
+     * @notice Self-call execution step for deployAccount
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `deployAccount` to isolate execution reverts from the outer call frame, ensuring the
+     *      nonce remains consumed even if the deployment fails.
+     * @param create2Salt The salt for CREATE2 deployment
+     * @return The address of the deployed account proxy
+     */
+    function executeDeployAccount(bytes32 create2Salt) external returns (address);
+
+    /**
+     * @notice Self-call execution step for setAccountImplementation
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `setAccountImplementation` to isolate execution reverts from the outer call frame, ensuring
+     *      the nonce remains consumed even if the whitelist validation or update fails.
+     * @param newImplementation The new implementation address
+     */
+    function executeSetAccountImplementation(address newImplementation) external;
+
+    /**
      * @notice Computes the address where an account proxy would be deployed
      * @param salt The salt for CREATE2 deployment
      * @return The computed address

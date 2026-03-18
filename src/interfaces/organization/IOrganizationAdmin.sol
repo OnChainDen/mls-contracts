@@ -37,6 +37,16 @@ interface IOrganizationAdmin {
     event VotingThresholdUpdated(uint256 previousVotingThreshold, uint256 newVotingThreshold);
 
     /**
+     * @notice Emitted when an admin operation's execution reverts after signature validation
+     * @dev The nonce is still consumed even though execution failed. The revert data from
+     *      the failed self-call is included for debugging purposes.
+     * @param operationType The type of admin operation that reverted
+     * @param nonce The nonce consumed for this operation
+     * @param revertData The revert data returned by the failed execution
+     */
+    event AdminOperationExecutionReverted(OperationType indexed operationType, uint256 indexed nonce, bytes revertData);
+
+    /**
      * @notice Emitted when an admin operation is rejected by authorized admins
      * @param operationType The type of admin operation that was rejected
      * @param operationData The encoded operation data
@@ -142,6 +152,21 @@ interface IOrganizationAdmin {
         OperationType operationType,
         bytes calldata operationData,
         AdminAuthParams calldata authParams
+    ) external;
+
+    /**
+     * @notice Self-call execution step for modifyAdmins
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `modifyAdmins` to isolate execution reverts from the outer call frame, ensuring the
+     *      nonce remains consumed even if the state change fails.
+     * @param adminsToAdd Addresses to add as admins
+     * @param adminsToRemove Addresses to remove from admins
+     * @param newVotingThreshold The new voting threshold (must be non-zero and <= final admin count)
+     */
+    function executeModifyAdmins(
+        address[] calldata adminsToAdd,
+        address[] calldata adminsToRemove,
+        uint256 newVotingThreshold
     ) external;
 
     /**

@@ -181,6 +181,33 @@ interface IOrganizationGuardianRecovery {
     function cancelInitializeGuardianRecovery(AdminAuthParams calldata authParams) external;
 
     /**
+     * @notice Self-call execution step for initiateInitializeGuardianRecovery
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `initiateInitializeGuardianRecovery` to isolate execution reverts from the outer call
+     *      frame, ensuring the nonce remains consumed even if the state change fails.
+     * @param recoveryAddress The proposed guardian recovery address
+     * @param timelockDurationSeconds The proposed timelock duration in seconds for recovery operations
+     */
+    function executeInitiateInitializeGuardianRecovery(address recoveryAddress, uint256 timelockDurationSeconds)
+        external;
+
+    /**
+     * @notice Self-call execution step for finalizeInitializeGuardianRecovery
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `finalizeInitializeGuardianRecovery` to isolate execution reverts from the outer call
+     *      frame, ensuring the nonce remains consumed even if the state change fails.
+     */
+    function executeFinalizeInitializeGuardianRecovery() external;
+
+    /**
+     * @notice Self-call execution step for cancelInitializeGuardianRecovery
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `cancelInitializeGuardianRecovery` to isolate execution reverts from the outer call
+     *      frame, ensuring the nonce remains consumed even if the state change fails.
+     */
+    function executeCancelInitializeGuardianRecovery() external;
+
+    /**
      * @notice Returns the full guardian recovery state
      * @return The GuardianRecoveryState struct containing all recovery configuration and pending state
      */

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
 import {OrganizationModifiers} from "organization/common/OrganizationModifiers.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
@@ -28,13 +29,27 @@ abstract contract OrganizationPolicyBase is OrganizationModifiers, IOrganization
         bytes memory operationData = abi.encode(newPoliciesRoot, keccak256(bytes(ipfsCid)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+        uint256 nonce = LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyPolicies,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
         });
 
+        // Execute via low-level self-call so that a revert does not bubble up.
+        /* solhint-disable avoid-low-level-calls */
+        // slither-disable-next-line low-level-calls,reentrancy-events
+        (bool success, bytes memory revertData) =
+            address(this).call(abi.encodeCall(this.executeSetPolicies, (newPoliciesRoot, ipfsCid)));
+        /* solhint-enable avoid-low-level-calls */
+
+        if (!success) {
+            emit IOrganizationAdmin.AdminOperationExecutionReverted(OperationType.ModifyPolicies, nonce, revertData);
+        }
+    }
+
+    /// @inheritdoc IOrganizationPolicy
+    function executeSetPolicies(bytes32 newPoliciesRoot, string calldata ipfsCid) external onlySelf {
         LibOrganizationPolicy.setPolicies(newPoliciesRoot, ipfsCid);
     }
 

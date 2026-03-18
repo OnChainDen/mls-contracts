@@ -153,9 +153,9 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         );
     }
 
-    /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` fails closed once guardian
-    /// recovery is already configured and does not burn the signed nonce.
-    function test_downstreamRevert_rollsBackNonceAndRetrySucceeds() public {
+    /// @dev Verifies downstream `GuardianRecoveryAlreadyConfigured` revert consumes the nonce and emits
+    /// `AdminOperationExecutionReverted`, blocking retries with the same signed payload.
+    function test_downstreamRevert_consumesNonceAndBlocksRetry() public {
         // Setup: set admin/member threshold and prepare signed admin auth.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationData) = _buildInitiateInitializeGuardianRecoveryAuth({
@@ -168,21 +168,23 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         });
         uint256 nonce = _computeRecoveryNonce(OperationType.InitiateInitializeGuardianRecovery, operationData, 11_008);
 
-        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting `GuardianRecoveryAlreadyConfigured`
-        // revert.
-        vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryAlreadyConfigured.selector);
+        // Call
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.InitiateInitializeGuardianRecovery,
+            nonce,
+            abi.encodeWithSelector(IOrganizationGuardianRecovery.GuardianRecoveryAlreadyConfigured.selector)
+        );
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, auth);
 
-        // Verify: nonce should rollback on downstream library revert; same signed request should succeed once root
-        // cause is fixed.
-        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on downstream library revert");
+        // Verify: nonce is consumed on downstream revert; retry with the same signed payload fails.
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
 
         recoveryStateHarness.resetGuardianRecoveryStorage();
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce));
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, auth);
-
-        assertTrue(harness.getUsedNonce(nonce), "same signed request should succeed once root cause is fixed");
     }
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` signed operationData is
@@ -324,14 +326,14 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         assertFalse(harness.getUsedNonce(initiateNonce), "initiate nonce should remain unused");
     }
 
-    /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` timelock range for initiate
-    /// flow is enforced to [2 days, 30 days].
-    function test_timelockOutOfRange_revertsInvalidTimelockDuration() public {
+    /// @dev Verifies downstream `InvalidTimelockDuration` reverts consume nonces and emit
+    /// `AdminOperationExecutionReverted` for both below-min and above-max timelock durations.
+    function test_timelockOutOfRange_consumesNonceAndEmitsRevertedEvent() public {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
-        (AdminAuthParams memory belowMinAuth,) = _buildInitiateInitializeGuardianRecoveryAuth({
+        (AdminAuthParams memory belowMinAuth, bytes memory belowMinData) = _buildInitiateInitializeGuardianRecoveryAuth({
             recoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
             timelockDurationSeconds: 1 days,
             salt: 11_014,
@@ -339,8 +341,10 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 belowMinNonce =
+            _computeRecoveryNonce(OperationType.InitiateInitializeGuardianRecovery, belowMinData, 11_014);
 
-        (AdminAuthParams memory aboveMaxAuth,) = _buildInitiateInitializeGuardianRecoveryAuth({
+        (AdminAuthParams memory aboveMaxAuth, bytes memory aboveMaxData) = _buildInitiateInitializeGuardianRecoveryAuth({
             recoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
             timelockDurationSeconds: 31 days,
             salt: 11_015,
@@ -348,10 +352,14 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 aboveMaxNonce =
+            _computeRecoveryNonce(OperationType.InitiateInitializeGuardianRecovery, aboveMaxData, 11_015);
 
-        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation
-        // revert.
-        vm.expectRevert(
+        // Call
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.InitiateInitializeGuardianRecovery,
+            belowMinNonce,
             abi.encodeWithSelector(
                 TimelockUtils.InvalidTimelockDuration.selector,
                 1 days,
@@ -362,7 +370,10 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, 1 days, belowMinAuth);
 
-        vm.expectRevert(
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.InitiateInitializeGuardianRecovery,
+            aboveMaxNonce,
             abi.encodeWithSelector(
                 TimelockUtils.InvalidTimelockDuration.selector,
                 31 days,
@@ -373,7 +384,9 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, 31 days, aboveMaxAuth);
 
-        // Verify: out-of-range timelock should not create pending init state.
+        // Verify: nonces are consumed despite the downstream execution reverts; pending init state remains clear.
+        assertTrue(harness.getUsedNonce(belowMinNonce), "below-min nonce should be consumed on downstream revert");
+        assertTrue(harness.getUsedNonce(aboveMaxNonce), "above-max nonce should be consumed on downstream revert");
         assertEq(
             harness.getGuardianRecoveryState().pendingInit.pendingTimestamp,
             0,
@@ -449,8 +462,10 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
     }
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` invalid params and
-    /// already-pending branches both roll back nonce usage.
-    function test_initiateInitializeGuardianRecovery_invalidParamsAndPendingState_rollBackNonce() public {
+    /// already-pending branches both consume nonces and emit `AdminOperationExecutionReverted`.
+    function test_initiateInitializeGuardianRecovery_invalidParamsAndPendingState_consumesNonceAndEmitsRevertedEvent()
+        public
+    {
         // Setup: reset storage, configure one-admin auth, and prepare one invalid-address payload plus one
         // already-pending payload.
         recoveryStateHarness.resetGuardianRecoveryStorage();
@@ -483,20 +498,30 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
 
         // Call: first use an invalid recovery address, then hit the already-pending branch with a valid signed tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
-        vm.expectRevert(IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress.selector);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.InitiateInitializeGuardianRecovery,
+            invalidAddressNonce,
+            abi.encodeWithSelector(IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress.selector)
+        );
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(address(0), GUARDIAN_RECOVERY_TIMELOCK, invalidAddressAuth);
 
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
         );
-        vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryInitializationAlreadyPending.selector);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.InitiateInitializeGuardianRecovery,
+            pendingNonce,
+            abi.encodeWithSelector(IOrganizationGuardianRecovery.GuardianRecoveryInitializationAlreadyPending.selector)
+        );
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, pendingAuth);
 
-        // Verify: both downstream revert branches leave their computed nonces unused and preserve the pending tuple.
-        assertFalse(harness.getUsedNonce(invalidAddressNonce), "invalid-address revert should not burn nonce");
-        assertFalse(harness.getUsedNonce(pendingNonce), "already-pending revert should not burn nonce");
+        // Verify: both downstream revert branches consume their nonces and preserve the pending tuple.
+        assertTrue(harness.getUsedNonce(invalidAddressNonce), "invalid-address nonce should be consumed");
+        assertTrue(harness.getUsedNonce(pendingNonce), "already-pending nonce should be consumed");
         assertEq(
             harness.getGuardianRecoveryState().pendingInit.pendingRecoveryAddress,
             GUARDIAN_RECOVERY_ADDRESS,

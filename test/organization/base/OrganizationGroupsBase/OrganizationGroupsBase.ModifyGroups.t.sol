@@ -81,8 +81,9 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
         assertFalse(harness.isGroupMember(groupId, admin2), "deleted group should not report the updated member");
     }
 
-    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` prevents group-id reuse after a successful deletion.
-    function test_modifyGroups_deletedGroupCannotBeRecreated() public {
+    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` prevents group-id reuse after a successful deletion,
+    /// consuming the nonce and emitting `AdminOperationExecutionReverted`.
+    function test_modifyGroups_deletedGroupCannotBeRecreated_consumesNonceAndEmitsRevertedEvent() public {
         uint256 groupId = 7902;
 
         // Setup: create and delete one group through valid guardian-authorized executions, then prepare a fresh
@@ -123,20 +124,25 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
 
         uint256 recreateNonce = _computeModifyGroupsNonce(recreateOperationData, 3193);
 
-        // Call: attempt to recreate the deleted group id with a fresh signed payload and expect the base path to
-        // bubble the non-reuse guard.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationGroups.GroupAlreadyDeleted.selector, groupId));
+        // Call: attempt to recreate the deleted group id; the outer call succeeds but the execution step reverts
+        // internally, emitting the revert event.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.ModifyGroups,
+            recreateNonce,
+            abi.encodeWithSelector(IOrganizationGroups.GroupAlreadyDeleted.selector, groupId)
+        );
         vm.prank(GUARDIAN);
         harness.modifyGroups(createModifications, recreateAuth);
 
-        // Verify: deleted groups remain non-recreatable and the failed recreate attempt does not consume its nonce.
-        assertFalse(groupsStateHarness.getUsedNonce(recreateNonce), "recreate revert should not consume nonce");
+        // Verify: nonce is consumed and the deleted group remains inactive.
+        assertTrue(groupsStateHarness.getUsedNonce(recreateNonce), "nonce should be consumed on downstream revert");
         assertFalse(harness.isGroup(groupId), "deleted group should remain inactive");
     }
 
-    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` rejects create batches that add non-members and rolls back
-    /// nonce consumption.
-    function test_modifyGroups_createWithNonMember_revertsAndDoesNotConsumeNonce() public {
+    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` consumes the nonce and emits
+    /// `AdminOperationExecutionReverted` when a create batch includes a non-member.
+    function test_modifyGroups_createWithNonMember_consumesNonceAndEmitsRevertedEvent() public {
         uint256 groupId = 7915;
         address nonMember = address(0xD15EA5E);
 
@@ -155,15 +161,20 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: execute the guardian-authorized create request, expecting the member-existence guard to reject the
-        // non-member entry.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.MemberDoesNotExist.selector, nonMember));
+        uint256 nonce = _computeModifyGroupsNonce(operationData, 3115);
+
+        // Call: the outer call succeeds but the execution step reverts internally because of the non-member entry.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.ModifyGroups,
+            nonce,
+            abi.encodeWithSelector(IOrganizationMembers.MemberDoesNotExist.selector, nonMember)
+        );
         vm.prank(GUARDIAN);
         harness.modifyGroups(modifications, auth);
 
-        // Verify: the failed create leaves the nonce unused and does not partially create the group.
-        uint256 nonce = _computeModifyGroupsNonce(operationData, 3115);
-        assertFalse(groupsStateHarness.getUsedNonce(nonce), "non-member create revert should not consume nonce");
+        // Verify: nonce is consumed and the group was not partially created.
+        assertTrue(groupsStateHarness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
         assertFalse(harness.isGroup(groupId), "group should not be created when one requested member is invalid");
     }
 
@@ -431,8 +442,8 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
         assertTrue(groupsStateHarness.getUsedNonce(nonce), "empty successful operation should consume nonce");
     }
 
-    /// @dev Verifies library custom errors bubble through base unchanged.
-    function test_modifyGroups_libraryCustomErrors_bubbleThroughBaseUnchanged() public {
+    /// @dev Verifies library custom errors consume the nonce and emit `AdminOperationExecutionReverted`.
+    function test_modifyGroups_libraryCustomErrors_consumeNonceAndEmitRevertedEvent() public {
         uint256 nonExistentGroupId = 7908;
 
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -449,17 +460,24 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationGroups.GroupDoesNotExist.selector, nonExistentGroupId));
+        uint256 nonce = _computeModifyGroupsNonce(operationData, 3108);
+
+        // Verify: the outer call succeeds but the execution step reverts internally, emitting the revert event.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.ModifyGroups,
+            nonce,
+            abi.encodeWithSelector(IOrganizationGroups.GroupDoesNotExist.selector, nonExistentGroupId)
+        );
         vm.prank(GUARDIAN);
         harness.modifyGroups(modifications, auth);
 
-        // Library revert should rollback nonce consumption from prior auth step.
-        uint256 nonce = _computeModifyGroupsNonce(operationData, 3108);
-        assertFalse(groupsStateHarness.getUsedNonce(nonce), "nonce should rollback on downstream library revert");
+        // Verify: nonce is consumed despite the downstream library revert.
+        assertTrue(groupsStateHarness.getUsedNonce(nonce), "nonce should be consumed on downstream library revert");
     }
 
-    /// @dev Verifies member-level custom errors bubble through base unchanged and nonce is rolled back.
-    function test_modifyGroups_memberDoesNotExist_bubblesThroughBaseAndDoesNotConsumeNonce() public {
+    /// @dev Verifies member-level custom errors consume the nonce and emit `AdminOperationExecutionReverted`.
+    function test_modifyGroups_memberDoesNotExist_consumesNonceAndEmitsRevertedEvent() public {
         uint256 groupId = 7911;
         address nonMember = address(0xD00D);
 
@@ -477,12 +495,20 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.MemberDoesNotExist.selector, nonMember));
+        uint256 nonce = _computeModifyGroupsNonce(operationData, 3111);
+
+        // Verify: the outer call succeeds but the execution step reverts internally, emitting the revert event.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.ModifyGroups,
+            nonce,
+            abi.encodeWithSelector(IOrganizationMembers.MemberDoesNotExist.selector, nonMember)
+        );
         vm.prank(GUARDIAN);
         harness.modifyGroups(modifications, auth);
 
-        uint256 nonce = _computeModifyGroupsNonce(operationData, 3111);
-        assertFalse(groupsStateHarness.getUsedNonce(nonce), "nonce should rollback on member-level library revert");
+        // Verify: nonce is consumed despite the member-level library revert.
+        assertTrue(groupsStateHarness.getUsedNonce(nonce), "nonce should be consumed on member-level library revert");
     }
 
     /// @dev Verifies malformed enum payloads revert through base path and do not mutate state.
@@ -522,9 +548,9 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
         assertFalse(harness.isGroup(groupId), "state should remain unchanged on malformed enum revert");
     }
 
-    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` rolls back an entire failing batch and allows the same
-    /// signed batch to be retried once the downstream condition is fixed.
-    function test_modifyGroups_libraryRevert_doesNotConsumeNonceAndCanRetrySameSaltAndOperation() public {
+    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` consumes the nonce on a library revert, blocking retries
+    /// with the same signed payload.
+    function test_modifyGroups_libraryRevert_consumesNonceAndBlocksRetryOfSameSaltAndOperation() public {
         uint256 groupId = 7910;
 
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -540,27 +566,33 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // First attempt reverts in library because group does not exist.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationGroups.GroupDoesNotExist.selector, groupId));
+        uint256 nonce = _computeModifyGroupsNonce(operationData, 3110);
+
+        // Call: the outer call succeeds but the execution step reverts internally because the group does not exist.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.ModifyGroups,
+            nonce,
+            abi.encodeWithSelector(IOrganizationGroups.GroupDoesNotExist.selector, groupId)
+        );
         vm.prank(GUARDIAN);
         harness.modifyGroups(modifications, auth);
 
-        uint256 nonce = _computeModifyGroupsNonce(operationData, 3110);
-        assertFalse(groupsStateHarness.getUsedNonce(nonce), "nonce should rollback on library revert");
+        // Verify: nonce is consumed despite the library revert.
+        assertTrue(groupsStateHarness.getUsedNonce(nonce), "nonce should be consumed on library revert");
 
         // Make payload valid without changing signed operation data.
         groupsStateHarness.setGroupStatus(groupId, true);
 
+        // Verify: retrying with the same signed payload fails because the nonce is already used.
+        _expectNonceAlreadyUsed(nonce);
         vm.prank(GUARDIAN);
         harness.modifyGroups(modifications, auth);
-
-        assertTrue(groupsStateHarness.getUsedNonce(nonce), "nonce should consume on successful retry");
-        assertTrue(harness.isGroupMember(groupId, admin1), "retry should apply signed update successfully");
     }
 
-    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` rejects create operations that include
-    /// `membersToRemove`.
-    function test_modifyGroups_createWithMembersToRemove_revertsInvalidGroupCreationOperation() public {
+    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` consumes the nonce and emits
+    /// `AdminOperationExecutionReverted` when a create operation includes `membersToRemove`.
+    function test_modifyGroups_createWithMembersToRemove_consumesNonceAndEmitsRevertedEvent() public {
         uint256 groupId = 7915;
 
         // Setup: configure one-admin auth and build a malformed create modification that includes
@@ -580,18 +612,24 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
 
         uint256 nonce = _computeModifyGroupsNonce(operationData, 3194);
 
-        // Call: execute the malformed create operation and expect the base path to bubble the shape-validation error.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationGroups.InvalidGroupCreationOperation.selector, groupId));
+        // Call: the outer call succeeds but the execution step reverts internally due to malformed create shape.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.ModifyGroups,
+            nonce,
+            abi.encodeWithSelector(IOrganizationGroups.InvalidGroupCreationOperation.selector, groupId)
+        );
         vm.prank(GUARDIAN);
         harness.modifyGroups(modifications, auth);
 
-        // Verify: invalid create-shape validation should leave both state and nonce untouched.
-        assertFalse(groupsStateHarness.getUsedNonce(nonce), "invalid create shape should not consume nonce");
+        // Verify: nonce is consumed and the group was not created.
+        assertTrue(groupsStateHarness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
         assertFalse(harness.isGroup(groupId), "invalid create shape should not create the group");
     }
 
-    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` rejects delete operations with non-empty member arrays.
-    function test_modifyGroups_deleteWithNonEmptyMemberArrays_revertsInvalidGroupDeletionOperation() public {
+    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` consumes the nonce and emits
+    /// `AdminOperationExecutionReverted` when a delete operation includes non-empty member arrays.
+    function test_modifyGroups_deleteWithNonEmptyMemberArrays_consumesNonceAndEmitsRevertedEvent() public {
         uint256 groupId = 7916;
 
         // Setup: configure one-admin auth and build a malformed delete modification that includes member arrays the
@@ -611,13 +649,18 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
 
         uint256 nonce = _computeModifyGroupsNonce(operationData, 3195);
 
-        // Call: execute the malformed delete operation and expect the base path to bubble the shape-validation error.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationGroups.InvalidGroupDeletionOperation.selector, groupId));
+        // Call: the outer call succeeds but the execution step reverts internally due to malformed delete shape.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.ModifyGroups,
+            nonce,
+            abi.encodeWithSelector(IOrganizationGroups.InvalidGroupDeletionOperation.selector, groupId)
+        );
         vm.prank(GUARDIAN);
         harness.modifyGroups(modifications, auth);
 
-        // Verify: invalid delete-shape validation should leave both state and nonce untouched.
-        assertFalse(groupsStateHarness.getUsedNonce(nonce), "invalid delete shape should not consume nonce");
+        // Verify: nonce is consumed and the group was not created or activated.
+        assertTrue(groupsStateHarness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
         assertFalse(harness.isGroup(groupId), "invalid delete shape should not create or activate the group");
     }
 }

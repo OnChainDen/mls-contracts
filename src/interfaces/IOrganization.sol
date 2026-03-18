@@ -59,6 +59,12 @@ interface IOrganization is
      */
     error UnauthorizedUpgrade();
 
+    /**
+     * @notice Thrown when a function restricted to self-calls is invoked by an external address
+     * @param caller The unauthorized caller address
+     */
+    error UnauthorizedSelfCall(address caller);
+
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions that don't belong to any specific module
     // ═══════════════════════════════════════════════════════════════════════════
@@ -77,6 +83,16 @@ interface IOrganization is
         bytes calldata data,
         AdminAuthParams calldata authParams
     ) external;
+
+    /**
+     * @notice Self-call execution step for upgradeToAndCallWithAuthorization
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `upgradeToAndCallWithAuthorization` to isolate execution reverts from the outer call
+     *      frame, ensuring the nonce remains consumed even if the whitelist validation or upgrade fails.
+     * @param newImplementation The new implementation address (must be whitelisted)
+     * @param data Optional calldata to execute on the new implementation after upgrade
+     */
+    function executeUpgrade(address newImplementation, bytes calldata data) external;
 
     // Note: implementation() is inherited from IBeacon.
     // It returns the current implementation address for all Account BeaconProxies.

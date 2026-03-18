@@ -231,9 +231,9 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         );
     }
 
-    /// @dev Verifies deferred guardian-recovery finalization reverts before the admin timelock expires and succeeds
-    /// at the exact boundary without requiring new signatures.
-    function test_downstreamRevert_rollsBackNonceAndAllowsRetry() public {
+    /// @dev Verifies downstream `TimelockNotExpired` revert consumes the nonce and emits
+    /// `AdminOperationExecutionReverted`, blocking retries with the same signed payload.
+    function test_downstreamRevert_consumesNonceAndBlocksRetry() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         uint256 canFinalizeAt = block.timestamp + 1 days;
@@ -253,9 +253,11 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
         uint256 nonce = _computeRecoveryNonce(OperationType.FinalizeInitializeGuardianRecovery, operationData, 12_009);
 
-        // Call: finalize deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation
-        // revert.
-        vm.expectRevert(
+        // Call
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.FinalizeInitializeGuardianRecovery,
+            nonce,
             abi.encodeWithSelector(
                 IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
             )
@@ -263,14 +265,13 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(auth);
 
-        // Verify: nonce should rollback on downstream timelock revert; same signed request should succeed once timelock
-        // expires.
-        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on downstream timelock revert");
+        // Verify: nonce is consumed on downstream revert; retry with the same signed payload fails.
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
 
         vm.warp(canFinalizeAt);
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce));
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(auth);
-        assertTrue(harness.getUsedNonce(nonce), "same signed request should succeed once timelock expires");
     }
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` expired auth reverts and

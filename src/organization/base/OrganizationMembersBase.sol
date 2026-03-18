@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {OrganizationModifiers} from "organization/common/OrganizationModifiers.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
@@ -27,13 +28,30 @@ abstract contract OrganizationMembersBase is OrganizationModifiers, IOrganizatio
             abi.encode(keccak256(abi.encode(membersToAdd)), keccak256(abi.encode(membersToRemove)));
 
         // Validate that the current admins have authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+        uint256 nonce = LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyMembers,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
         });
 
+        // Execute via low-level self-call so that a revert does not bubble up.
+        /* solhint-disable avoid-low-level-calls */
+        // slither-disable-next-line low-level-calls,reentrancy-events
+        (bool success, bytes memory revertData) =
+            address(this).call(abi.encodeCall(this.executeModifyMembers, (membersToAdd, membersToRemove)));
+        /* solhint-enable avoid-low-level-calls */
+
+        if (!success) {
+            emit IOrganizationAdmin.AdminOperationExecutionReverted(OperationType.ModifyMembers, nonce, revertData);
+        }
+    }
+
+    /// @inheritdoc IOrganizationMembers
+    function executeModifyMembers(address[] calldata membersToAdd, address[] calldata membersToRemove)
+        external
+        onlySelf
+    {
         LibOrganizationMembers.modifyMembers(membersToAdd, membersToRemove);
     }
 

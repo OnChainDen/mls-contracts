@@ -3,6 +3,8 @@
 pragma solidity 0.8.33;
 
 import {IAccount} from "interfaces/IAccount.sol";
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
+import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {OrganizationModifiers} from "organization/common/OrganizationModifiers.sol";
 import {LibOrganizationAccountFactory} from "organization/libraries/LibOrganizationAccountFactory.sol";
@@ -49,6 +51,11 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
         // Validate recovery is allowed
         LibOrganizationTxRecovery.validateRecoveryAccountTransactionAllowedOrRevert();
 
+        // Prevent self-calls that could reach onlySelf-gated functions via the account execution path.
+        if (account == address(this)) {
+            revert IOrganizationAccountTransaction.AccountCannotBeOrganization();
+        }
+
         // Verify the account is deployed by this organization
         LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
 
@@ -60,6 +67,7 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
     }
 
     /// @inheritdoc IOrganizationTxRecovery
+    // slither-disable-next-line missing-zero-check
     function initiateInitializeTransactionAndERC1271Recovery(
         address recoveryAddress,
         uint256 timelockDurationSeconds,
@@ -69,14 +77,35 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
         bytes memory operationData = abi.encode(recoveryAddress, timelockDurationSeconds);
 
         // Validate that the current admin has authorized this initiation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+        uint256 nonce = LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.InitiateInitializeTransactionRecovery,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
         });
 
-        // Initiate deferred initialization (starts timelock)
+        // Execute via low-level self-call so that a revert does not bubble up.
+        /* solhint-disable avoid-low-level-calls */
+        // forgefmt: disable-start
+        // slither-disable-next-line low-level-calls,reentrancy-events,missing-zero-check
+        (bool success, bytes memory revertData) = address(this).call(
+            abi.encodeCall(this.executeInitiateInitializeTxRecovery, (recoveryAddress, timelockDurationSeconds))
+        );
+        // forgefmt: disable-end
+        /* solhint-enable avoid-low-level-calls */
+
+        if (!success) {
+            emit IOrganizationAdmin.AdminOperationExecutionReverted(
+                OperationType.InitiateInitializeTransactionRecovery, nonce, revertData
+            );
+        }
+    }
+
+    /// @inheritdoc IOrganizationTxRecovery
+    function executeInitiateInitializeTxRecovery(address recoveryAddress, uint256 timelockDurationSeconds)
+        external
+        onlySelf
+    {
         LibOrganizationTxRecovery.initiateInitializeTxRecovery(recoveryAddress, timelockDurationSeconds);
     }
 
@@ -95,14 +124,29 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
         bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
 
         // Validate that the current admin has authorized this finalization (separate OperationType from initiate)
-        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+        uint256 nonce = LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.FinalizeInitializeTransactionRecovery,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
         });
 
-        // Finalize deferred initialization (writes config after timelock)
+        // Execute via low-level self-call so that a revert does not bubble up.
+        /* solhint-disable avoid-low-level-calls */
+        // slither-disable-next-line low-level-calls,reentrancy-events
+        (bool success, bytes memory revertData) =
+            address(this).call(abi.encodeCall(this.executeFinalizeInitializeTxRecovery, ()));
+        /* solhint-enable avoid-low-level-calls */
+
+        if (!success) {
+            emit IOrganizationAdmin.AdminOperationExecutionReverted(
+                OperationType.FinalizeInitializeTransactionRecovery, nonce, revertData
+            );
+        }
+    }
+
+    /// @inheritdoc IOrganizationTxRecovery
+    function executeFinalizeInitializeTxRecovery() external onlySelf {
         LibOrganizationTxRecovery.finalizeInitializeTxRecovery();
     }
 
@@ -121,14 +165,29 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
         bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
 
         // Validate that the current admin has authorized this cancellation (dedicated Cancel type)
-        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+        uint256 nonce = LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.CancelInitializeTransactionRecovery,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
         });
 
-        // Cancel the pending initialization
+        // Execute via low-level self-call so that a revert does not bubble up.
+        /* solhint-disable avoid-low-level-calls */
+        // slither-disable-next-line low-level-calls,reentrancy-events
+        (bool success, bytes memory revertData) =
+            address(this).call(abi.encodeCall(this.executeCancelInitializeTxRecovery, ()));
+        /* solhint-enable avoid-low-level-calls */
+
+        if (!success) {
+            emit IOrganizationAdmin.AdminOperationExecutionReverted(
+                OperationType.CancelInitializeTransactionRecovery, nonce, revertData
+            );
+        }
+    }
+
+    /// @inheritdoc IOrganizationTxRecovery
+    function executeCancelInitializeTxRecovery() external onlySelf {
         LibOrganizationTxRecovery.cancelInitializeTxRecovery();
     }
 

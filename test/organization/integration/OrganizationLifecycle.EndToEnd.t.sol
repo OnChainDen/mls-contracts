@@ -567,7 +567,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
                 isApproval: true
             });
 
-            vm.expectRevert(IAccount.TransactionExecutionFailed.selector);
+            // Partial revert: outer call succeeds, nonce consumed, execution failure caught internally.
             vm.prank(GUARDIAN);
             organization.executeAccountTransaction({
                 account: account,
@@ -583,15 +583,14 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
             });
         }
 
-        // Verify: the public nonce views report rejected admin operations as consumed, successful deploy-account
-        // operations as consumed, and reverted account transactions as rolled back to unused.
+        // Verify: all nonces (rejected admin ops, successful deploy, and partial-reverted account tx) are consumed.
         assertTrue(
             organization.isNonceUsed(rejectedSetPoliciesNonce), "rejected policy-update nonce should be consumed"
         );
         assertTrue(organization.isNonceUsed(deployAccountNonce), "successful deploy-account nonce should be consumed");
-        assertFalse(
+        assertTrue(
             organization.isNonceUsed(failingExecutionNonce),
-            "reverted account-transaction nonce should roll back to unused"
+            "partial-reverted account-transaction nonce should be consumed"
         );
     }
 

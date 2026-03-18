@@ -6,6 +6,7 @@ import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.s
 
 import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {OrganizationModifiers} from "organization/common/OrganizationModifiers.sol";
 import {LibOrganizationAccountFactory} from "organization/libraries/LibOrganizationAccountFactory.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
@@ -35,34 +36,66 @@ abstract contract OrganizationAccountFactoryBase is OrganizationModifiers, IOrga
         bytes memory operationData = abi.encode(create2Salt);
 
         // isApproval = true for execution
-        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+        uint256 nonce = LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.DeployAccount,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
         });
 
+        // Execute via low-level self-call so that a revert does not bubble up.
+        /* solhint-disable avoid-low-level-calls */
+        // slither-disable-next-line low-level-calls,reentrancy-events
+        (bool success, bytes memory returnData) =
+            address(this).call(abi.encodeCall(this.executeDeployAccount, (create2Salt)));
+        /* solhint-enable avoid-low-level-calls */
+
+        if (success) {
+            return abi.decode(returnData, (address));
+        }
+
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(OperationType.DeployAccount, nonce, returnData);
+        return address(0);
+    }
+
+    /// @inheritdoc IOrganizationAccountFactory
+    function executeDeployAccount(bytes32 create2Salt) external onlySelf returns (address) {
         return LibOrganizationAccountFactory.deployAccount(create2Salt);
     }
 
     /// @inheritdoc IOrganizationAccountFactory
+    // slither-disable-next-line missing-zero-check
     function setAccountImplementation(address newImplementation, AdminAuthParams calldata authParams)
         external
         override
         onlyGuardian
     {
-        // 1. Validate admin authorization (isApproval = true for execution)
+        // Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
-        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+        uint256 nonce = LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.UpgradeAccount,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
         });
 
-        // 2. Validate implementation against whitelist and set storage
-        LibOrganizationAccountFactory.setAccountImplementation(newImplementation);
+        // Execute via low-level self-call so that a revert does not bubble up.
+        /* solhint-disable avoid-low-level-calls */
+        // forgefmt: disable-start
+        // slither-disable-next-line low-level-calls,reentrancy-events,missing-zero-check
+        (bool success, bytes memory revertData) =
+            address(this).call(abi.encodeCall(this.executeSetAccountImplementation, (newImplementation)));
+        // forgefmt: disable-end
+        /* solhint-enable avoid-low-level-calls */
 
+        if (!success) {
+            emit IOrganizationAdmin.AdminOperationExecutionReverted(OperationType.UpgradeAccount, nonce, revertData);
+        }
+    }
+
+    /// @inheritdoc IOrganizationAccountFactory
+    function executeSetAccountImplementation(address newImplementation) external onlySelf {
+        LibOrganizationAccountFactory.setAccountImplementation(newImplementation);
         emit AccountImplementationUpdated(newImplementation);
     }
 

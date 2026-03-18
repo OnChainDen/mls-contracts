@@ -30,20 +30,21 @@ library LibOrganizationAdmin {
      * @param operationData The ABI-encoded data of the operation
      * @param isApproval Whether this is an approval (true) or rejection (false)
      * @param authParams The authorization parameters (salt, expiration, signatures)
+     * @return nonce The consumed nonce derived for the operation
      */
     function validateAdminAuthAndConsumeNonceOrRevert(
         OperationType operationType,
         bytes memory operationData,
         bool isApproval,
         AdminAuthParams memory authParams
-    ) public {
+    ) public returns (uint256 nonce) {
         // Check if the operation has expired
         if (block.timestamp > authParams.expirationTimestamp) {
             revert IOrganizationAdmin.AdminOperationExpired(authParams.expirationTimestamp, block.timestamp);
         }
 
         // Compute deterministic nonce from operation data and salt
-        uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, authParams.salt);
+        nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, authParams.salt);
 
         // Validate and consume nonce for replay protection (will revert if already used)
         LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);

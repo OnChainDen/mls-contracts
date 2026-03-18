@@ -227,9 +227,9 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
         assertFalse(harness.getUsedNonce(currentNonce), "current tuple nonce should remain unused");
     }
 
-    /// @dev Verifies `OrganizationGuardianRecoveryBase.cancelInitializeGuardianRecovery` downstream no-pending revert
-    /// rolls back nonce usage.
-    function test_downstreamNoPendingRevert_rollsBackNonce() public {
+    /// @dev Verifies downstream `NoGuardianRecoveryInitializationPending` revert consumes the nonce and emits
+    /// `AdminOperationExecutionReverted`.
+    function test_downstreamNoPendingRevert_consumesNonceAndEmitsRevertedEvent() public {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -245,14 +245,18 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
 
         uint256 nonce = _computeRecoveryNonce(OperationType.CancelInitializeGuardianRecovery, operationData, 13_009);
 
-        // Call: cancel deferred recovery initialization as `GUARDIAN`, expecting
-        // `NoGuardianRecoveryInitializationPending` revert.
-        vm.expectRevert(IOrganizationGuardianRecovery.NoGuardianRecoveryInitializationPending.selector);
+        // Call
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.CancelInitializeGuardianRecovery,
+            nonce,
+            abi.encodeWithSelector(IOrganizationGuardianRecovery.NoGuardianRecoveryInitializationPending.selector)
+        );
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(auth);
 
-        // Verify: nonce should rollback on downstream no-pending revert.
-        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on downstream no-pending revert");
+        // Verify
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
     }
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.cancelInitializeGuardianRecovery` expired auth reverts without

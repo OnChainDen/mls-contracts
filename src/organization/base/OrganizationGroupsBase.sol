@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
 import {OrganizationModifiers} from "organization/common/OrganizationModifiers.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
@@ -26,13 +27,27 @@ abstract contract OrganizationGroupsBase is OrganizationModifiers, IOrganization
         bytes memory operationData = abi.encode(keccak256(abi.encode(modifications)));
 
         // Validate that the current admins have authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+        uint256 nonce = LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyGroups,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
         });
 
+        // Execute via low-level self-call so that a revert does not bubble up.
+        /* solhint-disable avoid-low-level-calls */
+        // slither-disable-next-line low-level-calls,reentrancy-events
+        (bool success, bytes memory revertData) =
+            address(this).call(abi.encodeCall(this.executeModifyGroups, (modifications)));
+        /* solhint-enable avoid-low-level-calls */
+
+        if (!success) {
+            emit IOrganizationAdmin.AdminOperationExecutionReverted(OperationType.ModifyGroups, nonce, revertData);
+        }
+    }
+
+    /// @inheritdoc IOrganizationGroups
+    function executeModifyGroups(GroupModification[] calldata modifications) external onlySelf {
         LibOrganizationGroups.modifyGroups(modifications);
     }
 

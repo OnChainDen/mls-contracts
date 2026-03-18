@@ -19,6 +19,7 @@ import {ValidationProofs} from "types/PolicyTypes.sol";
  */
 abstract contract OrganizationAccountTransactionBase is OrganizationModifiers, IOrganizationAccountTransaction {
     /// @inheritdoc IOrganizationAccountTransaction
+    // slither-disable-next-line missing-zero-check
     function executeAccountTransaction(
         address account,
         address to,
@@ -31,6 +32,12 @@ abstract contract OrganizationAccountTransactionBase is OrganizationModifiers, I
         bytes calldata reviewSignatures,
         ValidationProofs calldata proofs
     ) external override onlyGuardian {
+        // Prevent self-calls that could reach onlySelf-gated functions via the low-level call
+        if (account == address(this)) revert AccountCannotBeOrganization();
+
+        // Ensure the target account was deployed by this organization before deriving the nonce.
+        LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
+
         uint256 nonce = _validateApprovalAndConsumeNonce({
             account: account,
             to: to,
@@ -44,20 +51,31 @@ abstract contract OrganizationAccountTransactionBase is OrganizationModifiers, I
             proofs: proofs
         });
 
-        // Emit event before external call (CEI pattern) - if execution fails, transaction reverts
-        emit AccountTransactionExecuted({
-            account: account, to: to, value: value, data: data, nonce: nonce, policyId: policyId
-        });
+        // Execute via low-level call so that a revert inside the Account does not bubble up.
+        // The nonce is already consumed, so it remains used regardless of execution outcome.
+        /* solhint-disable avoid-low-level-calls */
+        // forgefmt: disable-start
+        // slither-disable-next-line low-level-calls,reentrancy-events,missing-zero-check
+        (bool success, bytes memory revertData) =
+            payable(account).call(abi.encodeCall(IAccount.executeTransaction, (to, value, data, nonce, policyId)));
+        // forgefmt: disable-end
+        /* solhint-enable avoid-low-level-calls */
 
-        // Execute the transaction on the account
-        // forgefmt: disable-next-item
-        IAccount(payable(account)).executeTransaction({
-            to: to,
-            value: value,
-            data: data,
-            nonce: nonce,
-            policyId: policyId
-        });
+        if (success) {
+            emit AccountTransactionExecuted({
+                account: account, to: to, value: value, data: data, nonce: nonce, policyId: policyId
+            });
+        } else {
+            emit AccountTransactionExecutionReverted({
+                account: account,
+                to: to,
+                value: value,
+                data: data,
+                nonce: nonce,
+                policyId: policyId,
+                revertData: revertData
+            });
+        }
     }
 
     /// @inheritdoc IOrganizationAccountTransaction
@@ -73,6 +91,8 @@ abstract contract OrganizationAccountTransactionBase is OrganizationModifiers, I
         bytes calldata reviewSignatures,
         ValidationProofs calldata proofs
     ) external override onlyGuardian {
+        LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
+
         uint256 nonce = _validateRejectionAndConsumeNonce({
             account: account,
             to: to,
@@ -119,9 +139,6 @@ abstract contract OrganizationAccountTransactionBase is OrganizationModifiers, I
         bytes calldata reviewSignatures,
         ValidationProofs calldata proofs
     ) internal returns (uint256 nonce) {
-        // Ensure the target account was deployed by this organization before deriving the nonce.
-        LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
-
         // Encode the same operation payload used by signature validation while keeping local stack usage low.
         bytes32 dataHash = keccak256(data);
         bytes memory operationData = abi.encode(account, to, value, dataHash, policyId);
@@ -172,9 +189,6 @@ abstract contract OrganizationAccountTransactionBase is OrganizationModifiers, I
         bytes calldata reviewSignatures,
         ValidationProofs calldata proofs
     ) internal returns (uint256 nonce) {
-        // Ensure the target account was deployed by this organization before deriving the nonce.
-        LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
-
         // Reuse the same operation payload shape as approvals so both flows target the same nonce.
         bytes32 dataHash = keccak256(data);
         bytes memory operationData = abi.encode(account, to, value, dataHash, policyId);

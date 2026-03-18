@@ -162,8 +162,9 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
         assertTrue(organization.getGroupMemberStatus(GROUP_ID, memberToAddB), "second member should belong to group");
     }
 
-    /// @dev Verifies reversing the member/group order reverts atomically and preserves prior organization state.
-    function test_batchedModifyGroupsBeforeMembers_revertsAtomically() public {
+    /// @dev Verifies reversing the member/group order partially reverts the group sub-call while the member sub-call
+    ///      succeeds, because admin operations with post-validation execution failures no longer revert the outer call.
+    function test_batchedModifyGroupsBeforeMembers_partiallyRevertsGroupCreation() public {
         // Setup: encode the same logical work in the unsafe order, creating the group before members exist.
         bytes memory modifyGroupsCall = _buildCreateGroupCall(GROUP_ID, buildArray(memberToAddA, memberToAddB), 301);
         bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA, memberToAddB), 302);
@@ -171,15 +172,17 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
             BatchedTransaction.execute.selector, _encodeBatch(modifyGroupsCall, modifyMembersCall)
         );
 
-        // Call: execute the malformed ordering and expect the batch to fail atomically.
+        // Call: execute the malformed ordering. The modifyGroups sub-call partially reverts (group creation fails
+        // because members don't exist yet), while the modifyMembers sub-call succeeds.
         vm.prank(authorizedExecutor);
-        vm.expectRevert(ISafeExecutorModule.ExecutionFailed.selector);
-        module.executeOnBehalf(address(batchedTransaction), batchData);
+        bool success = module.executeOnBehalf(address(batchedTransaction), batchData);
 
-        // Verify: neither members nor group state is partially applied.
-        assertFalse(organization.getMemberStatus(memberToAddA), "first member should not be added");
-        assertFalse(organization.getMemberStatus(memberToAddB), "second member should not be added");
-        assertFalse(organization.getGroupStatus(GROUP_ID), "group should not be created");
+        // Verify: batch succeeds overall. Members are added (from modifyMembers), but the group is not created
+        // (from modifyGroups partial revert).
+        assertTrue(success, "batch should succeed with partial revert on group sub-call");
+        assertTrue(organization.getMemberStatus(memberToAddA), "first member should be added by modifyMembers");
+        assertTrue(organization.getMemberStatus(memberToAddB), "second member should be added by modifyMembers");
+        assertFalse(organization.getGroupStatus(GROUP_ID), "group should not be created due to partial revert");
         assertFalse(organization.getGroupMemberStatus(GROUP_ID, memberToAddA), "group membership should not exist");
         assertFalse(organization.getGroupMemberStatus(GROUP_ID, memberToAddB), "group membership should not exist");
     }

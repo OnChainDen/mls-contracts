@@ -195,6 +195,32 @@ interface IOrganizationTxRecovery {
     function cancelInitializeTransactionAndERC1271Recovery(AdminAuthParams calldata authParams) external;
 
     /**
+     * @notice Self-call execution step for initiateInitializeTransactionAndERC1271Recovery
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `initiateInitializeTransactionAndERC1271Recovery` to isolate execution reverts from the
+     *      outer call frame, ensuring the nonce remains consumed even if the state change fails.
+     * @param recoveryAddress The proposed recovery address
+     * @param timelockDurationSeconds The proposed timelock duration in seconds for enabling recovery
+     */
+    function executeInitiateInitializeTxRecovery(address recoveryAddress, uint256 timelockDurationSeconds) external;
+
+    /**
+     * @notice Self-call execution step for finalizeInitializeTransactionAndERC1271Recovery
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `finalizeInitializeTransactionAndERC1271Recovery` to isolate execution reverts from the
+     *      outer call frame, ensuring the nonce remains consumed even if the state change fails.
+     */
+    function executeFinalizeInitializeTxRecovery() external;
+
+    /**
+     * @notice Self-call execution step for cancelInitializeTransactionAndERC1271Recovery
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `cancelInitializeTransactionAndERC1271Recovery` to isolate execution reverts from the
+     *      outer call frame, ensuring the nonce remains consumed even if the state change fails.
+     */
+    function executeCancelInitializeTxRecovery() external;
+
+    /**
      * @notice Returns the full transaction recovery state
      * @return The TxRecoveryState struct containing all recovery configuration and pending state
      */

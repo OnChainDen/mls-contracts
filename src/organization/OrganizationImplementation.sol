@@ -73,6 +73,7 @@ contract OrganizationImplementation is
     }
 
     /// @inheritdoc IOrganization
+    // slither-disable-next-line missing-zero-check
     function upgradeToAndCallWithAuthorization(
         address newImplementation,
         bytes calldata data,
@@ -80,10 +81,28 @@ contract OrganizationImplementation is
     ) external override onlyGuardian {
         // Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation, keccak256(data));
-        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+        uint256 nonce = LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.Upgrade, operationData: operationData, isApproval: true, authParams: authParams
         });
 
+        // Execute via low-level self-call so that a revert does not bubble up.
+        // The companion function contains whitelist validation, authorized flag management,
+        // and the UUPS upgrade. On failure, all are rolled back while the nonce persists.
+        /* solhint-disable avoid-low-level-calls */
+        // forgefmt: disable-start
+        // slither-disable-next-line low-level-calls,reentrancy-events,missing-zero-check
+        (bool success, bytes memory revertData) =
+            address(this).call(abi.encodeCall(this.executeUpgrade, (newImplementation, data)));
+        // forgefmt: disable-end
+        /* solhint-enable avoid-low-level-calls */
+
+        if (!success) {
+            emit AdminOperationExecutionReverted(OperationType.Upgrade, nonce, revertData);
+        }
+    }
+
+    /// @inheritdoc IOrganization
+    function executeUpgrade(address newImplementation, bytes calldata data) external onlySelf {
         if (newImplementation == address(0)) {
             revert IOrganizationFactory.ZeroAddress();
         }
@@ -103,17 +122,9 @@ contract OrganizationImplementation is
         // Bind authorization to this exact target implementation for the upcoming UUPS hook call.
         LibOrganizationUpgradeStorage.layout().authorizedUpgradeImplementation = newImplementation;
 
-        // Perform the upgrade
-        // This calls the inherited UUPSUpgradeable.upgradeToAndCall which will:
-        // 1. Call _authorizeUpgrade (which checks the authorized target binding)
-        // 2. Upgrade the implementation
-        // 3. Optionally call `data` on the new implementation
         upgradeToAndCall(newImplementation, data);
 
         // Reset authorized target (defense-in-depth)
-        // Even though this value can't persist if the tx reverts, we reset it explicitly
-        // as a security best practice. This also protects against any theoretical
-        // scenario where the value might persist.
         LibOrganizationUpgradeStorage.layout().authorizedUpgradeImplementation = address(0);
     }
 

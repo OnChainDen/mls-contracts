@@ -107,6 +107,31 @@ interface IOrganizationGuardian {
     function cancelGuardianUpdate(AdminAuthParams calldata authParams) external;
 
     /**
+     * @notice Self-call execution step for initiateGuardianUpdate
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `initiateGuardianUpdate` to isolate execution reverts from the outer call frame, ensuring
+     *      the nonce remains consumed even if the state change fails.
+     * @param newGuardian The proposed new guardian address
+     */
+    function executeInitiateGuardianUpdate(address newGuardian) external;
+
+    /**
+     * @notice Self-call execution step for finalizeGuardianUpdate
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `finalizeGuardianUpdate` to isolate execution reverts from the outer call frame, ensuring
+     *      the nonce remains consumed even if the state change fails.
+     */
+    function executeFinalizeGuardianUpdate() external;
+
+    /**
+     * @notice Self-call execution step for cancelGuardianUpdate
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `cancelGuardianUpdate` to isolate execution reverts from the outer call frame, ensuring
+     *      the nonce remains consumed even if the state change fails.
+     */
+    function executeCancelGuardianUpdate() external;
+
+    /**
      * @notice Accepts the guardian role (completes the normal flow update)
      * @dev Can only be called by the pending guardian after the update has been finalized.
      */

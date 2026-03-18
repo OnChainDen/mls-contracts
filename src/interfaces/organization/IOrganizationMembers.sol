@@ -70,6 +70,16 @@ interface IOrganizationMembers {
     ) external;
 
     /**
+     * @notice Self-call execution step for modifyMembers
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `modifyMembers` to isolate execution reverts from the outer call frame, ensuring the
+     *      nonce remains consumed even if the state change fails.
+     * @param membersToAdd Addresses to add as members
+     * @param membersToRemove Addresses to remove from members
+     */
+    function executeModifyMembers(address[] calldata membersToAdd, address[] calldata membersToRemove) external;
+
+    /**
      * @notice Checks if an address is a member of the organization
      * @param memberAddress The address to check
      * @return True if the address is a member, false otherwise

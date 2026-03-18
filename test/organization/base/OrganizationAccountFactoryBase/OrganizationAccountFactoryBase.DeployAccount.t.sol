@@ -2,8 +2,6 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {Errors} from "@openzeppelin/contracts/utils/Errors.sol";
-
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {
@@ -194,7 +192,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
         address firstAccount = harness.deployAccount(create2Salt, firstAuth);
         assertGt(firstAccount.code.length, 0, "first deployment should produce runtime code");
 
-        (AdminAuthParams memory secondAuth,) = _buildDeployAccountAuth({
+        (AdminAuthParams memory secondAuth, bytes memory secondOperationData) = _buildDeployAccountAuth({
             create2Salt: create2Salt,
             salt: 51_034,
             expiration: block.timestamp + 1 hours,
@@ -202,14 +200,19 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: attempt a second deployment on the same organization with the same `create2Salt` but a different
-        // admin-auth salt; the second nonce is independent, but the CREATE2 address collides.
-        vm.expectRevert(Errors.FailedDeployment.selector);
-        vm.prank(GUARDIAN);
-        harness.deployAccount(create2Salt, secondAuth);
+        uint256 secondNonce = _computeDeployAccountNonce(secondOperationData, 51_034);
 
-        // Verify: the first deployment is unaffected and the second cannot be executed.
-        assertGt(firstAccount.code.length, 0, "first deployment should remain intact after collision revert");
+        // Call: attempt a second deployment on the same organization with the same `create2Salt` but a different
+        // admin-auth salt; the CREATE2 address collides but partial revert consumes the nonce.
+        vm.expectEmit(true, true, false, false, address(harness));
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(OperationType.DeployAccount, secondNonce, bytes(""));
+        vm.prank(GUARDIAN);
+        address secondAccount = harness.deployAccount(create2Salt, secondAuth);
+
+        // Verify: the first deployment is unaffected, the second returns address(0), and nonce is consumed.
+        assertGt(firstAccount.code.length, 0, "first deployment should remain intact after collision");
+        assertEq(secondAccount, address(0), "colliding deployment should return address(0)");
+        assertTrue(harness.getUsedNonce(secondNonce), "CREATE2 collision should still consume nonce");
     }
 
     /// @dev Verifies deployed-account tracking is isolated per organization even when both orgs deploy with the same
@@ -522,14 +525,16 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
         uint256 secondNonce = _computeDeployAccountNonce(operationData, 5186);
 
         // Call: attempt a second deployment that reaches the downstream CREATE2 collision branch.
-        vm.expectRevert();
+        // With partial reverts, the outer call succeeds, nonce is consumed, and a failure event is emitted.
+        vm.expectEmit(true, true, false, false, address(harness));
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(OperationType.DeployAccount, secondNonce, bytes(""));
         vm.prank(GUARDIAN);
-        harness.deployAccount(create2Salt, secondAuth);
+        address secondDeployResult = harness.deployAccount(create2Salt, secondAuth);
 
-        // Verify: the original deployment nonce stays consumed, while the reverted duplicate deployment rolls back
-        // the later nonce because the downstream CREATE2 call failed.
+        // Verify: both nonces are consumed, but the colliding deployment returns address(0).
         assertTrue(harness.getUsedNonce(firstNonce), "initial successful deployment should keep its nonce consumed");
-        assertFalse(harness.getUsedNonce(secondNonce), "CREATE2 collision should roll back the second nonce");
+        assertTrue(harness.getUsedNonce(secondNonce), "CREATE2 collision should still consume the second nonce");
+        assertEq(secondDeployResult, address(0), "colliding deployment should return address(0)");
     }
 
     /// @dev Verifies previously deployed accounts execute new implementation code immediately after upgrade.

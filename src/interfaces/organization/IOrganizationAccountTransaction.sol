@@ -29,6 +29,28 @@ interface IOrganizationAccountTransaction {
     );
 
     /**
+     * @notice Emitted when account transaction execution reverts after signature validation
+     * @dev The nonce is still consumed even though execution failed. The revert data from
+     *      the failed call is included for debugging purposes.
+     * @param account The account that attempted the transaction
+     * @param to The destination address of the transaction
+     * @param value The value of the transaction
+     * @param data The data of the transaction
+     * @param nonce The nonce consumed for this transaction
+     * @param policyId The policy ID that governed this transaction
+     * @param revertData The revert data returned by the failed execution
+     */
+    event AccountTransactionExecutionReverted(
+        address indexed account,
+        address indexed to,
+        uint256 value,
+        bytes data,
+        uint256 indexed nonce,
+        uint256 policyId,
+        bytes revertData
+    );
+
+    /**
      * @notice Emitted when a transaction is rejected by authorized users
      * @param account The account for which the transaction was rejected
      * @param to The destination address of the transaction
@@ -44,6 +66,12 @@ interface IOrganizationAccountTransaction {
     // ═══════════════════════════════════════════════════════════════════════════
     // Errors
     // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Thrown when the account address is the Organization itself
+     * @dev Prevents self-calls that could reach onlySelf-gated functions via the low-level call
+     */
+    error AccountCannotBeOrganization();
 
     /**
      * @notice Thrown when a transaction rejection is not allowed

@@ -242,8 +242,9 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         assertFalse(harness.getUsedNonce(nonceB), "mutated pending payload nonce should remain unused");
     }
 
-    /// @dev Verifies `NoPendingGuardianUpdate` downstream revert rolls back nonce usage.
-    function test_noPendingRevert_rollsBackNonce() public {
+    /// @dev Verifies downstream `NoPendingGuardianUpdate` revert consumes the nonce and emits
+    /// `AdminOperationExecutionReverted`.
+    function test_noPendingRevert_consumesNonceAndEmitsRevertedEvent() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationData) = _buildCancelGuardianUpdateAuth({
@@ -256,12 +257,17 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         uint256 nonce = _computeGuardianNonce(OperationType.CancelUpdateGuardian, operationData, 3010);
 
         // Call
-        vm.expectRevert(IOrganizationGuardian.NoPendingGuardianUpdate.selector);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.CancelUpdateGuardian,
+            nonce,
+            abi.encodeWithSelector(IOrganizationGuardian.NoPendingGuardianUpdate.selector)
+        );
         vm.prank(GUARDIAN);
         harness.cancelGuardianUpdate(auth);
 
         // Verify
-        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on no-pending downstream revert");
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
     }
 
     /// @dev Verifies `OrganizationGuardianBase.cancelGuardianUpdate` can cancel the same pending guardian twice with

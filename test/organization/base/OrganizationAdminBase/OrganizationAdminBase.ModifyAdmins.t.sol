@@ -742,8 +742,8 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         });
     }
 
-    /// @dev Verifies that a downstream revert rolls back both state and nonce consumption.
-    function test_modifyAdmins_downstreamRevert_rollsBackNonceConsumption() public {
+    /// @dev Verifies that a downstream revert consumes the nonce and emits `AdminOperationExecutionReverted`.
+    function test_modifyAdmins_downstreamRevert_consumesNonceAndEmitsRevertedEvent() public {
         address nonMember = address(0x20B);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -763,8 +763,13 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: salt});
 
         // Auth succeeds, then mutation fails in LibOrganizationAdmin because candidate is not a member.
-        // Verify: confirm this branch reverts for the intended failure condition.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.AdminNotMember.selector, nonMember));
+        // Verify: the outer call succeeds but the execution step reverts internally, emitting the revert event.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.ModifyAdmins,
+            nonce,
+            abi.encodeWithSelector(IOrganizationAdmin.AdminNotMember.selector, nonMember)
+        );
         vm.prank(GUARDIAN);
         // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
@@ -774,13 +779,13 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             authParams: auth
         });
 
-        // Transaction revert must also roll back nonce consumption.
-        // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
-        assertFalse(harness.getUsedNonce(nonce), "nonce should not remain consumed on downstream revert");
+        // Verify: nonce is consumed despite the downstream execution revert.
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
     }
 
-    /// @dev Verifies that an invalid-threshold downstream revert also rolls back nonce consumption.
-    function test_modifyAdmins_invalidThresholdDownstreamRevert_rollsBackNonceConsumption() public {
+    /// @dev Verifies that an invalid-threshold downstream revert consumes the nonce and emits
+    /// `AdminOperationExecutionReverted`.
+    function test_modifyAdmins_invalidThresholdDownstreamRevert_consumesNonceAndEmitsRevertedEvent() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -798,9 +803,13 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         uint256 nonce =
             harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: salt});
 
-        // Verify: confirm this branch reverts for the intended failure condition.
-
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.InvalidAdminVotingThreshold.selector, 0, 1));
+        // Verify: the outer call succeeds but the execution step reverts internally, emitting the revert event.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.ModifyAdmins,
+            nonce,
+            abi.encodeWithSelector(IOrganizationAdmin.InvalidAdminVotingThreshold.selector, 0, 1)
+        );
         vm.prank(GUARDIAN);
         // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
@@ -810,9 +819,8 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             authParams: auth
         });
 
-        // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
-
-        assertFalse(harness.getUsedNonce(nonce), "nonce should not remain consumed on downstream revert");
+        // Verify: nonce is consumed despite the downstream execution revert.
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on downstream revert");
     }
 
     /// @dev Verifies that `AdminAdded`, `AdminRemoved`, and `VotingThresholdUpdated` events are emitted with correct

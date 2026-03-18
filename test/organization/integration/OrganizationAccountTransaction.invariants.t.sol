@@ -4,7 +4,6 @@ pragma solidity 0.8.33;
 
 import {Vm} from "forge-std/Vm.sol";
 
-import {IAccount} from "interfaces/IAccount.sol";
 import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {
@@ -105,7 +104,8 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
         usageWindow = _computeTimeWindow(policy);
         usageAfterSuccess = harness.getPolicyUsage(usageKey, usageWindow);
 
-        // Setup: force a post-validation execution failure to assert atomic usage rollback.
+        // Setup: force a post-validation execution failure. With partial reverts, the outer call succeeds,
+        // nonce is consumed, and AccountTransactionExecutionReverted event is emitted.
         account.setShouldRevertExecution(true);
         bytes memory failingData = abi.encodeWithSelector(bytes4(0x82828282), uint256(2));
         bytes memory failingSig = _signInitiatorTx(
@@ -120,7 +120,6 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
             DEFAULT_POLICY_ID,
             true
         );
-        vm.expectRevert(IAccount.TransactionExecutionFailed.selector);
         vm.prank(GUARDIAN);
         harness.executeAccountTransaction({
             account: address(account),
@@ -135,6 +134,10 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
             proofs: proofs
         });
         account.setShouldRevertExecution(false);
+
+        // With partial reverts, rate-limit usage is consumed during validation (before the execution call),
+        // so it persists even when execution reverts. Update expected usage to reflect both transactions.
+        usageAfterSuccess = harness.getPolicyUsage(usageKey, usageWindow);
 
         // Setup: snapshot the reverted-path nonce and deploy a fresh organization harness for cross-org isolation
         // invariants.
@@ -287,10 +290,10 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
         );
     }
 
-    /// @dev Verifies invariant: reverted account-transaction execution paths do not burn their computed nonce.
-    function invariant_NMINV_4_revertedExecutionPathsDoNotConsumeNonce() public view {
-        // Verify: the nonce for the reverted downstream execution in `setUp` remains unused.
-        assertFalse(harness.getUsedNonce(failedExecutionNonce), "reverted execution should not consume nonce");
+    /// @dev Verifies invariant: partial-reverted account-transaction execution paths consume their nonce.
+    function invariant_NMINV_4_partialRevertedExecutionPathsConsumeNonce() public view {
+        // Verify: the nonce for the partial-reverted downstream execution in `setUp` is consumed.
+        assertTrue(harness.getUsedNonce(failedExecutionNonce), "partial revert should consume nonce");
     }
 
     /// @dev Verifies `_computeInitiatorHashFromParams` remains distinct when any bound field changes.

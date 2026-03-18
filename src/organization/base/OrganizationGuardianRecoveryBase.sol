@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
 import {OrganizationModifiers} from "organization/common/OrganizationModifiers.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
@@ -40,6 +41,7 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
     }
 
     /// @inheritdoc IOrganizationGuardianRecovery
+    // slither-disable-next-line missing-zero-check
     function initiateInitializeGuardianRecovery(
         address recoveryAddress,
         uint256 timelockDurationSeconds,
@@ -49,14 +51,35 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
         bytes memory operationData = abi.encode(recoveryAddress, timelockDurationSeconds);
 
         // Validate that the current admin has authorized this initiation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+        uint256 nonce = LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.InitiateInitializeGuardianRecovery,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
         });
 
-        // Initiate deferred initialization (starts timelock)
+        // Execute via low-level self-call so that a revert does not bubble up.
+        /* solhint-disable avoid-low-level-calls */
+        // forgefmt: disable-start
+        // slither-disable-next-line low-level-calls,reentrancy-events,missing-zero-check
+        (bool success, bytes memory revertData) = address(this).call(
+            abi.encodeCall(this.executeInitiateInitializeGuardianRecovery, (recoveryAddress, timelockDurationSeconds))
+        );
+        // forgefmt: disable-end
+        /* solhint-enable avoid-low-level-calls */
+
+        if (!success) {
+            emit IOrganizationAdmin.AdminOperationExecutionReverted(
+                OperationType.InitiateInitializeGuardianRecovery, nonce, revertData
+            );
+        }
+    }
+
+    /// @inheritdoc IOrganizationGuardianRecovery
+    function executeInitiateInitializeGuardianRecovery(address recoveryAddress, uint256 timelockDurationSeconds)
+        external
+        onlySelf
+    {
         LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery(recoveryAddress, timelockDurationSeconds);
     }
 
@@ -73,14 +96,29 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
         bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
 
         // Validate that the current admin has authorized this finalization (separate OperationType from initiate)
-        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+        uint256 nonce = LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.FinalizeInitializeGuardianRecovery,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
         });
 
-        // Finalize deferred initialization (writes config after timelock)
+        // Execute via low-level self-call so that a revert does not bubble up.
+        /* solhint-disable avoid-low-level-calls */
+        // slither-disable-next-line low-level-calls,reentrancy-events
+        (bool success, bytes memory revertData) =
+            address(this).call(abi.encodeCall(this.executeFinalizeInitializeGuardianRecovery, ()));
+        /* solhint-enable avoid-low-level-calls */
+
+        if (!success) {
+            emit IOrganizationAdmin.AdminOperationExecutionReverted(
+                OperationType.FinalizeInitializeGuardianRecovery, nonce, revertData
+            );
+        }
+    }
+
+    /// @inheritdoc IOrganizationGuardianRecovery
+    function executeFinalizeInitializeGuardianRecovery() external onlySelf {
         LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery();
     }
 
@@ -97,14 +135,29 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
         bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
 
         // Validate that the current admin has authorized this cancellation (dedicated Cancel type)
-        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+        uint256 nonce = LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.CancelInitializeGuardianRecovery,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
         });
 
-        // Cancel the pending initialization
+        // Execute via low-level self-call so that a revert does not bubble up.
+        /* solhint-disable avoid-low-level-calls */
+        // slither-disable-next-line low-level-calls,reentrancy-events
+        (bool success, bytes memory revertData) =
+            address(this).call(abi.encodeCall(this.executeCancelInitializeGuardianRecovery, ()));
+        /* solhint-enable avoid-low-level-calls */
+
+        if (!success) {
+            emit IOrganizationAdmin.AdminOperationExecutionReverted(
+                OperationType.CancelInitializeGuardianRecovery, nonce, revertData
+            );
+        }
+    }
+
+    /// @inheritdoc IOrganizationGuardianRecovery
+    function executeCancelInitializeGuardianRecovery() external onlySelf {
         LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery();
     }
 

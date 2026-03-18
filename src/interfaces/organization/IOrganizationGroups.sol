@@ -102,6 +102,15 @@ interface IOrganizationGroups {
     function modifyGroups(GroupModification[] calldata modifications, AdminAuthParams calldata authParams) external;
 
     /**
+     * @notice Self-call execution step for modifyGroups
+     * @dev Restricted to self-calls only (onlySelf modifier). Called via low-level `address(this).call()`
+     *      from `modifyGroups` to isolate execution reverts from the outer call frame, ensuring the
+     *      nonce remains consumed even if the state change fails.
+     * @param modifications Array of group modifications to apply
+     */
+    function executeModifyGroups(GroupModification[] calldata modifications) external;
+
+    /**
      * @notice Checks if a group exists in the organization
      * @param groupId The group ID to check
      * @return True if the group exists, false otherwise
