@@ -49,7 +49,7 @@ abstract contract OrganizationPolicyBase is OrganizationModifiers, IOrganization
     }
 
     /// @inheritdoc IOrganizationPolicy
-    function executeSetPolicies(bytes32 newPoliciesRoot, string calldata ipfsCid) external onlySelf {
+    function executeSetPolicies(bytes32 newPoliciesRoot, string calldata ipfsCid) external override onlySelf {
         LibOrganizationPolicy.setPolicies(newPoliciesRoot, ipfsCid);
     }
 

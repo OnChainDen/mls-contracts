@@ -50,6 +50,7 @@ abstract contract OrganizationMembersBase is OrganizationModifiers, IOrganizatio
     /// @inheritdoc IOrganizationMembers
     function executeModifyMembers(address[] calldata membersToAdd, address[] calldata membersToRemove)
         external
+        override
         onlySelf
     {
         LibOrganizationMembers.modifyMembers(membersToAdd, membersToRemove);

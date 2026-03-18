@@ -78,6 +78,7 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
     /// @inheritdoc IOrganizationGuardianRecovery
     function executeInitiateInitializeGuardianRecovery(address recoveryAddress, uint256 timelockDurationSeconds)
         external
+        override
         onlySelf
     {
         LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery(recoveryAddress, timelockDurationSeconds);
@@ -118,7 +119,7 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
     }
 
     /// @inheritdoc IOrganizationGuardianRecovery
-    function executeFinalizeInitializeGuardianRecovery() external onlySelf {
+    function executeFinalizeInitializeGuardianRecovery() external override onlySelf {
         LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery();
     }
 
@@ -157,7 +158,7 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
     }
 
     /// @inheritdoc IOrganizationGuardianRecovery
-    function executeCancelInitializeGuardianRecovery() external onlySelf {
+    function executeCancelInitializeGuardianRecovery() external override onlySelf {
         LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery();
     }
 

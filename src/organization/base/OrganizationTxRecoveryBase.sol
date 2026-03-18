@@ -104,6 +104,7 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
     /// @inheritdoc IOrganizationTxRecovery
     function executeInitiateInitializeTxRecovery(address recoveryAddress, uint256 timelockDurationSeconds)
         external
+        override
         onlySelf
     {
         LibOrganizationTxRecovery.initiateInitializeTxRecovery(recoveryAddress, timelockDurationSeconds);
@@ -146,7 +147,7 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
     }
 
     /// @inheritdoc IOrganizationTxRecovery
-    function executeFinalizeInitializeTxRecovery() external onlySelf {
+    function executeFinalizeInitializeTxRecovery() external override onlySelf {
         LibOrganizationTxRecovery.finalizeInitializeTxRecovery();
     }
 
@@ -187,7 +188,7 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
     }
 
     /// @inheritdoc IOrganizationTxRecovery
-    function executeCancelInitializeTxRecovery() external onlySelf {
+    function executeCancelInitializeTxRecovery() external override onlySelf {
         LibOrganizationTxRecovery.cancelInitializeTxRecovery();
     }
 

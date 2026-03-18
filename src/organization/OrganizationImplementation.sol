@@ -102,7 +102,7 @@ contract OrganizationImplementation is
     }
 
     /// @inheritdoc IOrganization
-    function executeUpgrade(address newImplementation, bytes calldata data) external onlySelf {
+    function executeUpgrade(address newImplementation, bytes calldata data) external override onlySelf {
         if (newImplementation == address(0)) {
             revert IOrganizationFactory.ZeroAddress();
         }

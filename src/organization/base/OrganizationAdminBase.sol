@@ -53,7 +53,7 @@ abstract contract OrganizationAdminBase is OrganizationModifiers, IOrganizationA
         address[] calldata adminsToAdd,
         address[] calldata adminsToRemove,
         uint256 newVotingThreshold
-    ) external onlySelf {
+    ) external override onlySelf {
         LibOrganizationAdmin.modifyAdmins(adminsToAdd, adminsToRemove, newVotingThreshold);
     }
 

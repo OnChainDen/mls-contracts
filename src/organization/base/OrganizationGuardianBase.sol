@@ -52,7 +52,7 @@ abstract contract OrganizationGuardianBase is OrganizationModifiers, IOrganizati
     }
 
     /// @inheritdoc IOrganizationGuardian
-    function executeInitiateGuardianUpdate(address newGuardian) external onlySelf {
+    function executeInitiateGuardianUpdate(address newGuardian) external override onlySelf {
         LibOrganizationGuardian.initiateGuardianUpdate(newGuardian);
     }
 
@@ -87,7 +87,7 @@ abstract contract OrganizationGuardianBase is OrganizationModifiers, IOrganizati
     }
 
     /// @inheritdoc IOrganizationGuardian
-    function executeFinalizeGuardianUpdate() external onlySelf {
+    function executeFinalizeGuardianUpdate() external override onlySelf {
         LibOrganizationGuardian.finalizeGuardianUpdate();
     }
 
@@ -122,7 +122,7 @@ abstract contract OrganizationGuardianBase is OrganizationModifiers, IOrganizati
     }
 
     /// @inheritdoc IOrganizationGuardian
-    function executeCancelGuardianUpdate() external onlySelf {
+    function executeCancelGuardianUpdate() external override onlySelf {
         LibOrganizationGuardian.cancelGuardianUpdate();
     }
 

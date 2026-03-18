@@ -59,7 +59,7 @@ abstract contract OrganizationAccountFactoryBase is OrganizationModifiers, IOrga
     }
 
     /// @inheritdoc IOrganizationAccountFactory
-    function executeDeployAccount(bytes32 create2Salt) external onlySelf returns (address) {
+    function executeDeployAccount(bytes32 create2Salt) external override onlySelf returns (address) {
         return LibOrganizationAccountFactory.deployAccount(create2Salt);
     }
 
@@ -94,7 +94,7 @@ abstract contract OrganizationAccountFactoryBase is OrganizationModifiers, IOrga
     }
 
     /// @inheritdoc IOrganizationAccountFactory
-    function executeSetAccountImplementation(address newImplementation) external onlySelf {
+    function executeSetAccountImplementation(address newImplementation) external override onlySelf {
         LibOrganizationAccountFactory.setAccountImplementation(newImplementation);
         emit AccountImplementationUpdated(newImplementation);
     }

@@ -47,7 +47,7 @@ abstract contract OrganizationGroupsBase is OrganizationModifiers, IOrganization
     }
 
     /// @inheritdoc IOrganizationGroups
-    function executeModifyGroups(GroupModification[] calldata modifications) external onlySelf {
+    function executeModifyGroups(GroupModification[] calldata modifications) external override onlySelf {
         LibOrganizationGroups.modifyGroups(modifications);
     }
 
