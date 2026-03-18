@@ -26,6 +26,9 @@ LIB_ORG_INIT_PATH="src/organization/libraries/LibOrganizationInitialization.sol:
 LIB_ORG_ACCOUNT_SIG_PATH="src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature"
 LIB_ORG_TX_RECOVERY_PATH="src/organization/libraries/LibOrganizationTxRecovery.sol:LibOrganizationTxRecovery"
 LIB_ORG_GUARDIAN_RECOVERY_PATH="src/organization/libraries/LibOrganizationGuardianRecovery.sol:LibOrganizationGuardianRecovery"
+LIB_ORG_GUARDIAN_PATH="src/organization/libraries/LibOrganizationGuardian.sol:LibOrganizationGuardian"
+LIB_ORG_ACCOUNT_FACTORY_PATH="src/organization/libraries/LibOrganizationAccountFactory.sol:LibOrganizationAccountFactory"
+LIB_ORG_ACCOUNT_TX_PATH="src/organization/libraries/LibOrganizationAccountTransaction.sol:LibOrganizationAccountTransaction"
 
 # =============================================================================
 # Validation Functions
@@ -179,6 +182,27 @@ get_lib_org_guardian_recovery() {
     get_config ".factory[\"$factory\"].lib_org_guardian_recovery"
 }
 
+# Get LibOrganizationGuardian address for a given factory
+# Usage: get_lib_org_guardian "arachnid"
+get_lib_org_guardian() {
+    local factory="$1"
+    get_config ".factory[\"$factory\"].lib_org_guardian"
+}
+
+# Get LibOrganizationAccountFactory address for a given factory
+# Usage: get_lib_org_account_factory "arachnid"
+get_lib_org_account_factory() {
+    local factory="$1"
+    get_config ".factory[\"$factory\"].lib_org_account_factory"
+}
+
+# Get LibOrganizationAccountTransaction address for a given factory
+# Usage: get_lib_org_account_tx "arachnid"
+get_lib_org_account_tx() {
+    local factory="$1"
+    get_config ".factory[\"$factory\"].lib_org_account_tx"
+}
+
 # =============================================================================
 # Safe Config Getters (from [safe.*] sections)
 # =============================================================================
@@ -252,7 +276,7 @@ get_guardian_module_address() {
 # Library Flags Builders
 # =============================================================================
 
-# Build --libraries flags for independent libraries (Policy, Admin, Members, Groups)
+# Build --libraries flags for independent libraries
 # Usage: FLAGS=$(build_independent_libraries_flags "arachnid")
 build_independent_libraries_flags() {
     local factory="$1"
@@ -260,13 +284,21 @@ build_independent_libraries_flags() {
     local admin_addr
     local members_addr
     local groups_addr
+    local tx_recovery_addr
+    local guardian_recovery_addr
+    local guardian_addr
+    local account_factory_addr
 
     policy_addr=$(get_lib_org_policy "$factory")
     admin_addr=$(get_lib_org_admin "$factory")
     members_addr=$(get_lib_org_members "$factory")
     groups_addr=$(get_lib_org_groups "$factory")
+    tx_recovery_addr=$(get_lib_org_tx_recovery "$factory")
+    guardian_recovery_addr=$(get_lib_org_guardian_recovery "$factory")
+    guardian_addr=$(get_lib_org_guardian "$factory")
+    account_factory_addr=$(get_lib_org_account_factory "$factory")
 
-    echo "--libraries ${LIB_ORG_POLICY_PATH}:${policy_addr} --libraries ${LIB_ORG_ADMIN_PATH}:${admin_addr} --libraries ${LIB_ORG_MEMBERS_PATH}:${members_addr} --libraries ${LIB_ORG_GROUPS_PATH}:${groups_addr}"
+    echo "--libraries ${LIB_ORG_POLICY_PATH}:${policy_addr} --libraries ${LIB_ORG_ADMIN_PATH}:${admin_addr} --libraries ${LIB_ORG_MEMBERS_PATH}:${members_addr} --libraries ${LIB_ORG_GROUPS_PATH}:${groups_addr} --libraries ${LIB_ORG_TX_RECOVERY_PATH}:${tx_recovery_addr} --libraries ${LIB_ORG_GUARDIAN_RECOVERY_PATH}:${guardian_recovery_addr} --libraries ${LIB_ORG_GUARDIAN_PATH}:${guardian_addr} --libraries ${LIB_ORG_ACCOUNT_FACTORY_PATH}:${account_factory_addr}"
 }
 
 # Build --libraries flags for all libraries
@@ -281,6 +313,9 @@ build_all_libraries_flags() {
     local account_sig_addr
     local tx_recovery_addr
     local guardian_recovery_addr
+    local guardian_addr
+    local account_factory_addr
+    local account_tx_addr
 
     policy_addr=$(get_lib_org_policy "$factory")
     admin_addr=$(get_lib_org_admin "$factory")
@@ -290,8 +325,11 @@ build_all_libraries_flags() {
     account_sig_addr=$(get_lib_org_account_sig "$factory")
     tx_recovery_addr=$(get_lib_org_tx_recovery "$factory")
     guardian_recovery_addr=$(get_lib_org_guardian_recovery "$factory")
+    guardian_addr=$(get_lib_org_guardian "$factory")
+    account_factory_addr=$(get_lib_org_account_factory "$factory")
+    account_tx_addr=$(get_lib_org_account_tx "$factory")
 
-    echo "--libraries ${LIB_ORG_POLICY_PATH}:${policy_addr} --libraries ${LIB_ORG_ADMIN_PATH}:${admin_addr} --libraries ${LIB_ORG_MEMBERS_PATH}:${members_addr} --libraries ${LIB_ORG_GROUPS_PATH}:${groups_addr} --libraries ${LIB_ORG_INIT_PATH}:${init_addr} --libraries ${LIB_ORG_ACCOUNT_SIG_PATH}:${account_sig_addr} --libraries ${LIB_ORG_TX_RECOVERY_PATH}:${tx_recovery_addr} --libraries ${LIB_ORG_GUARDIAN_RECOVERY_PATH}:${guardian_recovery_addr}"
+    echo "--libraries ${LIB_ORG_POLICY_PATH}:${policy_addr} --libraries ${LIB_ORG_ADMIN_PATH}:${admin_addr} --libraries ${LIB_ORG_MEMBERS_PATH}:${members_addr} --libraries ${LIB_ORG_GROUPS_PATH}:${groups_addr} --libraries ${LIB_ORG_INIT_PATH}:${init_addr} --libraries ${LIB_ORG_ACCOUNT_SIG_PATH}:${account_sig_addr} --libraries ${LIB_ORG_TX_RECOVERY_PATH}:${tx_recovery_addr} --libraries ${LIB_ORG_GUARDIAN_RECOVERY_PATH}:${guardian_recovery_addr} --libraries ${LIB_ORG_GUARDIAN_PATH}:${guardian_addr} --libraries ${LIB_ORG_ACCOUNT_FACTORY_PATH}:${account_factory_addr} --libraries ${LIB_ORG_ACCOUNT_TX_PATH}:${account_tx_addr}"
 }
 
 # =============================================================================

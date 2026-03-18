@@ -57,6 +57,9 @@ LIB_ORG_INIT_ADDRESS := $(get_lib_org_init "$FACTORY")
 LIB_ORG_ACCOUNT_SIG_ADDRESS := $(get_lib_org_account_sig "$FACTORY")
 LIB_ORG_TX_RECOVERY_ADDRESS := $(get_lib_org_tx_recovery "$FACTORY")
 LIB_ORG_GUARDIAN_RECOVERY_ADDRESS := $(get_lib_org_guardian_recovery "$FACTORY")
+LIB_ORG_GUARDIAN_ADDRESS := $(get_lib_org_guardian "$FACTORY")
+LIB_ORG_ACCOUNT_FACTORY_ADDRESS := $(get_lib_org_account_factory "$FACTORY")
+LIB_ORG_ACCOUNT_TX_ADDRESS := $(get_lib_org_account_tx "$FACTORY")
 
 # Arachnid deployer address (special case for funding - always from arachnid factory)
 ARACHNID_DEPLOYER_ADDRESS := $(get_factory_deployer "arachnid")
@@ -72,16 +75,23 @@ LIB_ORG_INIT_PATH := $LIB_ORG_INIT_PATH
 LIB_ORG_ACCOUNT_SIG_PATH := $LIB_ORG_ACCOUNT_SIG_PATH
 LIB_ORG_TX_RECOVERY_PATH := $LIB_ORG_TX_RECOVERY_PATH
 LIB_ORG_GUARDIAN_RECOVERY_PATH := $LIB_ORG_GUARDIAN_RECOVERY_PATH
+LIB_ORG_GUARDIAN_PATH := $LIB_ORG_GUARDIAN_PATH
+LIB_ORG_ACCOUNT_FACTORY_PATH := $LIB_ORG_ACCOUNT_FACTORY_PATH
+LIB_ORG_ACCOUNT_TX_PATH := $LIB_ORG_ACCOUNT_TX_PATH
 
 # ------------------------------------------------------------------------------
 # Library Linking Flags (for deploy-contracts and deploy-dependent-libs)
 # ------------------------------------------------------------------------------
-# Independent libraries (Policy, Admin, Members, Groups) - used for deploy-dependent-libs
+# Independent libraries - used for deploy-dependent-libs
 INDEPENDENT_LIBRARIES_FLAGS = \\
 	--libraries \$(LIB_ORG_POLICY_PATH):\$(LIB_ORG_POLICY_ADDRESS) \\
 	--libraries \$(LIB_ORG_ADMIN_PATH):\$(LIB_ORG_ADMIN_ADDRESS) \\
 	--libraries \$(LIB_ORG_MEMBERS_PATH):\$(LIB_ORG_MEMBERS_ADDRESS) \\
-	--libraries \$(LIB_ORG_GROUPS_PATH):\$(LIB_ORG_GROUPS_ADDRESS)
+	--libraries \$(LIB_ORG_GROUPS_PATH):\$(LIB_ORG_GROUPS_ADDRESS) \\
+	--libraries \$(LIB_ORG_TX_RECOVERY_PATH):\$(LIB_ORG_TX_RECOVERY_ADDRESS) \\
+	--libraries \$(LIB_ORG_GUARDIAN_RECOVERY_PATH):\$(LIB_ORG_GUARDIAN_RECOVERY_ADDRESS) \\
+	--libraries \$(LIB_ORG_GUARDIAN_PATH):\$(LIB_ORG_GUARDIAN_ADDRESS) \\
+	--libraries \$(LIB_ORG_ACCOUNT_FACTORY_PATH):\$(LIB_ORG_ACCOUNT_FACTORY_ADDRESS)
 
 # All libraries - used for deploy-contracts
 ALL_LIBRARIES_FLAGS = \\
@@ -92,5 +102,8 @@ ALL_LIBRARIES_FLAGS = \\
 	--libraries \$(LIB_ORG_INIT_PATH):\$(LIB_ORG_INIT_ADDRESS) \\
 	--libraries \$(LIB_ORG_ACCOUNT_SIG_PATH):\$(LIB_ORG_ACCOUNT_SIG_ADDRESS) \\
 	--libraries \$(LIB_ORG_TX_RECOVERY_PATH):\$(LIB_ORG_TX_RECOVERY_ADDRESS) \\
-	--libraries \$(LIB_ORG_GUARDIAN_RECOVERY_PATH):\$(LIB_ORG_GUARDIAN_RECOVERY_ADDRESS)
+	--libraries \$(LIB_ORG_GUARDIAN_RECOVERY_PATH):\$(LIB_ORG_GUARDIAN_RECOVERY_ADDRESS) \\
+	--libraries \$(LIB_ORG_GUARDIAN_PATH):\$(LIB_ORG_GUARDIAN_ADDRESS) \\
+	--libraries \$(LIB_ORG_ACCOUNT_FACTORY_PATH):\$(LIB_ORG_ACCOUNT_FACTORY_ADDRESS) \\
+	--libraries \$(LIB_ORG_ACCOUNT_TX_PATH):\$(LIB_ORG_ACCOUNT_TX_ADDRESS)
 EOF

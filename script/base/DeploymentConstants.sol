@@ -69,6 +69,18 @@ abstract contract DeploymentConstants {
     bytes32 internal constant LIB_ORG_GUARDIAN_RECOVERY_SALT =
         keccak256("den.mls-wallet.organization.lib.guardian-recovery.v1");
 
+    /// @dev Salt for LibOrganizationGuardian library deployment
+    bytes32 internal constant LIB_ORG_GUARDIAN_SALT = keccak256("den.mls-wallet.organization.lib.guardian.v1");
+
+    /// @dev Salt for LibOrganizationAccountFactory library deployment
+    bytes32 internal constant LIB_ORG_ACCOUNT_FACTORY_SALT =
+        keccak256("den.mls-wallet.organization.lib.account-factory.v1");
+
+    /// @dev Salt for LibOrganizationAccountTransaction library deployment
+    // forgefmt: disable-next-item
+    bytes32 internal constant LIB_ORG_ACCOUNT_TX_SALT =
+        keccak256("den.mls-wallet.organization.lib.account-transaction.v1");
+
     /// @dev Salt for OrganizationImplementation deployment
     bytes32 internal constant ORG_IMPL_SALT = keccak256("den.mls-wallet.organization.implementation.v1");
 

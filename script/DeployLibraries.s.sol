@@ -2,9 +2,12 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {LibOrganizationAccountFactory} from "organization/libraries/LibOrganizationAccountFactory.sol";
 import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
+import {LibOrganizationAccountTransaction} from "organization/libraries/LibOrganizationAccountTransaction.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationGroups} from "organization/libraries/LibOrganizationGroups.sol";
+import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGuardian.sol";
 import {LibOrganizationGuardianRecovery} from "organization/libraries/LibOrganizationGuardianRecovery.sol";
 import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
 import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
@@ -28,8 +31,10 @@ import {
  * @dev This script must be run BEFORE DeployContracts.s.sol.
  *      Library deployment is split into two stages due to inter-library dependencies:
  *
- *      Stage 1 (runDeployIndependentLibs): Deploys Policy, Admin, Members, Groups (no library deps)
- *      Stage 2 (runDeployDependentLibs): Deploys Init and AccountSig (requires Stage 1 libs linked)
+ *      Stage 1 (runDeployIndependentLibs): Deploys Policy, Admin, Members, Groups, TxRecovery,
+ *              GuardianRecovery, Guardian, AccountFactory (no library deps)
+ *      Stage 2 (runDeployDependentLibs): Deploys Init, AccountSig, AccountTransaction
+ *              (requires Stage 1 libs linked)
  *
  *      Usage for Stage 1:
  *        forge script script/DeployLibraries.s.sol:DeployLibraries \
@@ -56,7 +61,7 @@ import {
  */
 contract DeployLibraries is BaseDeployScript {
     /**
-     * @notice Stage 1: Deploy independent libraries (Policy, Admin, Members, Groups)
+     * @notice Stage 1: Deploy independent libraries
      * @dev These libraries have no dependencies on other platform libraries.
      *      Run this BEFORE runDeployDependentLibs.
      * @param factoryAddress Address of the CREATE2 factory to use for deployments
@@ -64,7 +69,8 @@ contract DeployLibraries is BaseDeployScript {
     function runDeployIndependentLibs(address factoryAddress) external {
         // Common deployment initialization (factory validation, confirmations, header logging)
         validateAndInitializeDeploymentOrRevert(
-            factoryAddress, "DeployLibraries - Stage 1: Independent (Policy, Admin, Members, Groups)"
+            factoryAddress,
+            "DeployLibraries - Stage 1: Independent (Policy, Admin, Members, Groups, TxRecovery, GuardianRecovery, Guardian, AccountFactory)"
         );
 
         // Start broadcasting transactions
@@ -81,36 +87,55 @@ contract DeployLibraries is BaseDeployScript {
     }
 
     /**
-     * @notice Stage 2: Deploy dependent libraries (Init and AccountSig)
+     * @notice Stage 2: Deploy dependent libraries (Init, AccountSig, AccountTransaction)
      * @dev These libraries depend on independent libraries being deployed and linked via --libraries.
      *      IMPORTANT: Run this AFTER runDeployIndependentLibs and with --libraries flags for
-     *      Policy, Admin, Members, and Groups.
+     *      all independent libraries.
      * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
     function runDeployDependentLibs(address factoryAddress) external {
         // Common deployment initialization (factory validation, confirmations, header logging)
         validateAndInitializeDeploymentOrRevert(
-            factoryAddress, "DeployLibraries - Stage 2: Dependent (Init, AccountSig)"
+            factoryAddress, "DeployLibraries - Stage 2: Dependent (Init, AccountSig, AccountTransaction)"
         );
 
         // Get expected addresses from deployment.toml
         PlatformLibraries memory expected = getExpectedLibraryAddresses();
 
-        // Validate Admin, Members, and Groups are linked in LibOrganizationInitialization and deployed
+        // Validate all linked libraries in LibOrganizationInitialization are deployed
         Logger.logSection("Verify Independent Libraries Linked in LibOrganizationInitialization");
         bytes memory initInitCode = type(LibOrganizationInitialization).creationCode;
-        LinkedLibraryInfo[] memory initLibs = new LinkedLibraryInfo[](3);
+        LinkedLibraryInfo[] memory initLibs = new LinkedLibraryInfo[](7);
         initLibs[0] = LinkedLibraryInfo({expectedAddress: expected.adminAddress, name: "LibOrganizationAdmin"});
         initLibs[1] = LinkedLibraryInfo({expectedAddress: expected.membersAddress, name: "LibOrganizationMembers"});
         initLibs[2] = LinkedLibraryInfo({expectedAddress: expected.groupsAddress, name: "LibOrganizationGroups"});
+        initLibs[3] = LinkedLibraryInfo({expectedAddress: expected.guardianAddress, name: "LibOrganizationGuardian"});
+        initLibs[4] =
+            LinkedLibraryInfo({expectedAddress: expected.accountFactoryAddress, name: "LibOrganizationAccountFactory"});
+        initLibs[5] = LinkedLibraryInfo({
+            expectedAddress: expected.guardianRecoveryAddress, name: "LibOrganizationGuardianRecovery"
+        });
+        initLibs[6] =
+            LinkedLibraryInfo({expectedAddress: expected.txRecoveryAddress, name: "LibOrganizationTxRecovery"});
         LinkedLibrariesUtils.validateLinkedLibrariesOrRevert(initInitCode, initLibs);
 
-        // Validate Policy is linked in LibOrganizationAccountSignature and deployed
-        Logger.logSection("Verify LibOrganizationPolicy Linked in LibOrganizationAccountSignature");
+        // Validate all linked libraries in LibOrganizationAccountSignature are deployed
+        Logger.logSection("Verify Independent Libraries Linked in LibOrganizationAccountSignature");
         bytes memory accountSigInitCode = type(LibOrganizationAccountSignature).creationCode;
-        LinkedLibraryInfo[] memory policyLib = new LinkedLibraryInfo[](1);
-        policyLib[0] = LinkedLibraryInfo({expectedAddress: expected.policyAddress, name: "LibOrganizationPolicy"});
-        LinkedLibrariesUtils.validateLinkedLibrariesOrRevert(accountSigInitCode, policyLib);
+        LinkedLibraryInfo[] memory accountSigLibs = new LinkedLibraryInfo[](3);
+        accountSigLibs[0] = LinkedLibraryInfo({expectedAddress: expected.policyAddress, name: "LibOrganizationPolicy"});
+        accountSigLibs[1] =
+            LinkedLibraryInfo({expectedAddress: expected.guardianAddress, name: "LibOrganizationGuardian"});
+        accountSigLibs[2] =
+            LinkedLibraryInfo({expectedAddress: expected.txRecoveryAddress, name: "LibOrganizationTxRecovery"});
+        LinkedLibrariesUtils.validateLinkedLibrariesOrRevert(accountSigInitCode, accountSigLibs);
+
+        // Validate Policy is linked in LibOrganizationAccountTransaction and deployed
+        Logger.logSection("Verify Independent Libraries Linked in LibOrganizationAccountTransaction");
+        bytes memory accountTxInitCode = type(LibOrganizationAccountTransaction).creationCode;
+        LinkedLibraryInfo[] memory accountTxLibs = new LinkedLibraryInfo[](1);
+        accountTxLibs[0] = LinkedLibraryInfo({expectedAddress: expected.policyAddress, name: "LibOrganizationPolicy"});
+        LinkedLibrariesUtils.validateLinkedLibrariesOrRevert(accountTxInitCode, accountTxLibs);
 
         // Start broadcasting transactions
         vm.startBroadcast();
@@ -168,14 +193,26 @@ contract DeployLibraries is BaseDeployScript {
                 factoryAddress, LIB_ORG_GUARDIAN_RECOVERY_SALT, type(LibOrganizationGuardianRecovery).creationCode
             )
         );
+        Logger.logKeyValue(
+            "LibOrganizationGuardian",
+            Create2Utils.computeAddress(
+                factoryAddress, LIB_ORG_GUARDIAN_SALT, type(LibOrganizationGuardian).creationCode
+            )
+        );
+        Logger.logKeyValue(
+            "LibOrganizationAccountFactory",
+            Create2Utils.computeAddress(
+                factoryAddress, LIB_ORG_ACCOUNT_FACTORY_SALT, type(LibOrganizationAccountFactory).creationCode
+            )
+        );
         Logger.logEmptyLine();
     }
 
     /**
      * @notice Compute and print dependent library addresses without deploying
      * @dev Use this to preview addresses before deployment. Does not require RPC connection.
-     *      IMPORTANT: This function must be called with --libraries flags for Policy, Admin,
-     *      Members, and Groups to ensure the correct addresses are embedded in the bytecode.
+     *      IMPORTANT: This function must be called with --libraries flags for all independent
+     *      libraries to ensure the correct addresses are embedded in the bytecode.
      * @param factoryAddress Address of the CREATE2 factory to use for address computation
      */
     function computeDependentAddresses(address factoryAddress) external pure {
@@ -200,10 +237,16 @@ contract DeployLibraries is BaseDeployScript {
                 factoryAddress, LIB_ORG_ACCOUNT_SIG_SALT, type(LibOrganizationAccountSignature).creationCode
             )
         );
+        Logger.logKeyValue(
+            "LibOrganizationAccountTransaction",
+            Create2Utils.computeAddress(
+                factoryAddress, LIB_ORG_ACCOUNT_TX_SALT, type(LibOrganizationAccountTransaction).creationCode
+            )
+        );
         Logger.logEmptyLine();
     }
 
-    /// @dev Deploys independent platform libraries (Policy, Admin, Members, Groups) via CREATE2
+    /// @dev Deploys independent platform libraries via CREATE2
     /// @return libs Struct containing deployed independent library addresses
     function _deployIndependentLibraries() internal returns (IndependentLibraries memory libs) {
         Logger.logSection("Independent Libraries (CREATE2)");
@@ -243,9 +286,25 @@ contract DeployLibraries is BaseDeployScript {
             type(LibOrganizationGuardianRecovery).creationCode,
             "LibOrganizationGuardianRecovery"
         );
+
+        // Deploy LibOrganizationGuardian
+        (libs.guardianAddress,) = Create2Utils.deployIfNotExists(
+            _factoryAddress,
+            LIB_ORG_GUARDIAN_SALT,
+            type(LibOrganizationGuardian).creationCode,
+            "LibOrganizationGuardian"
+        );
+
+        // Deploy LibOrganizationAccountFactory
+        (libs.accountFactoryAddress,) = Create2Utils.deployIfNotExists(
+            _factoryAddress,
+            LIB_ORG_ACCOUNT_FACTORY_SALT,
+            type(LibOrganizationAccountFactory).creationCode,
+            "LibOrganizationAccountFactory"
+        );
     }
 
-    /// @dev Deploys dependent platform libraries (Init and AccountSig) via CREATE2
+    /// @dev Deploys dependent platform libraries (Init, AccountSig, AccountTransaction) via CREATE2
     /// @return libs Struct containing deployed dependent library addresses
     function _deployDependentLibraries() internal returns (DependentLibraries memory libs) {
         Logger.logSection("Dependent Libraries (CREATE2)");
@@ -265,6 +324,14 @@ contract DeployLibraries is BaseDeployScript {
             type(LibOrganizationAccountSignature).creationCode,
             "LibOrganizationAccountSignature"
         );
+
+        // Deploy LibOrganizationAccountTransaction (depends on Policy being linked)
+        (libs.accountTransactionAddress,) = Create2Utils.deployIfNotExists(
+            _factoryAddress,
+            LIB_ORG_ACCOUNT_TX_SALT,
+            type(LibOrganizationAccountTransaction).creationCode,
+            "LibOrganizationAccountTransaction"
+        );
     }
 
     /// @dev Logs independent library addresses in a formatted summary
@@ -277,6 +344,8 @@ contract DeployLibraries is BaseDeployScript {
         Logger.logKeyValue("LibOrganizationGroups", libs.groupsAddress);
         Logger.logKeyValue("LibOrganizationTxRecovery", libs.txRecoveryAddress);
         Logger.logKeyValue("LibOrganizationGuardianRecovery", libs.guardianRecoveryAddress);
+        Logger.logKeyValue("LibOrganizationGuardian", libs.guardianAddress);
+        Logger.logKeyValue("LibOrganizationAccountFactory", libs.accountFactoryAddress);
         Logger.logBoxFooter();
     }
 
@@ -286,6 +355,7 @@ contract DeployLibraries is BaseDeployScript {
         Logger.logBoxHeader(unicode"✅ Deployed Dependent Library Addresses");
         Logger.logKeyValue("LibOrganizationInitialization", libs.initializationAddress);
         Logger.logKeyValue("LibOrganizationAccountSignature", libs.accountSignatureAddress);
+        Logger.logKeyValue("LibOrganizationAccountTransaction", libs.accountTransactionAddress);
         Logger.logBoxFooter();
     }
 }

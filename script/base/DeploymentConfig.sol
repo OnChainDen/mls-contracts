@@ -101,6 +101,15 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
             // forgefmt: disable-next-item
             guardianRecoveryAddress: vm.parseTomlAddress(
                 toml, string(abi.encodePacked(prefix, ".lib_org_guardian_recovery"))
+            ),
+            guardianAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".lib_org_guardian"))),
+            // forgefmt: disable-next-item
+            accountFactoryAddress: vm.parseTomlAddress(
+                toml, string(abi.encodePacked(prefix, ".lib_org_account_factory"))
+            ),
+            // forgefmt: disable-next-item
+            accountTransactionAddress: vm.parseTomlAddress(
+                toml, string(abi.encodePacked(prefix, ".lib_org_account_tx"))
             )
         });
     }

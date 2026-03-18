@@ -18,6 +18,9 @@ struct PlatformLibraries {
     address accountSignatureAddress;
     address txRecoveryAddress;
     address guardianRecoveryAddress;
+    address guardianAddress;
+    address accountFactoryAddress;
+    address accountTransactionAddress;
 }
 
 /// @dev Grouped addresses for independent libraries (no dependencies on other platform libraries)
@@ -28,12 +31,15 @@ struct IndependentLibraries {
     address groupsAddress;
     address txRecoveryAddress;
     address guardianRecoveryAddress;
+    address guardianAddress;
+    address accountFactoryAddress;
 }
 
 /// @dev Grouped addresses for dependent libraries (depend on independent libraries being linked)
 struct DependentLibraries {
     address initializationAddress;
     address accountSignatureAddress;
+    address accountTransactionAddress;
 }
 
 /// @dev Grouped addresses for deployed Safe infrastructure contracts

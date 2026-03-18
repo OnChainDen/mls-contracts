@@ -145,14 +145,14 @@ make deploy-safe-multisigs ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 # Step 5: Deploy Platform Libraries (in two stages)
 # =============================================================================
 # Libraries must be deployed in two stages due to inter-library dependencies:
-#   Stage 1 (independent): Policy, Admin, Members, Groups, TxRecovery, GuardianRecovery (no deps on other libs)
-#   Stage 2 (dependent): Init and AccountSig (depend on Stage 1 libs being linked)
+#   Stage 1 (independent): Policy, Admin, Members, Groups, TxRecovery, GuardianRecovery, Guardian, AccountFactory
+#   Stage 2 (dependent): Init, AccountSig, AccountTransaction (depend on Stage 1 libs being linked)
 echo ""
-echo "[Step 5a] Deploying independent libraries (Policy, Admin, Members, Groups, TxRecovery, GuardianRecovery)..."
+echo "[Step 5a] Deploying independent libraries (Policy, Admin, Members, Groups, TxRecovery, GuardianRecovery, Guardian, AccountFactory)..."
 make deploy-independent-libs ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 
 echo ""
-echo "[Step 5b] Deploying dependent libraries (Init, AccountSig)..."
+echo "[Step 5b] Deploying dependent libraries (Init, AccountSig, AccountTransaction)..."
 make deploy-dependent-libs ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 
 # =============================================================================

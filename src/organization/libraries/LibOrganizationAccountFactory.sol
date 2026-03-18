@@ -27,7 +27,7 @@ library LibOrganizationAccountFactory {
      *      Reverts if the implementation is not whitelisted for account contracts.
      * @param newImplementation The new account implementation address
      */
-    function setAccountImplementation(address newImplementation) internal {
+    function setAccountImplementation(address newImplementation) public {
         if (newImplementation == address(0)) {
             revert IOrganizationFactory.ZeroAddress();
         }
@@ -56,7 +56,7 @@ library LibOrganizationAccountFactory {
      * @param create2Salt The salt for CREATE2 deployment
      * @return accountAddress The address of the deployed account proxy
      */
-    function deployAccount(bytes32 create2Salt) internal returns (address accountAddress) {
+    function deployAccount(bytes32 create2Salt) public returns (address accountAddress) {
         bytes memory bytecode = _getAccountProxyBytecode();
 
         // Deploy the AccountProxy using CREATE2
@@ -78,7 +78,7 @@ library LibOrganizationAccountFactory {
      * @param salt The salt for CREATE2 deployment
      * @return The computed address
      */
-    function computeAccountAddress(bytes32 salt) internal view returns (address) {
+    function computeAccountAddress(bytes32 salt) public view returns (address) {
         return Create2.computeAddress(salt, keccak256(_getAccountProxyBytecode()));
     }
 
@@ -87,7 +87,7 @@ library LibOrganizationAccountFactory {
      * @param accountAddress The address of the account to check
      * @return True if the account was deployed by this organization, false otherwise
      */
-    function isAccountDeployedByOrganization(address accountAddress) internal view returns (bool) {
+    function isAccountDeployedByOrganization(address accountAddress) public view returns (bool) {
         return LibOrganizationAccountFactoryStorage.layout().deployedAccounts[accountAddress];
     }
 
@@ -96,7 +96,7 @@ library LibOrganizationAccountFactory {
      *      Reverts with AccountNotDeployedByOrganization if the account was not deployed by this organization.
      * @param accountAddress The address of the account to validate
      */
-    function validateIsAccountDeployedByOrgOrRevert(address accountAddress) internal view {
+    function validateIsAccountDeployedByOrgOrRevert(address accountAddress) public view {
         if (!isAccountDeployedByOrganization(accountAddress)) {
             revert IOrganizationAccountFactory.AccountNotDeployedByOrganization(accountAddress);
         }

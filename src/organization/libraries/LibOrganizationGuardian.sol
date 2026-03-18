@@ -24,7 +24,7 @@ library LibOrganizationGuardian {
      *      LibOrganizationAdminOperationTimelock.initializeAdminOperationTimelock() BEFORE calling this.
      * @param guardian The initial guardian address (must be non-zero)
      */
-    function initializeGuardian(address guardian) internal {
+    function initializeGuardian(address guardian) public {
         if (guardian == address(0)) {
             revert IOrganizationGuardian.InvalidGuardianAddress();
         }
@@ -43,7 +43,7 @@ library LibOrganizationGuardian {
      *      Sets pendingGuardian and pendingGuardianUpdateTimestamp.
      * @param newGuardian The proposed new guardian address
      */
-    function initiateGuardianUpdate(address newGuardian) internal {
+    function initiateGuardianUpdate(address newGuardian) public {
         // Validate new guardian is not zero
         if (newGuardian == address(0)) {
             revert IOrganizationGuardian.InvalidGuardianAddress();
@@ -74,7 +74,7 @@ library LibOrganizationGuardian {
     /**
      * @dev Finalizes a guardian update (after timelock, ready for new guardian to accept).
      */
-    function finalizeGuardianUpdate() internal {
+    function finalizeGuardianUpdate() public {
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
 
         // Case: No pending guardian update
@@ -96,7 +96,7 @@ library LibOrganizationGuardian {
     /**
      * @dev Cancels a pending guardian update (normal flow).
      */
-    function cancelGuardianUpdate() internal {
+    function cancelGuardianUpdate() public {
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
 
         // Case: No pending guardian update
@@ -119,7 +119,7 @@ library LibOrganizationGuardian {
      * @dev Accepts the guardian role (completes the normal flow update).
      *      Caller must be the pending guardian (enforced by modifier in OrganizationImplementation).
      */
-    function acceptGuardian() internal {
+    function acceptGuardian() public {
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
 
         address pendingGuardianAddr = guardianLayout.pendingGuardian;
@@ -151,7 +151,7 @@ library LibOrganizationGuardian {
      * @dev Enforces that the caller is the guardian address.
      *      This function will revert if msg.sender is not the guardian.
      */
-    function enforceOnlyGuardian() internal view {
+    function enforceOnlyGuardian() public view {
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
         if (msg.sender != guardianLayout.guardian) {
             revert IOrganizationGuardian.UnauthorizedGuardian(msg.sender, guardianLayout.guardian);
@@ -162,7 +162,7 @@ library LibOrganizationGuardian {
      * @dev Enforces that the caller is the pending guardian address.
      *      This function will revert if msg.sender is not the pending guardian.
      */
-    function enforceOnlyPendingGuardian() internal view {
+    function enforceOnlyPendingGuardian() public view {
         address pendingGuardianAddr = LibOrganizationGuardianStorage.layout().pendingGuardian;
         if (msg.sender != pendingGuardianAddr) {
             revert IOrganizationGuardian.UnauthorizedGuardianAcceptance(msg.sender, pendingGuardianAddr);
@@ -173,7 +173,7 @@ library LibOrganizationGuardian {
      * @dev Gets the current guardian address.
      * @return The current guardian address
      */
-    function getGuardian() internal view returns (address) {
+    function getGuardian() public view returns (address) {
         return LibOrganizationGuardianStorage.layout().guardian;
     }
 
@@ -181,7 +181,7 @@ library LibOrganizationGuardian {
      * @dev Gets the pending guardian address (normal flow).
      * @return The pending guardian address (zero if no pending update)
      */
-    function getPendingGuardian() internal view returns (address) {
+    function getPendingGuardian() public view returns (address) {
         return LibOrganizationGuardianStorage.layout().pendingGuardian;
     }
 
@@ -189,7 +189,7 @@ library LibOrganizationGuardian {
      * @dev Gets the pending guardian update timestamp (normal flow).
      * @return The timestamp when the update can be finalized (0 if no pending update)
      */
-    function getPendingGuardianUpdateTimestamp() internal view returns (uint256) {
+    function getPendingGuardianUpdateTimestamp() public view returns (uint256) {
         return LibOrganizationGuardianStorage.layout().pendingGuardianUpdateTimestamp;
     }
 
@@ -197,7 +197,7 @@ library LibOrganizationGuardian {
      * @dev Checks if the guardian update is ready for acceptance (normal flow).
      * @return True if the update has been finalized and is waiting for the new guardian to accept
      */
-    function getIsGuardianUpdateReadyForAcceptance() internal view returns (bool) {
+    function getIsGuardianUpdateReadyForAcceptance() public view returns (bool) {
         return LibOrganizationGuardianStorage.layout().isGuardianUpdateReadyForAcceptance;
     }
 }

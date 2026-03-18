@@ -324,7 +324,7 @@ contract DeployContracts is BaseDeployScript {
         bytes memory initCode = type(OrganizationImplementation).creationCode;
 
         // Build array of libraries to validate
-        LinkedLibraryInfo[] memory libs = new LinkedLibraryInfo[](6);
+        LinkedLibraryInfo[] memory libs = new LinkedLibraryInfo[](9);
         libs[0] = LinkedLibraryInfo({expectedAddress: expected.policyAddress, name: "LibOrganizationPolicy"});
         libs[1] = LinkedLibraryInfo({expectedAddress: expected.adminAddress, name: "LibOrganizationAdmin"});
         libs[2] = LinkedLibraryInfo({expectedAddress: expected.membersAddress, name: "LibOrganizationMembers"});
@@ -333,6 +333,12 @@ contract DeployContracts is BaseDeployScript {
             LinkedLibraryInfo({expectedAddress: expected.initializationAddress, name: "LibOrganizationInitialization"});
         libs[5] = LinkedLibraryInfo({
             expectedAddress: expected.accountSignatureAddress, name: "LibOrganizationAccountSignature"
+        });
+        libs[6] = LinkedLibraryInfo({expectedAddress: expected.guardianAddress, name: "LibOrganizationGuardian"});
+        libs[7] =
+            LinkedLibraryInfo({expectedAddress: expected.accountFactoryAddress, name: "LibOrganizationAccountFactory"});
+        libs[8] = LinkedLibraryInfo({
+            expectedAddress: expected.accountTransactionAddress, name: "LibOrganizationAccountTransaction"
         });
 
         // Validate all libraries are linked in bytecode and deployed

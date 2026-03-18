@@ -79,7 +79,7 @@ library LibOrganizationAccountTransaction {
         bytes memory initiatorSignature,
         bytes memory reviewSignatures,
         ValidationProofs calldata proofs
-    ) internal {
+    ) public {
         // Check transaction hasn't expired
         if (block.timestamp > expirationTimestamp) {
             revert IOrganizationAccountTransaction.TransactionExpired(expirationTimestamp, block.timestamp);
@@ -140,61 +140,6 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @dev Validates and updates rate limits for approved transactions.
-     *      Only applies if the policy has TimeInterval rate limit.
-     *      For token transfers, tracks the transfer amount.
-     *      For other transactions, tracks count (usage = 1).
-     *      Reverts if the limit would be exceeded.
-     * @param params The packed transaction parameters
-     * @param data The transaction calldata
-     * @param initiator The initiator's address
-     * @param policy The policy being used
-     */
-    function _validateAndUpdateRateLimitOrRevert(
-        TxParams memory params,
-        bytes calldata data,
-        address initiator,
-        Policy calldata policy
-    ) internal {
-        RateLimitType rateLimitType = policy.config.rateLimit.limitType;
-
-        // Case: Policy explicitly disables rate limiting.
-        if (rateLimitType == RateLimitType.None) {
-            return;
-        }
-
-        // Case: Unknown rate-limit enum value fails closed.
-        if (rateLimitType != RateLimitType.TimeInterval) {
-            revert IOrganizationAccountTransaction.RateLimitExceeded(params.policyId);
-        }
-
-        // Determine the actual destination (may differ for token transfers)
-        address destination = LibOrganizationPolicy.getActualDestination(params.to, data, params.value);
-
-        // Calculate usage amount: token amount for transfers, 1 for other transactions
-        uint256 usageAmount;
-        if (policy.config.transactionType == TransactionType.TokenTransfers) {
-            usageAmount = TokenTransferUtils.extractTransferAmount(data, params.value);
-        } else {
-            usageAmount = 1; // Count-based limit for non-transfer transactions
-        }
-
-        // Check limit and update usage tracking
-        bool withinLimit = LibOrganizationPolicy.checkAndUpdateRateLimit({
-            policyId: params.policyId,
-            policy: policy,
-            account: params.account,
-            destination: destination,
-            initiator: initiator,
-            usageAmount: usageAmount
-        });
-
-        if (!withinLimit) {
-            revert IOrganizationAccountTransaction.RateLimitExceeded(params.policyId);
-        }
-    }
-
-    /**
      * @dev Validates that the caller is authorized to reject the given transaction.
      *      Rejection validation ensures that only authorized parties can reject transactions.
      *      This prevents griefing attacks where unauthorized actors could reject
@@ -225,7 +170,7 @@ library LibOrganizationAccountTransaction {
         bytes memory initiatorSignature,
         bytes memory reviewSignatures,
         ValidationProofs calldata proofs
-    ) internal view {
+    ) public view {
         // Check transaction hasn't expired (can only reject pending transactions)
         if (block.timestamp > expirationTimestamp) {
             revert IOrganizationAccountTransaction.TransactionExpired(expirationTimestamp, block.timestamp);
@@ -284,6 +229,61 @@ library LibOrganizationAccountTransaction {
             });
         } else {
             revert IOrganizationAccountTransaction.PolicyDoesNotApply(policyId);
+        }
+    }
+
+    /**
+     * @dev Validates and updates rate limits for approved transactions.
+     *      Only applies if the policy has TimeInterval rate limit.
+     *      For token transfers, tracks the transfer amount.
+     *      For other transactions, tracks count (usage = 1).
+     *      Reverts if the limit would be exceeded.
+     * @param params The packed transaction parameters
+     * @param data The transaction calldata
+     * @param initiator The initiator's address
+     * @param policy The policy being used
+     */
+    function _validateAndUpdateRateLimitOrRevert(
+        TxParams memory params,
+        bytes calldata data,
+        address initiator,
+        Policy calldata policy
+    ) internal {
+        RateLimitType rateLimitType = policy.config.rateLimit.limitType;
+
+        // Case: Policy explicitly disables rate limiting.
+        if (rateLimitType == RateLimitType.None) {
+            return;
+        }
+
+        // Case: Unknown rate-limit enum value fails closed.
+        if (rateLimitType != RateLimitType.TimeInterval) {
+            revert IOrganizationAccountTransaction.RateLimitExceeded(params.policyId);
+        }
+
+        // Determine the actual destination (may differ for token transfers)
+        address destination = LibOrganizationPolicy.getActualDestination(params.to, data, params.value);
+
+        // Calculate usage amount: token amount for transfers, 1 for other transactions
+        uint256 usageAmount;
+        if (policy.config.transactionType == TransactionType.TokenTransfers) {
+            usageAmount = TokenTransferUtils.extractTransferAmount(data, params.value);
+        } else {
+            usageAmount = 1; // Count-based limit for non-transfer transactions
+        }
+
+        // Check limit and update usage tracking
+        bool withinLimit = LibOrganizationPolicy.checkAndUpdateRateLimit({
+            policyId: params.policyId,
+            policy: policy,
+            account: params.account,
+            destination: destination,
+            initiator: initiator,
+            usageAmount: usageAmount
+        });
+
+        if (!withinLimit) {
+            revert IOrganizationAccountTransaction.RateLimitExceeded(params.policyId);
         }
     }
 

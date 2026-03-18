@@ -178,8 +178,8 @@ fi
 # We must compute in stages because some libraries have their bytecode affected
 # by the addresses of other libraries they depend on.
 
-# Step 2a: Compute independent library addresses (Policy, Admin, Members, Groups)
-print_progress "  Computing independent library addresses (Policy, Admin, Members, Groups)..."
+# Step 2a: Compute independent library addresses
+print_progress "  Computing independent library addresses..."
 LIB_OUTPUT_INDEPENDENT=$(forge script script/DeployLibraries.s.sol:DeployLibraries \
     --sig "computeIndependentAddresses(address)" "$FACTORY_ADDRESS" --offline 2>&1) || {
     clear_progress
@@ -195,24 +195,30 @@ LIB_ORG_MEMBERS_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganiza
 LIB_ORG_GROUPS_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationGroups")
 LIB_ORG_TX_RECOVERY_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationTxRecovery")
 LIB_ORG_GUARDIAN_RECOVERY_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationGuardianRecovery")
+LIB_ORG_GUARDIAN_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationGuardian")
+LIB_ORG_ACCOUNT_FACTORY_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationAccountFactory")
 
-if [[ -z "$LIB_ORG_POLICY_ADDRESS" || -z "$LIB_ORG_ADMIN_ADDRESS" || -z "$LIB_ORG_MEMBERS_ADDRESS" || -z "$LIB_ORG_GROUPS_ADDRESS" || -z "$LIB_ORG_TX_RECOVERY_ADDRESS" || -z "$LIB_ORG_GUARDIAN_RECOVERY_ADDRESS" ]]; then
+if [[ -z "$LIB_ORG_POLICY_ADDRESS" || -z "$LIB_ORG_ADMIN_ADDRESS" || -z "$LIB_ORG_MEMBERS_ADDRESS" || -z "$LIB_ORG_GROUPS_ADDRESS" || -z "$LIB_ORG_TX_RECOVERY_ADDRESS" || -z "$LIB_ORG_GUARDIAN_RECOVERY_ADDRESS" || -z "$LIB_ORG_GUARDIAN_ADDRESS" || -z "$LIB_ORG_ACCOUNT_FACTORY_ADDRESS" ]]; then
     clear_progress
     echo "Error: Failed to extract independent library addresses from output" >&2
     echo "$LIB_OUTPUT_INDEPENDENT" >&2
     exit 1
 fi
 
-# Step 2b: Compute dependent library addresses (Init and AccountSig)
+# Step 2b: Compute dependent library addresses (Init, AccountSig, AccountTransaction)
 # These require --libraries flags because their bytecode contains the addresses
 # of the libraries they depend on
-print_progress "  Computing dependent library addresses (Init, AccountSig)..."
+print_progress "  Computing dependent library addresses (Init, AccountSig, AccountTransaction)..."
 
 # Build --libraries flags for the independent libraries
 DEP_LIBRARIES_FLAGS="--libraries ${LIB_ORG_POLICY_PATH}:${LIB_ORG_POLICY_ADDRESS}"
 DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_ADMIN_PATH}:${LIB_ORG_ADMIN_ADDRESS}"
 DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_MEMBERS_PATH}:${LIB_ORG_MEMBERS_ADDRESS}"
 DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_GROUPS_PATH}:${LIB_ORG_GROUPS_ADDRESS}"
+DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_TX_RECOVERY_PATH}:${LIB_ORG_TX_RECOVERY_ADDRESS}"
+DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_GUARDIAN_RECOVERY_PATH}:${LIB_ORG_GUARDIAN_RECOVERY_ADDRESS}"
+DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_GUARDIAN_PATH}:${LIB_ORG_GUARDIAN_ADDRESS}"
+DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_ACCOUNT_FACTORY_PATH}:${LIB_ORG_ACCOUNT_FACTORY_ADDRESS}"
 
 LIB_OUTPUT_DEPENDENT=$(forge script script/DeployLibraries.s.sol:DeployLibraries \
     --sig "computeDependentAddresses(address)" "$FACTORY_ADDRESS" \
@@ -226,8 +232,9 @@ LIB_OUTPUT_DEPENDENT=$(forge script script/DeployLibraries.s.sol:DeployLibraries
 # Extract dependent library addresses (these are now correct with --libraries)
 LIB_ORG_INIT_ADDRESS=$(extract_address "$LIB_OUTPUT_DEPENDENT" "LibOrganizationInitialization")
 LIB_ORG_ACCOUNT_SIG_ADDRESS=$(extract_address "$LIB_OUTPUT_DEPENDENT" "LibOrganizationAccountSignature")
+LIB_ORG_ACCOUNT_TX_ADDRESS=$(extract_address "$LIB_OUTPUT_DEPENDENT" "LibOrganizationAccountTransaction")
 
-if [[ -z "$LIB_ORG_INIT_ADDRESS" || -z "$LIB_ORG_ACCOUNT_SIG_ADDRESS" ]]; then
+if [[ -z "$LIB_ORG_INIT_ADDRESS" || -z "$LIB_ORG_ACCOUNT_SIG_ADDRESS" || -z "$LIB_ORG_ACCOUNT_TX_ADDRESS" ]]; then
     clear_progress
     echo "Error: Failed to extract dependent library addresses from output" >&2
     echo "$LIB_OUTPUT_DEPENDENT" >&2
@@ -272,6 +279,9 @@ LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_INIT_PATH}:${LIB_ORG_INI
 LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_ACCOUNT_SIG_PATH}:${LIB_ORG_ACCOUNT_SIG_ADDRESS}"
 LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_TX_RECOVERY_PATH}:${LIB_ORG_TX_RECOVERY_ADDRESS}"
 LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_GUARDIAN_RECOVERY_PATH}:${LIB_ORG_GUARDIAN_RECOVERY_ADDRESS}"
+LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_GUARDIAN_PATH}:${LIB_ORG_GUARDIAN_ADDRESS}"
+LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_ACCOUNT_FACTORY_PATH}:${LIB_ORG_ACCOUNT_FACTORY_ADDRESS}"
+LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_ACCOUNT_TX_PATH}:${LIB_ORG_ACCOUNT_TX_ADDRESS}"
 
 # Compute platform contracts with NONPROD guardian and admin safes
 print_progress "  Computing platform contract addresses (nonprod)..."
@@ -363,6 +373,9 @@ print_toml "lib_org_init" "${LIB_ORG_INIT_ADDRESS:-NOT_COMPUTED}"
 print_toml "lib_org_account_sig" "${LIB_ORG_ACCOUNT_SIG_ADDRESS:-NOT_COMPUTED}"
 print_toml "lib_org_tx_recovery" "${LIB_ORG_TX_RECOVERY_ADDRESS:-NOT_COMPUTED}"
 print_toml "lib_org_guardian_recovery" "${LIB_ORG_GUARDIAN_RECOVERY_ADDRESS:-NOT_COMPUTED}"
+print_toml "lib_org_guardian" "${LIB_ORG_GUARDIAN_ADDRESS:-NOT_COMPUTED}"
+print_toml "lib_org_account_factory" "${LIB_ORG_ACCOUNT_FACTORY_ADDRESS:-NOT_COMPUTED}"
+print_toml "lib_org_account_tx" "${LIB_ORG_ACCOUNT_TX_ADDRESS:-NOT_COMPUTED}"
 echo ""
 echo "# Platform Implementation Contracts (environment-independent)"
 print_toml "whitelist_impl" "${WHITELIST_IMPL_ADDRESS:-NOT_COMPUTED}"
