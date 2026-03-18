@@ -122,9 +122,17 @@ contract OrganizationImplementation is
         // Bind authorization to this exact target implementation for the upcoming UUPS hook call.
         LibOrganizationUpgradeStorage.layout().authorizedUpgradeImplementation = newImplementation;
 
+        // Perform the upgrade
+        // This calls the inherited UUPSUpgradeable.upgradeToAndCall which will:
+        // 1. Call _authorizeUpgrade (which checks the authorized target binding)
+        // 2. Upgrade the implementation
+        // 3. Optionally call `data` on the new implementation
         upgradeToAndCall(newImplementation, data);
 
         // Reset authorized target (defense-in-depth)
+        // Even though this value can't persist if the tx reverts, we reset it explicitly
+        // as a security best practice. This also protects against any theoretical
+        // scenario where the value might persist.
         LibOrganizationUpgradeStorage.layout().authorizedUpgradeImplementation = address(0);
     }
 
