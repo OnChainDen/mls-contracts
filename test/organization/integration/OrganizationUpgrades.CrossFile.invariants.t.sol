@@ -2,7 +2,9 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {
     AccountImplementationVersion1,
     IUUPSOrgEntrypoints,
@@ -55,6 +57,17 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
         });
 
         // Partial revert: outer call succeeds, nonce consumed, unwhitelisted target rejected internally.
+        uint256 nonce = organizationProxy.computeNonce(
+            OperationType.Upgrade, _encodeOperationDataForUpgrade(address(implementationV2)), 141_301
+        );
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            nonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
         assertEq(
@@ -81,6 +94,13 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
         });
 
         // Partial revert: outer call succeeds, nonce consumed, Organization-only entry rejected internally.
+        uint256 nonce = organizationProxy.computeNonce(OperationType.UpgradeAccount, abi.encode(target), 141_302);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount,
+            nonce,
+            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, target)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.setAccountImplementation(target, auth);
     }

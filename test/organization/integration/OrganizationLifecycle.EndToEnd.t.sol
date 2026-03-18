@@ -568,6 +568,16 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
             });
 
             // Partial revert: outer call succeeds, nonce consumed, execution failure caught internally.
+            vm.expectEmit(true, true, true, true);
+            emit IOrganizationAccountTransaction.AccountTransactionExecutionReverted({
+                account: account,
+                to: address(revertingReceiver),
+                value: 0.1 ether,
+                data: failingData,
+                nonce: failingExecutionNonce,
+                policyId: POLICY_ID,
+                revertData: abi.encodeWithSelector(IAccount.TransactionExecutionFailed.selector)
+            });
             vm.prank(GUARDIAN);
             organization.executeAccountTransaction({
                 account: account,

@@ -8,7 +8,9 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {AccountImplementation} from "account/AccountImplementation.sol";
 import {ImplementationWhitelistProxy} from "implementation-whitelist/ImplementationWhitelistProxy.sol";
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
+import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
 import {
@@ -334,15 +336,22 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        uint256 nonce = _computeUpgradeNonce(operationData, 14_011);
+
         // Call: execute upgrade wrapper without whitelist approval.
         // Partial revert: outer call succeeds, nonce consumed, whitelist failure caught internally.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            nonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
 
-        assertTrue(
-            stateHarness.getUsedNonce(_computeUpgradeNonce(operationData, 14_011)),
-            "partial revert should consume nonce"
-        );
+        assertTrue(stateHarness.getUsedNonce(nonce), "partial revert should consume nonce");
     }
 
     /// @dev Verifies implementations whitelisted only for `ContractType.Account` cannot upgrade Organization proxy.
@@ -350,16 +359,25 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         // Setup: whitelist the target under Account type only.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(address(implementationV2), true);
-        (AdminAuthParams memory auth,) = _buildUpgradeAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
             salt: 14_012,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 nonce = _computeUpgradeNonce(operationData, 14_012);
 
         // Call: execute Organization upgrade with Account-only whitelist entry.
         // Partial revert: outer call succeeds, nonce consumed, wrong namespace rejected internally.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            nonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
     }
@@ -369,16 +387,23 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         // Setup: whitelist a non-UUPS contract target and prepare valid auth.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(nonUupsImplementation), true);
-        (AdminAuthParams memory auth,) = _buildUpgradeAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildUpgradeAuth({
             newImplementation: address(nonUupsImplementation),
             salt: 14_013,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 nonce = _computeUpgradeNonce(operationData, 14_013);
 
         // Call: execute authorized upgrade to non-UUPS target.
         // Partial revert: outer call succeeds, nonce consumed, UUPS check fails internally.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            nonce,
+            abi.encodeWithSelector(ERC1967Utils.ERC1967InvalidImplementation.selector, address(nonUupsImplementation))
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(nonUupsImplementation), bytes(""), auth);
     }
@@ -388,16 +413,23 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         // Setup: whitelist incompatible-UUID UUPS target and prepare valid auth.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(wrongUuidImplementation), true);
-        (AdminAuthParams memory auth,) = _buildUpgradeAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildUpgradeAuth({
             newImplementation: address(wrongUuidImplementation),
             salt: 14_014,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 nonce = _computeUpgradeNonce(operationData, 14_014);
 
         // Call: execute upgrade to incompatible UUPS implementation.
         // Partial revert: outer call succeeds, nonce consumed, UUID check fails internally.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            nonce,
+            abi.encodeWithSelector(UUPSUpgradeable.UUPSUnsupportedProxiableUUID.selector, bytes32(uint256(123)))
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(wrongUuidImplementation), bytes(""), auth);
     }
@@ -608,7 +640,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
         bytes memory revertingData = abi.encodeCall(OrganizationImplementationHarness.migrationRevert, ());
-        (AdminAuthParams memory auth,) = _buildUpgradeAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
             migrationData: revertingData,
             salt: 14_020,
@@ -616,10 +648,17 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 nonce = _computeUpgradeNonce(operationData, 14_020);
         address implementationBefore = _readProxyImplementation(address(organizationProxy));
 
         // Call: execute upgrade with reverting migration payload.
         // Partial revert: outer call succeeds, nonce consumed, migration revert caught internally.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            nonce,
+            abi.encodeWithSelector(OrganizationImplementationHarness.MigrationCallReverted.selector)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), revertingData, auth);
 
@@ -645,6 +684,14 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         uint256 nonce = _computeUpgradeNonce(operationData, 14_021);
 
         // Call: first attempt — partial revert due to whitelist validation, nonce consumed.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            nonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
 
@@ -716,16 +763,42 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
         // Call: hit the whitelist, UUPS invalid-implementation, UUPS wrong-UUID, and migration-revert branches.
         // Partial revert: each outer call succeeds, nonce consumed, downstream failure caught.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            whitelistNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV3)
+            )
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV3), bytes(""), whitelistAuth);
 
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            nonUupsNonce,
+            abi.encodeWithSelector(ERC1967Utils.ERC1967InvalidImplementation.selector, address(nonUupsImplementation))
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(nonUupsImplementation), bytes(""), nonUupsAuth);
 
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            wrongUuidNonce,
+            abi.encodeWithSelector(UUPSUpgradeable.UUPSUnsupportedProxiableUUID.selector, bytes32(uint256(123)))
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(wrongUuidImplementation), bytes(""), wrongUuidAuth);
 
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            migrationNonce,
+            abi.encodeWithSelector(OrganizationImplementationHarness.MigrationCallReverted.selector)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(
             address(implementationV2), revertingMigrationData, migrationAuth
@@ -779,7 +852,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
         bytes memory revertingData = abi.encodeCall(OrganizationImplementationHarness.migrationRevert, ());
-        (AdminAuthParams memory auth,) = _buildUpgradeAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
             migrationData: revertingData,
             salt: 14_023,
@@ -787,9 +860,16 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 nonce = _computeUpgradeNonce(operationData, 14_023);
 
         // Call: execute authorized upgrade that reverts during migration.
         // Partial revert: outer call succeeds, nonce consumed, migration revert caught.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            nonce,
+            abi.encodeWithSelector(OrganizationImplementationHarness.MigrationCallReverted.selector)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), revertingData, auth);
 
@@ -855,7 +935,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         bytes memory nestedData = abi.encodeCall(
             OrganizationImplementationHarness.migrationNestedUpgrade, (address(implementationV3), bytes(""))
         );
-        (AdminAuthParams memory auth,) = _buildUpgradeAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
             migrationData: nestedData,
             salt: 14_026,
@@ -863,9 +943,14 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 nonce = _computeUpgradeNonce(operationData, 14_026);
 
         // Call: execute first upgrade with nested second-upgrade payload.
         // Partial revert: outer call succeeds, nonce consumed, nested upgrade rejected internally.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade, nonce, abi.encodeWithSelector(IOrganization.UnauthorizedUpgrade.selector)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), nestedData, auth);
     }
@@ -879,7 +964,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         bytes memory nestedData = abi.encodeCall(
             OrganizationImplementationHarness.migrationNestedUpgrade, (address(implementationV3), bytes(""))
         );
-        (AdminAuthParams memory auth,) = _buildUpgradeAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
             migrationData: nestedData,
             salt: 14_027,
@@ -887,9 +972,14 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 nonce = _computeUpgradeNonce(operationData, 14_027);
 
         // Call: attempt first upgrade with migration payload that chains a second upgrade.
         // Partial revert: outer call succeeds, nonce consumed, nested unauthorized upgrade rejected internally.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade, nonce, abi.encodeWithSelector(IOrganization.UnauthorizedUpgrade.selector)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), nestedData, auth);
     }
@@ -907,15 +997,16 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        uint256 nonce = _computeUpgradeNonce(operationData, 14_028);
+
         // Call: execute wrapper with whitelist target lacking runtime code.
         // Partial revert: outer call succeeds, nonce consumed, no-code whitelist fails internally.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(OperationType.Upgrade, nonce, bytes(""));
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
 
-        assertTrue(
-            stateHarness.getUsedNonce(_computeUpgradeNonce(operationData, 14_028)),
-            "partial revert should consume nonce"
-        );
+        assertTrue(stateHarness.getUsedNonce(nonce), "partial revert should consume nonce");
     }
 
     /// @dev Verifies upgrade reverts when the whitelist validation call reverts, confirming the upgrade path reads
@@ -926,15 +1017,20 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         RevertingValidationWhitelistMock revertingWhitelist = new RevertingValidationWhitelistMock();
         organizationProxy.setUpgradeState(address(revertingWhitelist), address(0));
         address implementationBefore = _readProxyImplementation(address(organizationProxy));
-        (AdminAuthParams memory authReverting,) = _buildUpgradeAuth({
+        (AdminAuthParams memory authReverting, bytes memory operationData) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
             salt: 14_029,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 nonce = _computeUpgradeNonce(operationData, 14_029);
 
         // Call: partial revert — whitelist validation fails internally but outer call succeeds.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade, nonce, abi.encodeWithSignature("Error(string)", "VALIDATION_REVERT")
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), authReverting);
 
@@ -962,16 +1058,21 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        uint256 nonce = _computeUpgradeNonce(operationData, 14_030);
+
         // Call: validation should observe an unset authorization target and fail with its sentinel error.
         // Partial revert: outer call succeeds, nonce consumed, validation order mock revert caught.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            nonce,
+            abi.encodeWithSelector(ValidationOrderWhitelistMock.ValidationRevertedBeforeFlagSet.selector)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
 
         // Verify: partial revert consumes nonce but authorization target remains unset.
-        assertTrue(
-            stateHarness.getUsedNonce(_computeUpgradeNonce(operationData, 14_030)),
-            "partial revert should consume nonce"
-        );
+        assertTrue(stateHarness.getUsedNonce(nonce), "partial revert should consume nonce");
         (, address authorizedTargetAfterFailure) = organizationProxy.getUpgradeState();
         assertEq(authorizedTargetAfterFailure, address(0), "authorization target should remain unset");
     }
@@ -998,25 +1099,32 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        uint256 zeroNonce = _computeUpgradeNonce(zeroOperationData, 14_031);
+        uint256 noCodeNonce = _computeUpgradeNonce(noCodeOperationData, 14_032);
+
         // Call: attempt upgrade to zero address even though whitelisted.
         // Partial revert: outer call succeeds, nonce consumed, zero-address rejected internally.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade, zeroNonce, abi.encodeWithSelector(IOrganizationFactory.ZeroAddress.selector)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(0), bytes(""), zeroAuth);
 
-        assertTrue(
-            stateHarness.getUsedNonce(_computeUpgradeNonce(zeroOperationData, 14_031)),
-            "partial revert should consume nonce"
-        );
+        assertTrue(stateHarness.getUsedNonce(zeroNonce), "partial revert should consume nonce");
 
         // Call: attempt upgrade to a no-code target even though whitelisted.
         // Partial revert: outer call succeeds, nonce consumed, no-code rejected internally.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            noCodeNonce,
+            abi.encodeWithSelector(ERC1967Utils.ERC1967InvalidImplementation.selector, noCodeImplementation)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(noCodeImplementation, bytes(""), noCodeAuth);
 
-        assertTrue(
-            stateHarness.getUsedNonce(_computeUpgradeNonce(noCodeOperationData, 14_032)),
-            "partial revert should consume nonce"
-        );
+        assertTrue(stateHarness.getUsedNonce(noCodeNonce), "partial revert should consume nonce");
     }
 
     /// @dev Verifies upgrading the real whitelist proxy preserves Organization upgrade enforcement for current and
@@ -1038,13 +1146,14 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        (AdminAuthParams memory rejectedAuth,) = _buildUpgradeAuth({
+        (AdminAuthParams memory rejectedAuth, bytes memory rejectedOperationData) = _buildUpgradeAuth({
             newImplementation: address(implementationV3),
             salt: 14_034,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 rejectedNonce = _computeUpgradeNonce(rejectedOperationData, 14_034);
 
         // Call: upgrade the whitelist proxy itself, then run the Organization upgrade against that upgraded
         // whitelist endpoint.
@@ -1061,6 +1170,14 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         );
 
         // Partial revert: outer call succeeds, nonce consumed, unwhitelisted V3 rejected internally.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            rejectedNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV3)
+            )
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV3), bytes(""), rejectedAuth);
 
@@ -1083,15 +1200,24 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         organizationProxy.setUpgradeState(address(realWhitelist), address(0));
         _setSingleAdminThresholdOne();
 
-        (AdminAuthParams memory auth,) = _buildUpgradeAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
             salt: 14_035,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 nonce = _computeUpgradeNonce(operationData, 14_035);
 
         // Call: partial revert while V2 is unapproved — nonce consumed, implementation unchanged.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            nonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
 

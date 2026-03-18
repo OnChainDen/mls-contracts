@@ -5,6 +5,7 @@ pragma solidity 0.8.33;
 import {BatchedTransaction} from "../../src/safe-module/BatchedTransaction.sol";
 import {SafeExecutorModule} from "../../src/safe-module/SafeExecutorModule.sol";
 import {ISafeExecutorModule} from "interfaces/ISafeExecutorModule.sol";
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
 import {OrganizationGroupsTestBase} from "test/organization/shared/OrganizationGroupsTestBase.sol";
 import {OrganizationImplementationHarness} from "test/organization/shared/OrganizationUpgradeHarnesses.sol";
@@ -174,6 +175,8 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
 
         // Call: execute the malformed ordering. The modifyGroups sub-call partially reverts (group creation fails
         // because members don't exist yet), while the modifyMembers sub-call succeeds.
+        vm.expectEmit(true, false, false, false, address(organization));
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(OperationType.ModifyGroups, 0, bytes(""));
         vm.prank(authorizedExecutor);
         bool success = module.executeOnBehalf(address(batchedTransaction), batchData);
 

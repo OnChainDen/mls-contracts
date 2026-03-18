@@ -2,11 +2,13 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {
     OrganizationAccountFactoryBaseSuiteBase
 } from "test/organization/base/OrganizationAccountFactoryBase/OrganizationAccountFactoryBaseSuiteBase.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
+import {OperationType} from "types/CommonTypes.sol";
 
 /**
  * @dev Fuzz tests for `OrganizationAccountFactoryBase`.
@@ -84,7 +86,7 @@ contract OrganizationAccountFactoryBaseFuzzTest is OrganizationAccountFactoryBas
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        (AdminAuthParams memory unwhitelistedAuth,) = _buildSetAccountImplementationAuth({
+        (AdminAuthParams memory unwhitelistedAuth, bytes memory unwhitelistedOperationData) = _buildSetAccountImplementationAuth({
             newImplementation: mutatedImplementation,
             salt: adminSalt + 1,
             expiration: block.timestamp + 1 days,
@@ -105,7 +107,17 @@ contract OrganizationAccountFactoryBaseFuzzTest is OrganizationAccountFactoryBas
         vm.prank(GUARDIAN);
         harness.setAccountImplementation(approvedImplementation, approvedAuth);
 
+        uint256 unwhitelistedNonce = _computeSetAccountImplementationNonce(unwhitelistedOperationData, adminSalt + 1);
+
         // Partial revert: outer call succeeds, nonce consumed, unwhitelisted target rejected internally.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount,
+            unwhitelistedNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, mutatedImplementation
+            )
+        );
         vm.prank(GUARDIAN);
         harness.setAccountImplementation(mutatedImplementation, unwhitelistedAuth);
 

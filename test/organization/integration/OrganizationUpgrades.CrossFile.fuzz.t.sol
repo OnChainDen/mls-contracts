@@ -2,7 +2,9 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {
     IUUPSOrgEntrypoints,
     OrganizationUpgradesCrossFileSuiteBase
@@ -30,6 +32,15 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
         });
 
         // Verify: candidate partial-reverts without any implementation pointer change.
+        uint256 nonce = organizationProxy.computeNonce(
+            OperationType.Upgrade, _encodeOperationDataForUpgrade(candidate), uint256(uint160(candidate)) + 141_020
+        );
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            nonce,
+            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, candidate)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(candidate, bytes(""), auth);
     }
@@ -51,6 +62,15 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
         });
 
         // Verify: account implementation update partial-reverts for non-whitelisted candidates.
+        uint256 nonce = organizationProxy.computeNonce(
+            OperationType.UpgradeAccount, abi.encode(candidate), uint256(uint160(candidate)) + 141_021
+        );
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount,
+            nonce,
+            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, candidate)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.setAccountImplementation(candidate, auth);
     }
@@ -104,8 +124,13 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
         address implementationBefore = _readProxyImplementation(address(organizationProxy));
+        uint256 nonce = organizationProxy.computeNonce(
+            OperationType.Upgrade, _encodeOperationDataForUpgrade(address(implementationV2), malformedData), 141_200
+        );
 
         // Call: execute upgrade with malformed migration payload.
+        vm.expectEmit(true, true, false, false);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(OperationType.Upgrade, nonce, bytes(""));
         vm.prank(GUARDIAN);
         (bool success,) = address(organizationProxy)
             .call(
@@ -137,6 +162,13 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
         });
 
         // Verify: nested second-upgrade attempts partial-revert.
+        uint256 nonce = organizationProxy.computeNonce(
+            OperationType.Upgrade, _encodeOperationDataForUpgrade(address(implementationV2), nestedData), 141_201
+        );
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade, nonce, abi.encodeWithSelector(IOrganization.UnauthorizedUpgrade.selector)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), nestedData, auth);
     }

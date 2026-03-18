@@ -4,6 +4,7 @@ pragma solidity 0.8.33;
 
 import {Vm} from "forge-std/Vm.sol";
 
+import {IAccount} from "interfaces/IAccount.sol";
 import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {
@@ -120,6 +121,22 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
             DEFAULT_POLICY_ID,
             true
         );
+        failedExecutionNonce = harness.computeNonce({
+            operationType: OperationType.AccountTransaction,
+            operationData: abi.encode(address(account), DESTINATION, 0, keccak256(failingData), DEFAULT_POLICY_ID),
+            salt: 2
+        });
+
+        vm.expectEmit(true, true, true, true);
+        emit IOrganizationAccountTransaction.AccountTransactionExecutionReverted({
+            account: address(account),
+            to: DESTINATION,
+            value: 0,
+            data: failingData,
+            nonce: failedExecutionNonce,
+            policyId: DEFAULT_POLICY_ID,
+            revertData: abi.encodeWithSelector(IAccount.TransactionExecutionFailed.selector)
+        });
         vm.prank(GUARDIAN);
         harness.executeAccountTransaction({
             account: address(account),
@@ -138,14 +155,6 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
         // With partial reverts, rate-limit usage is consumed during validation (before the execution call),
         // so it persists even when execution reverts. Update expected usage to reflect both transactions.
         usageAfterSuccess = harness.getPolicyUsage(usageKey, usageWindow);
-
-        // Setup: snapshot the reverted-path nonce and deploy a fresh organization harness for cross-org isolation
-        // invariants.
-        failedExecutionNonce = harness.computeNonce({
-            operationType: OperationType.AccountTransaction,
-            operationData: abi.encode(address(account), DESTINATION, 0, keccak256(failingData), DEFAULT_POLICY_ID),
-            salt: 2
-        });
         secondOrganization = new OrganizationAccountTransactionBaseHarness();
     }
 

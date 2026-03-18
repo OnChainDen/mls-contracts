@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {
     AccountImplementationVersion1,
@@ -179,6 +180,17 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 retryOrgNonce = organizationProxy.computeNonce(
+            OperationType.Upgrade, _encodeOperationDataForUpgrade(address(implementationV2)), 141_008
+        );
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            retryOrgNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), retryOrgAuth);
 
@@ -191,6 +203,14 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 retryAccountNonce =
+            organizationProxy.computeNonce(OperationType.UpgradeAccount, abi.encode(accountImplV1), 141_009);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount,
+            retryAccountNonce,
+            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplV1)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.setAccountImplementation(accountImplV1, retryAccountAuth);
 
@@ -314,6 +334,13 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         });
 
         // Verify: account upgrade partial-reverts for Organization-only whitelist namespace.
+        uint256 nonce = organizationProxy.computeNonce(OperationType.UpgradeAccount, abi.encode(target), 141_015);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount,
+            nonce,
+            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, target)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.setAccountImplementation(target, accountAuth);
     }
@@ -355,6 +382,17 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         _setOrganizationImplementationWhitelisted(address(implementationV2), false);
 
         // Verify: whitelist is enforced at execution time — partial revert, nonce consumed.
+        uint256 nonce = organizationProxy.computeNonce(
+            OperationType.Upgrade, _encodeOperationDataForUpgrade(address(implementationV2)), 141_016
+        );
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            nonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
     }
@@ -377,6 +415,17 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
 
         _setOrganizationImplementationWhitelisted(address(implementationV2), false);
         // Partial revert: unwhitelisted target, nonce consumed.
+        uint256 partialRevertNonce = organizationProxy.computeNonce(
+            OperationType.Upgrade, _encodeOperationDataForUpgrade(address(implementationV2)), 141_017
+        );
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            partialRevertNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
+        );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), oldAuth);
 
@@ -446,6 +495,14 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         _setAccountImplementationWhitelisted(accountImplV2, false);
 
         // Call: partial revert while V2 is unwhitelisted — nonce consumed.
+        uint256 partialRevertNonce =
+            organizationProxy.computeNonce(OperationType.UpgradeAccount, abi.encode(accountImplV2), 141_021);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount,
+            partialRevertNonce,
+            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplV2)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.setAccountImplementation(accountImplV2, setV2Auth);
 

@@ -5,6 +5,8 @@ pragma solidity 0.8.33;
 import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgradeable.sol";
 
 import {ImplementationWhitelistProxy} from "implementation-whitelist/ImplementationWhitelistProxy.sol";
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {
@@ -117,8 +119,14 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        uint256 zeroWhitelistNonce = _computeSetAccountImplementationNonce(zeroWhitelistOperationData, 6180);
+
         // Call: execute `setAccountImplementation` against a zero-address whitelist.
         // Partial revert: outer call succeeds, nonce is consumed, execution rolled back internally.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount, zeroWhitelistNonce, bytes("")
+        );
         vm.prank(GUARDIAN);
         (bool zeroSuccess,) = address(harness)
             .call(abi.encodeCall(harness.setAccountImplementation, (accountImplementationV1, zeroWhitelistAuth)));
@@ -145,7 +153,13 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        uint256 noCodeWhitelistNonce = _computeSetAccountImplementationNonce(noCodeWhitelistOperationData, 6181);
+
         // Call: execute `setAccountImplementation` with a no-code whitelist target.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount, noCodeWhitelistNonce, bytes("")
+        );
         vm.prank(GUARDIAN);
         (bool noCodeSuccess,) = address(harness)
             .call(abi.encodeCall(harness.setAccountImplementation, (accountImplementationV1, noCodeWhitelistAuth)));
@@ -271,16 +285,25 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         _setSingleAdminThresholdOne();
         whitelist.setImplementationWhitelisted(ContractType.Organization, accountImplementationV1, true);
 
-        (AdminAuthParams memory auth,) = _buildSetAccountImplementationAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildSetAccountImplementationAuth({
             newImplementation: accountImplementationV1,
             salt: 6115,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 nonce = _computeSetAccountImplementationNonce(operationData, 6115);
 
         // Call: attempt update when only Organization-type whitelist is set.
         // Partial revert: outer call succeeds, nonce consumed, but implementation not updated.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount,
+            nonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplementationV1
+            )
+        );
         vm.prank(GUARDIAN);
         harness.setAccountImplementation(accountImplementationV1, auth);
 
@@ -406,12 +429,20 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        uint256 nonce = _computeSetAccountImplementationNonce(operationData, 6164);
+
         // Call: first attempt before whitelist entry exists.
         // Partial revert: outer call succeeds, nonce consumed, implementation unchanged.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount,
+            nonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplementationV2
+            )
+        );
         vm.prank(GUARDIAN);
         harness.setAccountImplementation(accountImplementationV2, auth);
-
-        uint256 nonce = _computeSetAccountImplementationNonce(operationData, 6164);
         assertTrue(harness.getUsedNonce(nonce), "partial revert should consume nonce");
         assertEq(
             harness.getAccountImplementationStorage(),
@@ -574,20 +605,23 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(address(0), true);
 
-        (AdminAuthParams memory auth,) = _buildSetAccountImplementationAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildSetAccountImplementationAuth({
             newImplementation: address(0),
             salt: 6171,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 nonce = _computeSetAccountImplementationNonce(operationData, 6171);
 
         // Call: attempt to set zero-address implementation with valid auth.
         // Partial revert: outer call succeeds, nonce consumed, zero-address rejected internally.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount, nonce, abi.encodeWithSelector(IOrganizationFactory.ZeroAddress.selector)
+        );
         vm.prank(GUARDIAN);
         harness.setAccountImplementation(address(0), auth);
-
-        // Verify: zero-address implementation was rejected but nonce is consumed via partial revert.
     }
 
     /// @dev Verifies reverting whitelist contracts fail closed and preserve nonce/state for account implementation
@@ -608,8 +642,14 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        uint256 nonce = _computeSetAccountImplementationNonce(operationData, 6172);
+
         // Call: execute `setAccountImplementation` while the whitelist contract itself reverts.
         // Partial revert: outer call succeeds, nonce consumed, execution failure caught.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount, nonce, abi.encodeWithSignature("Error(string)", "VALIDATION_REVERT")
+        );
         vm.prank(GUARDIAN);
         harness.setAccountImplementation(accountImplementationV2, auth);
 
@@ -644,13 +684,14 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        (AdminAuthParams memory rejectedAuth,) = _buildSetAccountImplementationAuth({
+        (AdminAuthParams memory rejectedAuth, bytes memory rejectedOperationData) = _buildSetAccountImplementationAuth({
             newImplementation: accountImplementationV2,
             salt: 6174,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 rejectedNonce = _computeSetAccountImplementationNonce(rejectedOperationData, 6174);
 
         // Call: upgrade the whitelist proxy itself, then execute account implementation updates against that upgraded
         // whitelist endpoint.
@@ -669,6 +710,14 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         );
 
         // Partial revert: outer call succeeds, nonce consumed, unwhitelisted target rejected internally.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount,
+            rejectedNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplementationV2
+            )
+        );
         vm.prank(GUARDIAN);
         harness.setAccountImplementation(accountImplementationV2, rejectedAuth);
 
@@ -692,15 +741,24 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         harness.setUpgradeState(address(realWhitelist), address(0));
         _setSingleAdminThresholdOne();
 
-        (AdminAuthParams memory auth,) = _buildSetAccountImplementationAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildSetAccountImplementationAuth({
             newImplementation: accountImplementationV1,
             salt: 6175,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 nonce = _computeSetAccountImplementationNonce(operationData, 6175);
 
         // Call: partial revert while V1 is unapproved — nonce consumed, implementation unchanged.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount,
+            nonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplementationV1
+            )
+        );
         vm.prank(GUARDIAN);
         harness.setAccountImplementation(accountImplementationV1, auth);
 

@@ -760,6 +760,12 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             harness.computeNonce(OperationType.InitiateInitializeTransactionRecovery, configuredOperationData, 105);
 
         // Call: partial revert — outer call succeeds, nonce consumed, downstream error caught.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.InitiateInitializeTransactionRecovery,
+            configuredNonce,
+            abi.encodeWithSelector(IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured.selector)
+        );
         vm.prank(GUARDIAN);
         harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, configuredAuth);
         assertTrue(harness.getUsedNonce(configuredNonce), "partial revert should consume nonce");
@@ -776,6 +782,12 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         uint256 pendingNonce =
             harness.computeNonce(OperationType.InitiateInitializeTransactionRecovery, pendingOperationData, 106);
 
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.InitiateInitializeTransactionRecovery,
+            pendingNonce,
+            abi.encodeWithSelector(IOrganizationTxRecovery.TxRecoveryInitializationAlreadyPending.selector)
+        );
         vm.prank(GUARDIAN);
         harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, pendingAuth);
         assertTrue(harness.getUsedNonce(pendingNonce), "partial revert should consume nonce");
@@ -791,6 +803,12 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         });
         uint256 invalidAddressNonce =
             harness.computeNonce(OperationType.InitiateInitializeTransactionRecovery, invalidAddressOperationData, 107);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.InitiateInitializeTransactionRecovery,
+            invalidAddressNonce,
+            abi.encodeWithSelector(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector)
+        );
         vm.prank(GUARDIAN);
         harness.initiateInitializeTransactionAndERC1271Recovery(address(0), TX_RECOVERY_TIMELOCK, invalidAddressAuth);
         assertTrue(harness.getUsedNonce(invalidAddressNonce), "partial revert should consume nonce");
@@ -805,6 +823,17 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         });
         uint256 invalidTimelockNonce = harness.computeNonce(
             OperationType.InitiateInitializeTransactionRecovery, invalidTimelockOperationData, 108
+        );
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.InitiateInitializeTransactionRecovery,
+            invalidTimelockNonce,
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
         );
         vm.prank(GUARDIAN);
         harness.initiateInitializeTransactionAndERC1271Recovery(
@@ -932,17 +961,46 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
         // Call: exercise each failure branch as guardian using valid signatures. With partial reverts, each downstream
         // failure consumes its nonce but does not revert the outer call.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.InitiateInitializeTransactionRecovery,
+            configuredNonce,
+            abi.encodeWithSelector(IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured.selector)
+        );
         vm.prank(GUARDIAN);
         harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, configuredAuth);
 
         _setTxRecoveryState(address(0), false, 0, 0, address(0xABC), TX_RECOVERY_TIMELOCK, block.timestamp + 1);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.InitiateInitializeTransactionRecovery,
+            pendingNonce,
+            abi.encodeWithSelector(IOrganizationTxRecovery.TxRecoveryInitializationAlreadyPending.selector)
+        );
         vm.prank(GUARDIAN);
         harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, pendingAuth);
 
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.InitiateInitializeTransactionRecovery,
+            invalidAddressNonce,
+            abi.encodeWithSelector(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector)
+        );
         vm.prank(GUARDIAN);
         harness.initiateInitializeTransactionAndERC1271Recovery(address(0), TX_RECOVERY_TIMELOCK, invalidAddressAuth);
 
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.InitiateInitializeTransactionRecovery,
+            invalidTimelockNonce,
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
         vm.prank(GUARDIAN);
         harness.initiateInitializeTransactionAndERC1271Recovery(
             ALT_TX_RECOVERY, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1, invalidTimelockAuth
@@ -1033,7 +1091,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         // Setup: start from a fully zeroed recovery state (no config, no pending init).
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
 
-        (AdminAuthParams memory noPendingAuth,) = _buildTxRecoveryAuth({
+        (AdminAuthParams memory noPendingAuth, bytes memory noPendingOperationData) = _buildTxRecoveryAuth({
             operationType: OperationType.FinalizeInitializeTransactionRecovery,
             recoveryAddress: address(0),
             timelockDurationSeconds: 0,
@@ -1041,6 +1099,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 noPendingNonce =
+            harness.computeNonce(OperationType.FinalizeInitializeTransactionRecovery, noPendingOperationData, 201);
 
         // FITR-1: non-guardian caller is rejected before any auth or state checks.
         _expectOnlyGuardian(NON_GUARDIAN);
@@ -1048,6 +1108,12 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         harness.finalizeInitializeTransactionAndERC1271Recovery(noPendingAuth);
 
         // FITR-7: guardian with valid auth — partial revert because no pending init exists yet.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.FinalizeInitializeTransactionRecovery,
+            noPendingNonce,
+            abi.encodeWithSelector(IOrganizationTxRecovery.NoTxRecoveryInitializationPending.selector)
+        );
         vm.prank(GUARDIAN);
         harness.finalizeInitializeTransactionAndERC1271Recovery(noPendingAuth);
 
@@ -1095,7 +1161,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
         // FITR-8: valid auth before admin-op timelock expiry — partial revert, nonce consumed.
         // Build a separate auth for this pre-timelock attempt since it will consume its own nonce.
-        (AdminAuthParams memory preFinalizeAuth,) = _buildTxRecoveryAuth({
+        (AdminAuthParams memory preFinalizeAuth, bytes memory preFinalizeOperationData) = _buildTxRecoveryAuth({
             operationType: OperationType.FinalizeInitializeTransactionRecovery,
             recoveryAddress: ALT_TX_RECOVERY,
             timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
@@ -1103,6 +1169,18 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 preFinalizeNonce =
+            harness.computeNonce(OperationType.FinalizeInitializeTransactionRecovery, preFinalizeOperationData, 2041);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.FinalizeInitializeTransactionRecovery,
+            preFinalizeNonce,
+            abi.encodeWithSelector(
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector,
+                block.timestamp + ADMIN_OPERATION_TIMELOCK,
+                block.timestamp
+            )
+        );
         vm.prank(GUARDIAN);
         harness.finalizeInitializeTransactionAndERC1271Recovery(preFinalizeAuth);
 
@@ -1128,7 +1206,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertTrue(harness.getUsedNonce(nonce), "finalize nonce should be consumed");
 
         // FITR-12: second finalize — partial revert because pending init was already cleared by the first.
-        (AdminAuthParams memory afterFinalizeNoPendingAuth,) = _buildTxRecoveryAuth({
+        (AdminAuthParams memory afterFinalizeNoPendingAuth, bytes memory afterFinalizeOperationData) = _buildTxRecoveryAuth({
             operationType: OperationType.FinalizeInitializeTransactionRecovery,
             recoveryAddress: address(0),
             timelockDurationSeconds: 0,
@@ -1136,6 +1214,14 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 afterFinalizeNonce =
+            harness.computeNonce(OperationType.FinalizeInitializeTransactionRecovery, afterFinalizeOperationData, 205);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.FinalizeInitializeTransactionRecovery,
+            afterFinalizeNonce,
+            abi.encodeWithSelector(IOrganizationTxRecovery.NoTxRecoveryInitializationPending.selector)
+        );
         vm.prank(GUARDIAN);
         harness.finalizeInitializeTransactionAndERC1271Recovery(afterFinalizeNoPendingAuth);
     }
@@ -1277,10 +1363,26 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             harness.computeNonce(OperationType.CancelInitializeTransactionRecovery, cancelOperationData, 213);
 
         // Call: partial revert on finalize before the pending timestamp, and cancel with no tuple.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.FinalizeInitializeTransactionRecovery,
+            finalizeNonce,
+            abi.encodeWithSelector(
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector,
+                block.timestamp + ADMIN_OPERATION_TIMELOCK,
+                block.timestamp
+            )
+        );
         vm.prank(GUARDIAN);
         harness.finalizeInitializeTransactionAndERC1271Recovery(finalizeAuth);
 
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.CancelInitializeTransactionRecovery,
+            cancelNonce,
+            abi.encodeWithSelector(IOrganizationTxRecovery.NoTxRecoveryInitializationPending.selector)
+        );
         vm.prank(GUARDIAN);
         harness.cancelInitializeTransactionAndERC1271Recovery(cancelAuth);
 
@@ -1427,7 +1529,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     function test_cancelInitialize_noPendingInit_revertsNoTxRecoveryInitializationPending() public {
         // Setup: clear pending-init storage and build valid cancel auth bound to zero pending values.
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
-        (AdminAuthParams memory noPendingAuth,) = _buildTxRecoveryAuth({
+        (AdminAuthParams memory noPendingAuth, bytes memory noPendingOperationData) = _buildTxRecoveryAuth({
             operationType: OperationType.CancelInitializeTransactionRecovery,
             recoveryAddress: address(0),
             timelockDurationSeconds: 0,
@@ -1435,9 +1537,17 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 noPendingNonce =
+            harness.computeNonce(OperationType.CancelInitializeTransactionRecovery, noPendingOperationData, 335);
 
         // Call: execute cancel as guardian with valid auth while no pending deferred-init exists.
         // Partial revert: outer call succeeds, nonce consumed, downstream error caught.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.CancelInitializeTransactionRecovery,
+            noPendingNonce,
+            abi.encodeWithSelector(IOrganizationTxRecovery.NoTxRecoveryInitializationPending.selector)
+        );
         vm.prank(GUARDIAN);
         harness.cancelInitializeTransactionAndERC1271Recovery(noPendingAuth);
 

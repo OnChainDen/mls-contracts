@@ -7,6 +7,7 @@ import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgrad
 import {AccountImplementation} from "account/AccountImplementation.sol";
 import {ImplementationWhitelistProxy} from "implementation-whitelist/ImplementationWhitelistProxy.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {SignatureTestHelpers} from "test/helpers/SignatureTestHelpers.sol";
 import {
     ImplementationWhitelistHarness,
@@ -109,6 +110,18 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
 
         // Verify: organization UUPS upgrade partial-reverts for unwhitelisted target and preserves the active
         // implementation.
+        bytes memory orgUpgradeOperationData =
+            abi.encode(address(upgradeOrganizationImplementation), keccak256(bytes("")));
+        uint256 orgUpgradeNonce = organization.computeNonce(OperationType.Upgrade, orgUpgradeOperationData, 15_101);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            orgUpgradeNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector,
+                address(upgradeOrganizationImplementation)
+            )
+        );
         vm.prank(GUARDIAN);
         organization.upgradeToAndCallWithAuthorization(
             address(upgradeOrganizationImplementation), bytes(""), orgUpgradeAuth
@@ -121,6 +134,17 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
 
         // Verify: account implementation upgrade partial-reverts for unwhitelisted Account target and preserves the
         // beacon pointer.
+        bytes memory accountUpgradeOperationData = abi.encode(address(upgradeAccountImplementation));
+        uint256 accountUpgradeNonce =
+            organization.computeNonce(OperationType.UpgradeAccount, accountUpgradeOperationData, 15_102);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount,
+            accountUpgradeNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(upgradeAccountImplementation)
+            )
+        );
         vm.prank(GUARDIAN);
         organization.setAccountImplementation(address(upgradeAccountImplementation), accountUpgradeAuth);
         assertEq(
@@ -167,12 +191,35 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         );
 
         // Verify: Account-only whitelist entries never unlock Organization UUPS upgrades (partial revert).
+        bytes memory orgUpgradeOperationData =
+            abi.encode(address(upgradeOrganizationImplementation), keccak256(bytes("")));
+        uint256 orgUpgradeNonce = organization.computeNonce(OperationType.Upgrade, orgUpgradeOperationData, 15_201);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            orgUpgradeNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector,
+                address(upgradeOrganizationImplementation)
+            )
+        );
         vm.prank(GUARDIAN);
         organization.upgradeToAndCallWithAuthorization(
             address(upgradeOrganizationImplementation), bytes(""), orgUpgradeAuth
         );
 
         // Verify: Organization-only whitelist entries never unlock Account implementation updates (partial revert).
+        bytes memory accountUpgradeOperationData = abi.encode(address(upgradeAccountImplementation));
+        uint256 accountUpgradeNonce =
+            organization.computeNonce(OperationType.UpgradeAccount, accountUpgradeOperationData, 15_202);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount,
+            accountUpgradeNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(upgradeAccountImplementation)
+            )
+        );
         vm.prank(GUARDIAN);
         organization.setAccountImplementation(address(upgradeAccountImplementation), accountUpgradeAuth);
     }
@@ -213,6 +260,16 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
             data: bytes(""),
             salt: 15_252
         });
+        bytes memory orgUpgradeOperationData = abi.encode(address(baseOrganizationImplementation), keccak256(bytes("")));
+        uint256 orgUpgradeNonce = organization.computeNonce(OperationType.Upgrade, orgUpgradeOperationData, 15_252);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            orgUpgradeNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(baseOrganizationImplementation)
+            )
+        );
         vm.prank(GUARDIAN);
         organization.upgradeToAndCallWithAuthorization(
             address(baseOrganizationImplementation), bytes(""), orgUpgradeAuth
@@ -222,6 +279,17 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         AdminAuthParams memory accountUpgradeAuth = _buildAccountImplementationAuth({
             organization: organization, newImplementation: address(baseAccountImplementation), salt: 15_253
         });
+        bytes memory accountUpgradeOperationData = abi.encode(address(baseAccountImplementation));
+        uint256 accountUpgradeNonce =
+            organization.computeNonce(OperationType.UpgradeAccount, accountUpgradeOperationData, 15_253);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount,
+            accountUpgradeNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(baseAccountImplementation)
+            )
+        );
         vm.prank(GUARDIAN);
         organization.setAccountImplementation(address(baseAccountImplementation), accountUpgradeAuth);
 
@@ -311,6 +379,18 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
             data: bytes(""),
             salt: 15_504
         });
+        bytes memory blockedOrgUpgradeOperationData =
+            abi.encode(address(otherOrganizationImplementation), keccak256(bytes("")));
+        uint256 blockedOrgUpgradeNonce =
+            organization.computeNonce(OperationType.Upgrade, blockedOrgUpgradeOperationData, 15_504);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            blockedOrgUpgradeNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(otherOrganizationImplementation)
+            )
+        );
         vm.prank(GUARDIAN);
         organization.upgradeToAndCallWithAuthorization(
             address(otherOrganizationImplementation), bytes(""), blockedOrgUpgradeAuth
@@ -334,6 +414,17 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         AdminAuthParams memory blockedAccountUpgradeAuth = _buildAccountImplementationAuth({
             organization: organization, newImplementation: address(otherAccountImplementation), salt: 15_506
         });
+        bytes memory blockedAccountUpgradeOperationData = abi.encode(address(otherAccountImplementation));
+        uint256 blockedAccountUpgradeNonce =
+            organization.computeNonce(OperationType.UpgradeAccount, blockedAccountUpgradeOperationData, 15_506);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount,
+            blockedAccountUpgradeNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(otherAccountImplementation)
+            )
+        );
         vm.prank(GUARDIAN);
         organization.setAccountImplementation(address(otherAccountImplementation), blockedAccountUpgradeAuth);
     }
@@ -390,6 +481,19 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
             salt: 15_602
         });
         // Partial revert: org upgrade with unwhitelisted target, nonce consumed.
+        bytes memory blockedOrgUpgradeOperationData =
+            abi.encode(address(upgradeOrganizationImplementation), keccak256(bytes("")));
+        uint256 blockedOrgUpgradeNonce =
+            organization.computeNonce(OperationType.Upgrade, blockedOrgUpgradeOperationData, 15_602);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.Upgrade,
+            blockedOrgUpgradeNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector,
+                address(upgradeOrganizationImplementation)
+            )
+        );
         vm.prank(GUARDIAN);
         organization.upgradeToAndCallWithAuthorization(
             address(upgradeOrganizationImplementation), bytes(""), blockedOrgUpgradeAuth
@@ -399,6 +503,17 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
             organization: organization, newImplementation: address(upgradeAccountImplementation), salt: 15_603
         });
         // Partial revert: account upgrade with unwhitelisted target, nonce consumed.
+        bytes memory blockedAccountUpgradeOperationData = abi.encode(address(upgradeAccountImplementation));
+        uint256 blockedAccountUpgradeNonce =
+            organization.computeNonce(OperationType.UpgradeAccount, blockedAccountUpgradeOperationData, 15_603);
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationAdmin.AdminOperationExecutionReverted(
+            OperationType.UpgradeAccount,
+            blockedAccountUpgradeNonce,
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(upgradeAccountImplementation)
+            )
+        );
         vm.prank(GUARDIAN);
         organization.setAccountImplementation(address(upgradeAccountImplementation), blockedAccountUpgradeAuth);
 
