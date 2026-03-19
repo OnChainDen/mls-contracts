@@ -233,8 +233,9 @@ The risk of an attacker replaying signatures from a reverted operation is mitiga
 |------------|------------------------|
 | **Guardian protection** | Only the Guardian (`msg.sender`) can submit operations. An attacker cannot replay signatures without control of the Guardian. |
 | **Signature expiration** | All signed messages include `expirationTimestamp`. Signatures expire and become unusable after their deadline. |
+| **Explicit rejection** | Admin Operations and Account Transactions can be explicitly rejected to burn the nonce, permanently invalidating the associated signatures. If a user decides a reverted operation should not be retried, they can reject it. |
 
-A successful replay attack would require simultaneously: (1) control of the Guardian, (2) possession of un-expired signatures from a reverted operation, and (3) blockchain state changes that make the previously-reverted operation succeed. This combination is extremely unlikely.
+A successful replay attack would require simultaneously: (1) control of the Guardian, (2) possession of un-expired signatures from a reverted operation that was not explicitly rejected, and (3) blockchain state changes that make the previously-reverted operation succeed. This combination is extremely unlikely.
 
 Files: `LibOrganizationSignatures.sol`, `LibOrganizationSignaturesStorage.sol`
 

@@ -596,10 +596,11 @@ Full-revert semantics mean that if a reverted operation's conditions later chang
 |------------|------------------------|
 | **Guardian protection** | Only the Guardian (`msg.sender`) can submit Admin Operations and Account Transactions to the Organization contract. An attacker cannot replay signatures without control of the Guardian. See [Guardian Protection](#guardian-protection). |
 | **Signature expiration** | All signed messages include an `expirationTimestamp`. Even if an attacker gained control of the Guardian, signatures expire and become unusable after their expiration. See [Signatures](#signatures). |
+| **Explicit rejection** | Admin Operations and Account Transactions can be explicitly rejected to burn the nonce, permanently invalidating the associated signatures. If a user decides a reverted operation should not be retried, they can reject it. See [Rejecting Admin Operations](#rejecting-admin-operations) and [Rejecting Account Transactions](#rejecting-account-transactions). |
 
 For a replay attack to succeed, an attacker would need to simultaneously:
 1. Gain control of the Guardian
-2. Possess un-expired signatures that were previously used in a reverted transaction
+2. Possess un-expired signatures that were previously used in a reverted transaction that was not explicitly rejected
 3. Have blockchain state change such that the previously-reverted operation would now succeed
 
 This combination of conditions is extremely unlikely, especially given the Guardian's security architecture (Safe multisig with `SafeExecutorModule`, see [Guardian Safe Architecture](./docs/GUARDIAN_PROTECTION.md#guardian-safe-architecture)).
