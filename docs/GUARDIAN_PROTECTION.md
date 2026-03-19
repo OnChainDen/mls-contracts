@@ -141,8 +141,11 @@ The Guardian often needs to execute multiple transactions atomically (e.g., subm
 |------------------|-------------|
 | **`address(this)` validation** | When delegatecalled from the Safe, `address(this)` is the Safe address—sub-transactions targeting `address(this)` are blocked |
 | **CALL-only** | Only `call` operations are supported (no `delegatecall` within batches) |
-| **Atomic execution** | If any sub-transaction fails, the entire batch reverts |
+| **Atomic execution** | If any sub-transaction fails, the entire batch reverts — including all nonce consumption and state changes from other operations in the batch |
 | **No value field in encoding** | ETH value is hardcoded to 0 for all sub-transactions, preventing ETH transfers. Note that no tokens should be held by the Guardian Safe anyway, but this serves as an extra precaution and gas optimization |
+
+> [!NOTE]
+> Atomic batch execution is made possible by the **full-revert semantics** of Admin Operations and Account Transactions. Because nonces are not consumed on revert (the entire EVM transaction rolls back), a single failed operation in a batch causes all operations to revert cleanly — no nonces are burned and no partial state changes are applied. This is an intentional design decision. See [Full-Revert Semantics](../README.md#full-revert-semantics-intentional-design) in the README and [Full-Revert Semantics](./SIGNATURES.md#full-revert-semantics-intentional-design) in SIGNATURES.md for the full design rationale and replay risk analysis.
 
 #### Why Block `address(this)`?
 
