@@ -24,15 +24,16 @@ In addition to this README.md and [supplemental docs](./docs/), we also recommen
 4. [Policies](#policies)
 5. [Account Transactions](#account-transactions)
 6. [Account Signatures (ERC-1271)](#account-signatures-erc-1271)
-7. [Architecture](#architecture)
+7. [Full-Revert Semantics (Intentional Design)](#full-revert-semantics-intentional-design)
+8. [Architecture](#architecture)
    - [Merkle-Based Storage](#merkle-based-storage)
    - [Core Contracts](#core-contracts)
    - [Factory Patterns](#factory-patterns)
    - [Upgradeability (Proxy Patterns)](#upgradeability-proxy-patterns)
-8. [Guardian Protection](#guardian-protection)
-9. [Signatures](#signatures)
-10. [Disaster Recovery](#disaster-recovery)
-11. [Deployment](#deployment)
+9. [Guardian Protection](#guardian-protection)
+10. [Signatures](#signatures)
+11. [Disaster Recovery](#disaster-recovery)
+12. [Deployment](#deployment)
 
 ### Supplementary Documentation
 
@@ -141,6 +142,10 @@ Steps to approve an Admin Operation:
 2. **Guardian collects the signatures**
 3. **Guardian sends the signatures to the Organization contract**
 4. **Organization contract performs validations and updates state** – Checks that `msg.sender` is the Guardian, validates admin signatures
+
+> [!NOTE]
+> Admin Operations use **full-revert semantics**: if the operation reverts after signature validation, the nonce is **not** consumed. This is intentional — see [Full-Revert Semantics](#full-revert-semantics-intentional-design) for the design rationale and replay risk analysis.
+
 ![Approving Admin Operation](docs/images/ApprovingAdminOperation.svg)
 
 ### Rejecting Admin Operations
@@ -428,6 +433,9 @@ The Policy that's used to create the transaction dictates who can approve or rej
     - The Account contract checks that `msg.sender` is the Organization contract that owns it.
     - The Account contract executes the transaction.
 
+> [!NOTE]
+> Account Transactions use **full-revert semantics**: if the underlying transaction (Step 8) reverts, the entire operation reverts — including nonce consumption. The nonce is **not** burned. This is intentional — see [Full-Revert Semantics](#full-revert-semantics-intentional-design) for the design rationale and replay risk analysis.
+
 ![Approving Account Transaction](docs/images/ApprovingAccountTransaction.svg)
 
 ### Rejecting Account Transactions
@@ -564,6 +572,39 @@ For signature formats and message types, see [Signatures](#signatures).
 For recovery signatures (type `0x00`), see [Disaster Recovery](#disaster-recovery).
 
 Files: `AccountImplementation.sol:54-62`, `OrganizationAccountSignatureBase.sol`, `LibOrganizationAccountSignature.sol`
+
+---
+
+## Full-Revert Semantics (Intentional Design)
+
+> [!IMPORTANT]
+> Admin Operations and Account Transactions use **full-revert semantics** — if the underlying operation reverts after signature validation, the **entire transaction reverts**, including nonce consumption. This means that on revert, the nonce is **not** burned/consumed. This is an intentional design decision.
+
+### Why Full Reverts?
+
+In many smart contract wallets, nonce consumption happens *before* the operation executes, so a failed operation still burns the nonce (partial revert). MLS Wallet deliberately uses full reverts instead, for two reasons:
+
+1. **Atomic batched transactions** — The Guardian uses the `BatchedTransaction` contract to execute multiple Admin Operations and Account Transactions in a single atomic batch. If one operation in a batch fails, the entire batch reverts — including all nonce consumption and state changes from other operations in the batch. Partial-revert semantics would make atomic batching impossible, since a single failed operation would permanently burn nonces for all other operations in the batch even though they never executed.
+
+2. **Retryability** — If an operation reverts due to transient conditions (e.g., insufficient token balance that is later resolved), the same signed operation can be retried without requiring new signatures from all parties. This is valuable in an organizational context where collecting multiple admin or reviewer signatures can be time-consuming.
+
+### Replay Risk Mitigation
+
+Full-revert semantics mean that if a reverted operation's conditions later change such that it would succeed, the original signatures could theoretically be replayed. This risk is mitigated by two independent protections:
+
+| Protection | How It Mitigates Replay |
+|------------|------------------------|
+| **Guardian protection** | Only the Guardian (`msg.sender`) can submit Admin Operations and Account Transactions to the Organization contract. An attacker cannot replay signatures without control of the Guardian. See [Guardian Protection](#guardian-protection). |
+| **Signature expiration** | All signed messages include an `expirationTimestamp`. Even if an attacker gained control of the Guardian, signatures expire and become unusable after their expiration. See [Signatures](#signatures). |
+
+For a replay attack to succeed, an attacker would need to simultaneously:
+1. Gain control of the Guardian
+2. Possess un-expired signatures that were previously used in a reverted transaction
+3. Have blockchain state change such that the previously-reverted operation would now succeed
+
+This combination of conditions is extremely unlikely, especially given the Guardian's security architecture (Safe multisig with `SafeExecutorModule`, see [Guardian Safe Architecture](./docs/GUARDIAN_PROTECTION.md#guardian-safe-architecture)).
+
+For details on nonce mechanics, see [Replay Protection & Non-Sequential Nonces](./docs/SIGNATURES.md#replay-protection--non-sequential-nonces).
 
 ---
 

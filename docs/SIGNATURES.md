@@ -212,6 +212,30 @@ IAccount(account).executeTransaction(...);
 
 This ensures that even if the external call triggers a reentrant call back to the Organization, the nonce is already consumed and the replay attempt fails.
 
+#### Full-Revert Semantics (Intentional Design)
+
+> [!IMPORTANT]
+> Admin Operations and Account Transactions use **full-revert semantics**. If the underlying operation or transaction reverts after signature validation and nonce consumption, the **entire EVM transaction reverts** — including the nonce consumption. This means on revert, the nonce is **not** burned/consumed. This is an intentional design decision.
+
+While the CEI pattern above consumes the nonce before external calls within the *internal execution flow*, a revert in the external call (Step 3) causes the EVM to roll back all state changes in the transaction, including the nonce consumption in Step 2. This is standard EVM behavior for reverts, and MLS Wallet intentionally does **not** use `try/catch` or other mechanisms to isolate the nonce burn from the operation execution.
+
+**Why this is intentional:**
+
+1. **Atomic batched transactions** — The Guardian uses `BatchedTransaction` to execute multiple operations atomically. If one operation in a batch fails, the entire batch reverts, preserving nonce integrity for all operations. Partial-revert semantics (where nonces are burned even on failure) would make atomic batching impossible.
+
+2. **Retryability** — Reverted operations can be retried with the same signatures when conditions change (e.g., sufficient token balance is restored), avoiding the cost of re-collecting organizational signatures.
+
+**Replay risk mitigation:**
+
+The risk of an attacker replaying signatures from a reverted operation is mitigated by:
+
+| Protection | How It Mitigates Replay |
+|------------|------------------------|
+| **Guardian protection** | Only the Guardian (`msg.sender`) can submit operations. An attacker cannot replay signatures without control of the Guardian. |
+| **Signature expiration** | All signed messages include `expirationTimestamp`. Signatures expire and become unusable after their deadline. |
+
+A successful replay attack would require simultaneously: (1) control of the Guardian, (2) possession of un-expired signatures from a reverted operation, and (3) blockchain state changes that make the previously-reverted operation succeed. This combination is extremely unlikely.
+
 Files: `LibOrganizationSignatures.sol`, `LibOrganizationSignaturesStorage.sol`
 
 ---
