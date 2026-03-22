@@ -27,8 +27,9 @@ contract LibOrganizationAccountSignatureIsValidSignatureRoutingTest is LibOrgani
     function test_isValidSignature_recoveryTypePrefix_routesToRecoveryValidation() public {
         // Setup: configure enabled recovery and build a valid recovery payload.
         _setTxRecoveryState(guardianSigner, true);
+        uint256 expiration = block.timestamp + 1 days;
         bytes memory recoverySignature =
-            _buildRecoverySignature(_signRecoverySignature(GUARDIAN_PK, ACCOUNT, MESSAGE_HASH));
+            _buildRecoverySignature(expiration, _signRecoverySignature(GUARDIAN_PK, ACCOUNT, MESSAGE_HASH, expiration));
 
         // Call: execute `isValidSignatureViaLibrary` with a recovery-prefixed payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, recoverySignature);
@@ -40,8 +41,9 @@ contract LibOrganizationAccountSignatureIsValidSignatureRoutingTest is LibOrgani
     /// @dev Verifies recovery-prefixed signatures return invalid when recovery is disabled or not configured.
     function test_isValidSignature_recoveryPrefixDisabledOrUnconfigured_returnsInvalidValue() public {
         // Setup: build one recovery payload and apply disabled / zero-address recovery configurations.
+        uint256 expiration = block.timestamp + 1 days;
         bytes memory recoverySignature =
-            _buildRecoverySignature(_signRecoverySignature(GUARDIAN_PK, ACCOUNT, MESSAGE_HASH));
+            _buildRecoverySignature(expiration, _signRecoverySignature(GUARDIAN_PK, ACCOUNT, MESSAGE_HASH, expiration));
 
         _setTxRecoveryState(address(0), true);
         bytes4 unconfiguredResult = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, recoverySignature);
@@ -121,8 +123,9 @@ contract LibOrganizationAccountSignatureIsValidSignatureRoutingTest is LibOrgani
     function test_isValidSignature_recoveryPayloadForcedThroughPolicyPath_returnsInvalidValue() public {
         // Setup: build a valid recovery payload, then mutate only the leading type byte to the policy prefix.
         _setTxRecoveryState(guardianSigner, true);
+        uint256 expiration = block.timestamp + 1 days;
         bytes memory recoverySignature =
-            _buildRecoverySignature(_signRecoverySignature(GUARDIAN_PK, ACCOUNT, MESSAGE_HASH));
+            _buildRecoverySignature(expiration, _signRecoverySignature(GUARDIAN_PK, ACCOUNT, MESSAGE_HASH, expiration));
         bytes memory forcedPolicySignature = bytes.concat(recoverySignature);
         forcedPolicySignature[0] = bytes1(uint8(0x01));
 

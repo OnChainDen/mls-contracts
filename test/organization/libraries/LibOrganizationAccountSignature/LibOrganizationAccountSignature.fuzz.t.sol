@@ -131,7 +131,11 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         address recoverySigner = vm.addr(recoveryPk);
         _setTxRecoveryState(recoverySigner, true);
 
-        bytes memory signature = _buildRecoverySignature(_signRecoverySignature(recoveryPk, ACCOUNT, MESSAGE_HASH));
+        uint256 expiration = block.timestamp + 1 days;
+        // forgefmt: disable-next-item
+        bytes memory signature = _buildRecoverySignature(
+            expiration, _signRecoverySignature(recoveryPk, ACCOUNT, MESSAGE_HASH, expiration)
+        );
 
         // Call: execute `isValidSignatureViaLibrary` through the recovery-signature route.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
@@ -347,8 +351,11 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         address recoverySigner = vm.addr(recoveryPk);
         _setTxRecoveryState(recoverySigner, true);
 
-        bytes memory goodSignature = _signRecoverySignature(recoveryPk, ACCOUNT, MESSAGE_HASH);
-        bytes memory badSignature = _signRecoverySignature(wrongPk, ACCOUNT, MESSAGE_HASH);
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory goodSignature =
+            abi.encode(expiration, _signRecoverySignature(recoveryPk, ACCOUNT, MESSAGE_HASH, expiration));
+        bytes memory badSignature =
+            abi.encode(expiration, _signRecoverySignature(wrongPk, ACCOUNT, MESSAGE_HASH, expiration));
 
         // Call: execute recovery validation for matching and mismatching signatures.
         bytes4 good = harness.validateRecoverySignatureViaLibrary(ACCOUNT, MESSAGE_HASH, goodSignature);
@@ -384,7 +391,11 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         address recoverySigner = vm.addr(recoveryPk);
         _setTxRecoveryState(configureRecovery ? recoverySigner : address(0), enableRecovery);
 
-        bytes memory signature = _signRecoverySignature(useMatchingSigner ? recoveryPk : wrongPk, ACCOUNT, MESSAGE_HASH);
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory signature = abi.encode(
+            expiration,
+            _signRecoverySignature(useMatchingSigner ? recoveryPk : wrongPk, ACCOUNT, MESSAGE_HASH, expiration)
+        );
 
         // Call: validate the recovery signature against the fuzzed tx-recovery configuration.
         bytes4 actual = harness.validateRecoverySignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);

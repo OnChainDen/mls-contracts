@@ -50,7 +50,7 @@ library LibOrganizationEIP712 {
     /// @dev Type hash for recovery signatures on ERC-1271 signature validation requests
     bytes32 internal constant RECOVERY_SIGNATURE_VALIDATION_TYPEHASH = keccak256(
         // solhint-disable-next-line max-line-length
-        "RecoverySignatureValidation(address organization,address account,bytes32 hash,uint256 chainId)"
+        "RecoverySignatureValidation(address organization,address account,bytes32 hash,uint256 expirationTimestamp,uint256 chainId)"
     );
 
     /**

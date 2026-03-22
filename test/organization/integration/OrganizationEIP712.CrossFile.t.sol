@@ -290,8 +290,10 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
     function test_isValidSignature_rejectsRecoveryAndPolicyFlowPrefixReplay() public {
         // Setup: configure valid recovery and valid policy-signature fixtures.
         _setTxRecoveryState(guardianSigner, true);
-        bytes memory recoverySignature =
-            _buildRecoverySignature(_signRecoverySignature(GUARDIAN_PK, ACCOUNT, MESSAGE_HASH));
+        uint256 recoveryExpiration = block.timestamp + 1 days;
+        bytes memory recoverySignature = _buildRecoverySignature(
+            recoveryExpiration, _signRecoverySignature(GUARDIAN_PK, ACCOUNT, MESSAGE_HASH, recoveryExpiration)
+        );
 
         policyStateHarness.setGuardian(guardianSigner);
         (bytes memory policySignature,,,,,) =

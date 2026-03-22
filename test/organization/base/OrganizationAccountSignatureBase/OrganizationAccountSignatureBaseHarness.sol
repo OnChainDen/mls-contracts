@@ -53,13 +53,14 @@ contract OrganizationAccountSignatureBaseHarness is OrganizationPolicyStateHarne
      * @dev Exposes `_getRecoverySignatureHash` for external-base-path fixtures.
      * @param account The account bound into the hash.
      * @param hash The message hash.
+     * @param expirationTimestamp The expiration timestamp.
      * @return signatureHash The computed recovery hash.
      */
-    function getRecoverySignatureHashViaLibrary(address account, bytes32 hash)
+    function getRecoverySignatureHashViaLibrary(address account, bytes32 hash, uint256 expirationTimestamp)
         external
         view
         returns (bytes32 signatureHash)
     {
-        return LibOrganizationAccountSignature._getRecoverySignatureHash(account, hash);
+        return LibOrganizationAccountSignature._getRecoverySignatureHash(account, hash, expirationTimestamp);
     }
 }

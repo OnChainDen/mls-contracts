@@ -89,12 +89,15 @@ library LibOrganizationAccountSignature {
     /**
      * @dev Validates a recovery signature.
      *      Recovery signatures bypass all guardian and policy checks.
+     *      The signatureData is ABI-encoded and contains:
+     *      - expirationTimestamp: When the recovery signature expires
+     *      - recoverySignature: The recovery address's signature (EOA or ERC-1271)
      *      The signature is validated against an EIP-712 typed data hash that
-     *      binds the recovery signature to a specific account and organization,
-     *      preventing cross-account replay.
+     *      binds the recovery signature to a specific account, organization, and expiration,
+     *      preventing cross-account replay and enforcing time-bounded validity.
      * @param account The account address whose signature is being validated
      * @param hash The message hash that was signed
-     * @param signatureData The raw recovery signature (without type prefix)
+     * @param signatureData ABI-encoded (expirationTimestamp, recoverySignature) without type prefix
      * @return magicValue SignatureUtils.ERC1271_MAGIC_VALUE if valid, SignatureUtils.ERC1271_INVALID_VALUE otherwise
      */
     function _validateRecoverySignature(address account, bytes32 hash, bytes memory signatureData)
@@ -107,11 +110,19 @@ library LibOrganizationAccountSignature {
             return SignatureUtils.ERC1271_INVALID_VALUE;
         }
 
-        // Compute account-bound recovery hash to prevent cross-account replay
-        bytes32 recoveryHash = _getRecoverySignatureHash(account, hash);
+        // Decode the expiration timestamp and inner recovery signature
+        (uint256 expirationTimestamp, bytes memory recoverySignature) = abi.decode(signatureData, (uint256, bytes));
+
+        // Case: Recovery signature has expired
+        if (block.timestamp > expirationTimestamp) {
+            return SignatureUtils.ERC1271_INVALID_VALUE;
+        }
+
+        // Compute account-bound recovery hash including expiration to prevent cross-account replay
+        bytes32 recoveryHash = _getRecoverySignatureHash(account, hash, expirationTimestamp);
 
         // Validate the recovery signature against the account-bound hash
-        if (LibOrganizationTxRecovery.isValidRecoverySignature(recoveryHash, signatureData)) {
+        if (LibOrganizationTxRecovery.isValidRecoverySignature(recoveryHash, recoverySignature)) {
             return SignatureUtils.ERC1271_MAGIC_VALUE;
         }
 
@@ -355,18 +366,25 @@ library LibOrganizationAccountSignature {
     /**
      * @dev Computes the EIP-712 hash for recovery signatures.
      *      Creates a typed data hash that binds the recovery signature to a specific
-     *      organization, account, and chain, preventing cross-account replay.
+     *      organization, account, expiration, and chain, preventing cross-account replay
+     *      and enforcing time-bounded validity.
      * @param account The account whose signature is being validated
      * @param hash The message hash being signed
+     * @param expirationTimestamp When the recovery signature expires
      * @return The EIP-712 typed data hash for signing
      */
-    function _getRecoverySignatureHash(address account, bytes32 hash) internal view returns (bytes32) {
+    function _getRecoverySignatureHash(address account, bytes32 hash, uint256 expirationTimestamp)
+        internal
+        view
+        returns (bytes32)
+    {
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.RECOVERY_SIGNATURE_VALIDATION_TYPEHASH,
                 address(this),
                 account,
                 hash,
+                expirationTimestamp,
                 block.chainid
             )
         );
