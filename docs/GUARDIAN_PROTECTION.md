@@ -233,9 +233,50 @@ Files: `OrganizationGuardianBase.sol`, `LibOrganizationGuardian.sol`
 
 If the Guardian is compromised or unavailable, the Guardian can also be updated through the **Disaster Recovery** mechanism. This flow uses a separate privileged address (`guardianRecoveryAddress`) and follows a similar timelocked process, but does **not** require the current Guardian to participate.
 
-For details on the disaster recovery flow, see [Disaster Recovery](#disaster-recovery).
+For details on the disaster recovery flow, see [Disaster Recovery](./DISASTER_RECOVERY.md#guardian-recovery).
 
 Files: `OrganizationGuardianRecoveryBase.sol`, `LibOrganizationGuardianRecovery.sol`
+
+---
+
+### Concurrent Guardian Update Flows
+
+> [!IMPORTANT]
+> The normal guardian update flow and the recovery guardian update flow are **intentionally independent** and can run concurrently. Each flow maintains its own pending state in separate storage, and neither flow checks or invalidates the other's state.
+
+#### How the Two Flows Interact
+
+The normal flow stores pending state in `LibOrganizationGuardianStorage` (`pendingGuardian`, `pendingGuardianUpdateTimestamp`, `isGuardianUpdateReadyForAcceptance`). The recovery flow stores pending state in `LibOrganizationRecoveryStorage.guardianRecovery` (`pendingGuardian`, `pendingGuardianTimestamp`, `isUpdateReadyForAcceptance`). Both flows ultimately write to the same live guardian slot at `LibOrganizationGuardianStorage.layout().guardian`.
+
+This means:
+- Both flows can have pending or ready-for-acceptance updates active at the same time
+- If both flows reach the acceptance stage, the **last to accept** determines the final guardian (last-write-wins)
+- Accepting via one flow does **not** clear the other flow's pending state
+
+#### Why This Is Intentional
+
+Coupling the two flows would undermine the core purpose of the recovery mechanism:
+
+1. **Recovery must work when the Guardian is compromised.** The recovery flow is designed to replace the Guardian *without* requiring the current Guardian's participation. If `initiateRecoveryGuardianUpdate()` were blocked whenever a normal-flow update was pending, a compromised Guardian could initiate a bogus normal-flow update and then refuse to cancel or finalize it — effectively vetoing recovery and defeating its purpose.
+
+2. **The normal flow must not be blocked by recovery.** Similarly, if `initiateGuardianUpdate()` were blocked whenever a recovery-flow update was pending, a compromised or misbehaving `guardianRecoveryAddress` could initiate a recovery update and block all normal guardian rotations.
+
+3. **Both flows are already independently secured.**
+   - The normal flow requires the current Guardian (`onlyGuardian`) + admin threshold signatures at every step, plus a timelock.
+   - The recovery flow requires the `guardianRecoveryAddress` (`onlyGuardianRecoveryAddress`) at every step, plus a separate timelock.
+   - The final acceptance step in both flows requires the *new* guardian itself to call `acceptGuardian()` or `acceptGuardianRecovery()`, proving it is operational.
+
+4. **Last-write-wins is the correct outcome.** If both flows complete acceptance, the most recently accepted guardian is the one that has demonstrated it is operational and was authorized through a complete timelocked flow. Any previously set guardian was overwritten by a fully authorized process.
+
+#### Operational Guidance
+
+In practice, concurrent flows are expected only during adversarial scenarios (e.g., recovery initiated because the Guardian is believed to be compromised, while the Guardian simultaneously attempts a normal rotation). The Den Guardian service monitors for concurrent flows and alerts operators.
+
+If concurrent flows are detected during normal (non-adversarial) operations, admins should cancel the unintended flow:
+- To cancel a normal-flow update: the current Guardian calls `cancelGuardianUpdate()` with admin authorization
+- To cancel a recovery-flow update: the `guardianRecoveryAddress` calls `cancelRecoveryGuardianUpdate()`
+
+Files: `LibOrganizationGuardian.sol`, `LibOrganizationGuardianRecovery.sol`, `LibOrganizationGuardianStorage.sol`, `LibOrganizationRecoveryStorage.sol`
 
 ---
 
