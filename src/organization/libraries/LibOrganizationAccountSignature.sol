@@ -74,7 +74,7 @@ library LibOrganizationAccountSignature {
 
         // Case: Recovery signature
         if (signatureType == SIGNATURE_TYPE_RECOVERY) {
-            return _validateRecoverySignature(hash, signatureData);
+            return _validateRecoverySignature(account, hash, signatureData);
         }
 
         // Case: Policy-based signature
@@ -89,11 +89,15 @@ library LibOrganizationAccountSignature {
     /**
      * @dev Validates a recovery signature.
      *      Recovery signatures bypass all guardian and policy checks.
+     *      The signature is validated against an EIP-712 typed data hash that
+     *      binds the recovery signature to a specific account and organization,
+     *      preventing cross-account replay.
+     * @param account The account address whose signature is being validated
      * @param hash The message hash that was signed
      * @param signatureData The raw recovery signature (without type prefix)
      * @return magicValue SignatureUtils.ERC1271_MAGIC_VALUE if valid, SignatureUtils.ERC1271_INVALID_VALUE otherwise
      */
-    function _validateRecoverySignature(bytes32 hash, bytes memory signatureData)
+    function _validateRecoverySignature(address account, bytes32 hash, bytes memory signatureData)
         internal
         view
         returns (bytes4 magicValue)
@@ -103,8 +107,11 @@ library LibOrganizationAccountSignature {
             return SignatureUtils.ERC1271_INVALID_VALUE;
         }
 
-        // Validate the recovery signature
-        if (LibOrganizationTxRecovery.isValidRecoverySignature(hash, signatureData)) {
+        // Compute account-bound recovery hash to prevent cross-account replay
+        bytes32 recoveryHash = _getRecoverySignatureHash(account, hash);
+
+        // Validate the recovery signature against the account-bound hash
+        if (LibOrganizationTxRecovery.isValidRecoverySignature(recoveryHash, signatureData)) {
             return SignatureUtils.ERC1271_MAGIC_VALUE;
         }
 
@@ -339,6 +346,28 @@ library LibOrganizationAccountSignature {
                 expirationTimestamp,
                 block.chainid,
                 keccak256(initiatorSignature)
+            )
+        );
+
+        return MessageHashUtils.toTypedDataHash(LibOrganizationEIP712.getDomainSeparator(), structHash);
+    }
+
+    /**
+     * @dev Computes the EIP-712 hash for recovery signatures.
+     *      Creates a typed data hash that binds the recovery signature to a specific
+     *      organization, account, and chain, preventing cross-account replay.
+     * @param account The account whose signature is being validated
+     * @param hash The message hash being signed
+     * @return The EIP-712 typed data hash for signing
+     */
+    function _getRecoverySignatureHash(address account, bytes32 hash) internal view returns (bytes32) {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                LibOrganizationEIP712.RECOVERY_SIGNATURE_VALIDATION_TYPEHASH,
+                address(this),
+                account,
+                hash,
+                block.chainid
             )
         );
 

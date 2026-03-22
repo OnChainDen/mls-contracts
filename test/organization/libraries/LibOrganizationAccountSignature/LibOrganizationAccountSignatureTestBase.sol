@@ -130,6 +130,31 @@ abstract contract LibOrganizationAccountSignatureTestBase is LibOrganizationAcco
     }
 
     /**
+     * @dev Signs the EIP-712 recovery hash for a given account and message hash.
+     */
+    function _signRecoverySignature(uint256 privateKey, address account, bytes32 hash)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes32 recoveryHash = harness.getRecoverySignatureHashViaLibrary(account, hash);
+        return _signHash(privateKey, recoveryHash);
+    }
+
+    /**
+     * @dev Signs the EIP-712 recovery hash using the specified harness.
+     */
+    function _signRecoverySignatureWithHarness(
+        LibOrganizationAccountSignatureHarness sigHarness,
+        uint256 privateKey,
+        address account,
+        bytes32 hash
+    ) internal view returns (bytes memory) {
+        bytes32 recoveryHash = sigHarness.getRecoverySignatureHashViaLibrary(account, hash);
+        return _signHash(privateKey, recoveryHash);
+    }
+
+    /**
      * @dev Signs the initiator hash using the provided harness + signer key.
      */
     function _signInitiatorSignature(

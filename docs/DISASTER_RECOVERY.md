@@ -152,10 +152,19 @@ When transaction recovery is enabled, ERC-1271 signature validation supports a r
 └───────────────┴─────────────────────────────┘
 ```
 
+The recovery address signs an **EIP-712 typed data hash** that binds the signature to a specific account:
+
+```solidity
+RecoverySignatureValidation(address organization, address account, bytes32 hash, uint256 chainId)
+```
+
+This ensures each recovery signature is valid only for the specific account it was created for, preventing cross-account replay within the same organization.
+
 **Validation:**
 1. Check transaction recovery is configured (`transactionAndERC1271RecoveryAddress != address(0)`)
 2. Check `isRecoveryEnabledForTransactionsAndERC1271 == true`
-3. Verify signature is from `transactionAndERC1271RecoveryAddress`
+3. Compute account-bound EIP-712 hash from `{organization, account, messageHash, chainId}`
+4. Verify signature over the EIP-712 hash is from `transactionAndERC1271RecoveryAddress`
 
 **Compared to Policy-Based (0x01):**
 
@@ -164,6 +173,7 @@ When transaction recovery is enabled, ERC-1271 signature validation supports a r
 | Guardian required | No | Yes |
 | Policy checks | Bypassed | Enforced |
 | Expiration | None | Required |
+| Account binding | Via recovery EIP-712 hash | Via initiator/review EIP-712 hashes |
 | Use case | Emergency access | Normal operations |
 
 File: `LibOrganizationAccountSignature.sol:79`

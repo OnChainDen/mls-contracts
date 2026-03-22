@@ -44,12 +44,19 @@ contract LibOrganizationAccountSignatureHarness is OrganizationPolicyStateHarnes
     /**
      * @dev Wrapper around `_validateRecoverySignature`.
      */
-    function validateRecoverySignatureViaLibrary(bytes32 hash, bytes calldata signatureData)
+    function validateRecoverySignatureViaLibrary(address account, bytes32 hash, bytes calldata signatureData)
         external
         view
         returns (bytes4)
     {
-        return LibOrganizationAccountSignature._validateRecoverySignature(hash, signatureData);
+        return LibOrganizationAccountSignature._validateRecoverySignature(account, hash, signatureData);
+    }
+
+    /**
+     * @dev Wrapper around `_getRecoverySignatureHash`.
+     */
+    function getRecoverySignatureHashViaLibrary(address account, bytes32 hash) external view returns (bytes32) {
+        return LibOrganizationAccountSignature._getRecoverySignatureHash(account, hash);
     }
 
     /**

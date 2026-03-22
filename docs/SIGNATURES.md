@@ -288,16 +288,28 @@ Disaster Recovery Account Signatures that bypass Guardian and policy checks:
 
 ```
 ┌────────┬──────────────────────────────────────────────────────────────┐
-│ 0x00   │ Raw signature from transactionAndERC1271RecoveryAddress      │
+│ 0x00   │ Signature from transactionAndERC1271RecoveryAddress          │
 └────────┴──────────────────────────────────────────────────────────────┘
 ```
 
-The signature data is simply the raw signature (65 bytes for EOA, or 23+N bytes for ERC-1271) from the recovery address signing the message hash directly.
+The signature data is a signature (65 bytes for EOA, or 23+N bytes for ERC-1271) from the recovery address signing an **EIP-712 typed data hash** that binds the signature to a specific account and organization:
+
+```solidity
+RecoverySignatureValidation(
+    address organization,
+    address account,
+    bytes32 hash,
+    uint256 chainId
+)
+```
+
+This account-specific binding prevents a recovery signature valid for one account from being replayed on a different sibling account in the same organization.
 
 **Validation flow:**
 1. Check `isRecoverySupportedForTransactionsAndERC1271 == true`
 2. Check `isRecoveryEnabledForTransactionsAndERC1271 == true`
-3. Validate signature is from `transactionAndERC1271RecoveryAddress`
+3. Compute account-bound EIP-712 hash from `{organization, account, messageHash, chainId}`
+4. Validate signature over the EIP-712 hash is from `transactionAndERC1271RecoveryAddress`
 
 **Key differences:**
 
@@ -307,6 +319,7 @@ The signature data is simply the raw signature (65 bytes for EOA, or 23+N bytes 
 | Policy checks | Full validation | Bypassed |
 | Expiration | Required | None |
 | Merkle proofs | Required | None |
+| Account binding | Via initiator/review EIP-712 hashes | Via recovery EIP-712 hash |
 | Use case | Normal operations | Emergency access |
 
 Files: `LibOrganizationAccountSignature.sol`, `LibOrganizationTxRecovery.sol`
