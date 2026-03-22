@@ -86,13 +86,14 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
         override
         onlyGuardian
     {
-        // Get pending values directly from storage for operation data
+        // Get pending values and attempt ID directly from storage for operation data
         TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
         address pendingAddress = txRecovery.pendingInit.pendingRecoveryAddress;
         uint256 pendingTimelock = txRecovery.pendingInit.pendingTimelockDurationSeconds;
+        uint256 initAttemptId = txRecovery.initAttemptId;
 
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
+        // Encode the operation data for validation (initAttemptId binds signatures to this specific attempt)
+        bytes memory operationData = abi.encode(pendingAddress, pendingTimelock, initAttemptId);
 
         // Validate that the current admin has authorized this finalization (separate OperationType from initiate)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
@@ -112,13 +113,14 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
         override
         onlyGuardian
     {
-        // Get pending values directly from storage for operation data
+        // Get pending values and attempt ID directly from storage for operation data
         TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
         address pendingAddress = txRecovery.pendingInit.pendingRecoveryAddress;
         uint256 pendingTimelock = txRecovery.pendingInit.pendingTimelockDurationSeconds;
+        uint256 initAttemptId = txRecovery.initAttemptId;
 
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
+        // Encode the operation data for validation (initAttemptId binds signatures to this specific attempt)
+        bytes memory operationData = abi.encode(pendingAddress, pendingTimelock, initAttemptId);
 
         // Validate that the current admin has authorized this cancellation (dedicated Cancel type)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({

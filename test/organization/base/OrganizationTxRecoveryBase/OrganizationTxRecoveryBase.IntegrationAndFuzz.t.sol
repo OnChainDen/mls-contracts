@@ -161,7 +161,8 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
                 pendingRecoveryAddress: address(0xABC3),
                 pendingTimelockDurationSeconds: 4 days,
                 pendingTimestamp: block.timestamp + 4321
-            })
+            }),
+            initAttemptId: 0
         });
         harness.setGuardianRecoveryState(beforeState);
 

@@ -822,7 +822,8 @@ contract StorageLayoutInvariantHandler {
             pendingEnableTimestamp: pendingEnableTimestamp,
             pendingInit: _buildPendingRecoveryInit(
                 pendingRecoveryAddress, pendingTimelockDurationSeconds, pendingTimestamp
-            )
+            ),
+            initAttemptId: 0
         });
 
         HARNESS.setTxRecoveryState(txRecoveryState);
@@ -865,7 +866,8 @@ contract StorageLayoutInvariantHandler {
             pendingGuardianTimestamp: pendingGuardianTimestamp,
             pendingInit: _buildPendingRecoveryInit(
                 pendingRecoveryAddress, pendingTimelockDurationSeconds, pendingTimestamp
-            )
+            ),
+            initAttemptId: 0
         });
 
         HARNESS.setGuardianRecoveryState(guardianRecoveryState);
@@ -968,7 +970,8 @@ contract StorageLayoutInvariantHandler {
                 expectedTxPendingInitRecoveryAddress,
                 expectedTxPendingInitTimelockDurationSeconds,
                 expectedTxPendingInitTimestamp
-            )
+            ),
+            initAttemptId: 0
         });
         HARNESS.setTxRecoveryState(txRecoveryState);
 
@@ -982,7 +985,8 @@ contract StorageLayoutInvariantHandler {
                 expectedGuardianPendingInitRecoveryAddress,
                 expectedGuardianPendingInitTimelockDurationSeconds,
                 expectedGuardianPendingInitTimestamp
-            )
+            ),
+            initAttemptId: 0
         });
         HARNESS.setGuardianRecoveryState(guardianRecoveryState);
     }

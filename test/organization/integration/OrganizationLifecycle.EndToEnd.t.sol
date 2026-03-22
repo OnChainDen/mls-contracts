@@ -422,8 +422,10 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         organization.initiateGuardianUpdate(UPDATED_GUARDIAN, initiateGuardianAuth);
 
         vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK);
+        // forgefmt: disable-next-item
         AdminAuthParams memory finalizeGuardianAuth = _buildOperationAuth(
-            organization, OperationType.FinalizeUpdateGuardian, abi.encode(UPDATED_GUARDIAN), 15_403, true
+            organization, OperationType.FinalizeUpdateGuardian,
+            abi.encode(UPDATED_GUARDIAN, organization.guardianUpdateAttemptId()), 15_403, true
         );
         vm.prank(GUARDIAN);
         organization.finalizeGuardianUpdate(finalizeGuardianAuth);
@@ -1181,8 +1183,10 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         organization.initiateGuardianUpdate(newGuardian, initiateAuth);
 
         vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK);
+        // forgefmt: disable-next-item
         AdminAuthParams memory finalizeAuth = _buildOperationAuth(
-            organization, OperationType.FinalizeUpdateGuardian, abi.encode(newGuardian), finalizeSalt, true
+            organization, OperationType.FinalizeUpdateGuardian,
+            abi.encode(newGuardian, organization.guardianUpdateAttemptId()), finalizeSalt, true
         );
         vm.prank(GUARDIAN);
         organization.finalizeGuardianUpdate(finalizeAuth);

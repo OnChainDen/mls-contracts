@@ -300,13 +300,6 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        (AdminAuthParams memory cancelAuth,) = _buildCancelGuardianUpdateAuth({
-            pendingGuardian: NEW_GUARDIAN_A,
-            salt: 1013,
-            expiration: block.timestamp + 1 days,
-            isApproval: true,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
         (AdminAuthParams memory secondInitiateAuth,) = _buildInitiateGuardianUpdateAuth({
             newGuardian: NEW_GUARDIAN_A,
             salt: 1014,
@@ -321,6 +314,15 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
         // auth salt.
         vm.prank(GUARDIAN);
         harness.initiateGuardianUpdate(NEW_GUARDIAN_A, firstInitiateAuth);
+
+        // Build cancelAuth after initiation so the attempt ID in the digest matches the incremented counter.
+        (AdminAuthParams memory cancelAuth,) = _buildCancelGuardianUpdateAuth({
+            pendingGuardian: NEW_GUARDIAN_A,
+            salt: 1013,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
 
         vm.prank(GUARDIAN);
         harness.cancelGuardianUpdate(cancelAuth);

@@ -840,14 +840,6 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        (AdminAuthParams memory cancelAuth,) = _buildTxRecoveryAuth({
-            operationType: OperationType.CancelInitializeTransactionRecovery,
-            recoveryAddress: ALT_TX_RECOVERY,
-            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
-            salt: 110,
-            isApproval: true,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
         (AdminAuthParams memory secondInitiateAuth,) = _buildTxRecoveryAuth({
             operationType: OperationType.InitiateInitializeTransactionRecovery,
             recoveryAddress: ALT_TX_RECOVERY,
@@ -866,6 +858,16 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         harness.initiateInitializeTransactionAndERC1271Recovery(
             ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, firstInitiateAuth
         );
+
+        // Build cancelAuth after initiation so the attempt ID in the digest matches the incremented counter.
+        (AdminAuthParams memory cancelAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 110,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
 
         vm.prank(GUARDIAN);
         harness.cancelInitializeTransactionAndERC1271Recovery(cancelAuth);
@@ -1212,7 +1214,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
                     pendingRecoveryAddress: ALT_TX_RECOVERY,
                     pendingTimelockDurationSeconds: TX_RECOVERY_TIMELOCK,
                     pendingTimestamp: block.timestamp
-                })
+                }),
+                initAttemptId: 0
             })
         );
 
@@ -1517,14 +1520,6 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        (AdminAuthParams memory firstCancelAuth, bytes memory operationData) = _buildTxRecoveryAuth({
-            operationType: OperationType.CancelInitializeTransactionRecovery,
-            recoveryAddress: ALT_TX_RECOVERY,
-            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
-            salt: 339,
-            isApproval: true,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
         (AdminAuthParams memory secondInitiateAuth,) = _buildTxRecoveryAuth({
             operationType: OperationType.InitiateInitializeTransactionRecovery,
             recoveryAddress: ALT_TX_RECOVERY,
@@ -1533,17 +1528,6 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        (AdminAuthParams memory secondCancelAuth,) = _buildTxRecoveryAuth({
-            operationType: OperationType.CancelInitializeTransactionRecovery,
-            recoveryAddress: ALT_TX_RECOVERY,
-            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
-            salt: 341,
-            isApproval: true,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
-        uint256 firstNonce = harness.computeNonce(OperationType.CancelInitializeTransactionRecovery, operationData, 339);
-        uint256 secondNonce =
-            harness.computeNonce(OperationType.CancelInitializeTransactionRecovery, operationData, 341);
 
         // Call: initiate and cancel the tuple once, re-initiate the identical tuple, then cancel it again with a new
         // auth salt.
@@ -1552,6 +1536,18 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, firstInitiateAuth
         );
 
+        // Build firstCancelAuth after initiation so the attempt ID in the digest matches the incremented counter.
+        (AdminAuthParams memory firstCancelAuth, bytes memory firstOperationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 339,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 firstNonce =
+            harness.computeNonce(OperationType.CancelInitializeTransactionRecovery, firstOperationData, 339);
+
         vm.prank(GUARDIAN);
         harness.cancelInitializeTransactionAndERC1271Recovery(firstCancelAuth);
 
@@ -1559,6 +1555,18 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         harness.initiateInitializeTransactionAndERC1271Recovery(
             ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, secondInitiateAuth
         );
+
+        // Build secondCancelAuth after reinitiation so the attempt ID in the digest matches the incremented counter.
+        (AdminAuthParams memory secondCancelAuth, bytes memory secondOperationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 341,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 secondNonce =
+            harness.computeNonce(OperationType.CancelInitializeTransactionRecovery, secondOperationData, 341);
 
         vm.prank(GUARDIAN);
         harness.cancelInitializeTransactionAndERC1271Recovery(secondCancelAuth);

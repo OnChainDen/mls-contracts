@@ -271,16 +271,9 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         // re-initiation step between the cancels.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3910);
-        (AdminAuthParams memory firstCancelAuth, bytes memory operationData) = _buildCancelGuardianUpdateAuth({
+        (AdminAuthParams memory firstCancelAuth, bytes memory firstOperationData) = _buildCancelGuardianUpdateAuth({
             pendingGuardian: NEW_GUARDIAN_A,
             salt: 3011,
-            expiration: block.timestamp + 1 days,
-            isApproval: true,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
-        (AdminAuthParams memory secondCancelAuth,) = _buildCancelGuardianUpdateAuth({
-            pendingGuardian: NEW_GUARDIAN_A,
-            salt: 3012,
             expiration: block.timestamp + 1 days,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -292,8 +285,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        uint256 firstNonce = _computeGuardianNonce(OperationType.CancelUpdateGuardian, operationData, 3011);
-        uint256 secondNonce = _computeGuardianNonce(OperationType.CancelUpdateGuardian, operationData, 3012);
+        uint256 firstNonce = _computeGuardianNonce(OperationType.CancelUpdateGuardian, firstOperationData, 3011);
 
         // Call: cancel once, recreate the identical pending guardian tuple, then cancel again with a different salt.
         vm.prank(GUARDIAN);
@@ -301,6 +293,16 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
 
         vm.prank(GUARDIAN);
         harness.initiateGuardianUpdate(NEW_GUARDIAN_A, reinitiateAuth);
+
+        // Build secondCancelAuth after reinitiation so the attempt ID in the digest matches the incremented counter.
+        (AdminAuthParams memory secondCancelAuth, bytes memory secondOperationData) = _buildCancelGuardianUpdateAuth({
+            pendingGuardian: NEW_GUARDIAN_A,
+            salt: 3012,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 secondNonce = _computeGuardianNonce(OperationType.CancelUpdateGuardian, secondOperationData, 3012);
 
         vm.prank(GUARDIAN);
         harness.cancelGuardianUpdate(secondCancelAuth);

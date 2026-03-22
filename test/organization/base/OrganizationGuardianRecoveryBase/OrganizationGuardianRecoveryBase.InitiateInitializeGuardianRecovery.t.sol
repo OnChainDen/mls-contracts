@@ -396,14 +396,6 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        (AdminAuthParams memory cancelAuth,) = _buildCancelInitializeGuardianRecoveryAuth({
-            pendingAddress: GUARDIAN_RECOVERY_ADDRESS_B,
-            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
-            salt: 11_021,
-            expiration: block.timestamp + 1 days,
-            isApproval: true,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
         (AdminAuthParams memory secondInitiateAuth,) = _buildInitiateInitializeGuardianRecoveryAuth({
             recoveryAddress: GUARDIAN_RECOVERY_ADDRESS_B,
             timelockDurationSeconds: GUARDIAN_RECOVERY_TIMELOCK,
@@ -423,6 +415,16 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         harness.initiateInitializeGuardianRecovery(
             GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, firstInitiateAuth
         );
+
+        // Build cancelAuth after initiation so the attempt ID in the digest matches the incremented counter.
+        (AdminAuthParams memory cancelAuth,) = _buildCancelInitializeGuardianRecoveryAuth({
+            pendingAddress: GUARDIAN_RECOVERY_ADDRESS_B,
+            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 11_021,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
 
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(cancelAuth);

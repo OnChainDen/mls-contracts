@@ -305,25 +305,18 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
     /// @dev Verifies `OrganizationGuardianRecoveryBase.cancelInitializeGuardianRecovery` can cancel the same pending
     /// tuple twice with different salts when the tuple is recreated in between.
     function test_cancelInitializeGuardianRecovery_samePendingTupleDifferentSalts_canCancelTwice() public {
-        // Setup: reset storage, stage one pending tuple, and prepare two cancel salts around an intermediate
-        // re-initiation of the identical params.
+        // Setup: reset storage, stage one pending tuple, and prepare the first cancel auth and reinitiate auth.
+        // The second cancel auth must be built AFTER reinitiation because the initAttemptId changes,
+        // binding signatures to specific initialization attempts.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1
         );
-        (AdminAuthParams memory firstCancelAuth, bytes memory operationData) = _buildCancelInitializeGuardianRecoveryAuth({
+        (AdminAuthParams memory firstCancelAuth, bytes memory firstOperationData) = _buildCancelInitializeGuardianRecoveryAuth({
             pendingAddress: GUARDIAN_RECOVERY_ADDRESS_B,
             pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
             salt: 13_013,
-            expiration: block.timestamp + 1 days,
-            isApproval: true,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
-        (AdminAuthParams memory secondCancelAuth,) = _buildCancelInitializeGuardianRecoveryAuth({
-            pendingAddress: GUARDIAN_RECOVERY_ADDRESS_B,
-            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
-            salt: 13_014,
             expiration: block.timestamp + 1 days,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -337,12 +330,9 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
         uint256 firstNonce =
-            _computeRecoveryNonce(OperationType.CancelInitializeGuardianRecovery, operationData, 13_013);
-        uint256 secondNonce =
-            _computeRecoveryNonce(OperationType.CancelInitializeGuardianRecovery, operationData, 13_014);
+            _computeRecoveryNonce(OperationType.CancelInitializeGuardianRecovery, firstOperationData, 13_013);
 
-        // Call: cancel once, recreate the identical pending deferred-init tuple, then cancel it again with a new
-        // admin-auth salt.
+        // Call: cancel once, then recreate the identical pending deferred-init tuple.
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(firstCancelAuth);
 
@@ -351,11 +341,24 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
             GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, reinitiateAuth
         );
 
+        // Build second cancel auth AFTER reinitiation so it binds to the new initAttemptId.
+        (AdminAuthParams memory secondCancelAuth, bytes memory secondOperationData) = _buildCancelInitializeGuardianRecoveryAuth({
+            pendingAddress: GUARDIAN_RECOVERY_ADDRESS_B,
+            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 13_014,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 secondNonce =
+            _computeRecoveryNonce(OperationType.CancelInitializeGuardianRecovery, secondOperationData, 13_014);
+
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(secondCancelAuth);
 
-        // Verify: both cancel nonces are isolated by salt, and the second cancel clears the recreated pending tuple.
-        assertTrue(firstNonce != secondNonce, "different salts should isolate cancel nonces");
+        // Verify: both cancel nonces are isolated by salt and attempt ID, and the second cancel clears the
+        // recreated pending tuple.
+        assertTrue(firstNonce != secondNonce, "different salts and attempt IDs should isolate cancel nonces");
         assertTrue(harness.getUsedNonce(firstNonce), "first cancel nonce should remain consumed");
         assertTrue(harness.getUsedNonce(secondNonce), "second cancel nonce should be consumed");
         assertEq(

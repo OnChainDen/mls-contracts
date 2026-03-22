@@ -76,7 +76,8 @@ abstract contract LibOrganizationGuardianRecoverySuiteBase is OrganizationAdminT
                 pendingRecoveryAddress: address(0xD302),
                 pendingTimelockDurationSeconds: 5 days,
                 pendingTimestamp: block.timestamp + 10 days
-            })
+            }),
+            initAttemptId: 0
         });
         recoveryStateHarness.setTxRecoveryState(txState);
     }

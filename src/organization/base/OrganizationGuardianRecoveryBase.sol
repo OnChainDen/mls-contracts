@@ -62,15 +62,16 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
 
     /// @inheritdoc IOrganizationGuardianRecovery
     function finalizeInitializeGuardianRecovery(AdminAuthParams calldata authParams) external override onlyGuardian {
-        // Get pending values directly from storage for operation data
+        // Get pending values and attempt ID directly from storage for operation data
         // forgefmt: disable-next-item
         GuardianRecoveryState storage guardianRecovery =
             LibOrganizationRecoveryStorage.layout().guardianRecovery;
         address pendingAddress = guardianRecovery.pendingInit.pendingRecoveryAddress;
         uint256 pendingTimelock = guardianRecovery.pendingInit.pendingTimelockDurationSeconds;
+        uint256 initAttemptId = guardianRecovery.initAttemptId;
 
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
+        // Encode the operation data for validation (initAttemptId binds signatures to this specific attempt)
+        bytes memory operationData = abi.encode(pendingAddress, pendingTimelock, initAttemptId);
 
         // Validate that the current admin has authorized this finalization (separate OperationType from initiate)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
@@ -86,15 +87,16 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
 
     /// @inheritdoc IOrganizationGuardianRecovery
     function cancelInitializeGuardianRecovery(AdminAuthParams calldata authParams) external override onlyGuardian {
-        // Get pending values directly from storage for operation data
+        // Get pending values and attempt ID directly from storage for operation data
         // forgefmt: disable-next-item
         GuardianRecoveryState storage guardianRecovery =
             LibOrganizationRecoveryStorage.layout().guardianRecovery;
         address pendingAddress = guardianRecovery.pendingInit.pendingRecoveryAddress;
         uint256 pendingTimelock = guardianRecovery.pendingInit.pendingTimelockDurationSeconds;
+        uint256 initAttemptId = guardianRecovery.initAttemptId;
 
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
+        // Encode the operation data for validation (initAttemptId binds signatures to this specific attempt)
+        bytes memory operationData = abi.encode(pendingAddress, pendingTimelock, initAttemptId);
 
         // Validate that the current admin has authorized this cancellation (dedicated Cancel type)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({

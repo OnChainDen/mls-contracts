@@ -135,4 +135,10 @@ interface IOrganizationGuardian {
      * @return True if the update has been finalized and is waiting for the new guardian to accept
      */
     function isGuardianUpdateReadyForAcceptance() external view returns (bool);
+
+    /**
+     * @notice Returns the current guardian update attempt ID (normal flow)
+     * @return The monotonic attempt counter (0 if no update has ever been initiated)
+     */
+    function guardianUpdateAttemptId() external view returns (uint256);
 }
