@@ -371,4 +371,55 @@ contract LibOrganizationMembersModifyMembersTest is LibOrganizationMembersSuiteB
         // Verify: final state remains non-member after add-then-remove processing.
         assertFalse(harness.isMember(candidate), "candidate should end non-member");
     }
+
+    /// @dev Verifies that re-adding a previously removed member reverts with `MemberAlreadyDeleted`.
+    function test_modifyMembers_readdDeletedMember_revertsMemberAlreadyDeleted() public {
+        address candidate = address(0x317);
+        // Setup: configure members/admins for a valid baseline state and add the candidate.
+        _setMembersAndAdmins({members: buildArray(admin1, candidate), admins: buildArray(admin1), threshold: 1});
+
+        // Call: remove the candidate.
+        harness.modifyMembersViaLibrary({
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(candidate)
+        });
+
+        // Verify: re-adding the deleted member must revert.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.MemberAlreadyDeleted.selector, candidate));
+        // Call: attempt to re-add the removed member.
+        harness.modifyMembersViaLibrary({
+            membersToAdd: buildArray(candidate), membersToRemove: buildEmptyAddressArray()
+        });
+    }
+
+    /// @dev Verifies that removing a member sets the `wasMemberDeleted` flag to true.
+    function test_modifyMembers_removeMember_setsWasMemberDeleted() public {
+        address candidate = address(0x318);
+        // Setup: configure members/admins for a valid baseline state.
+        _setMembersAndAdmins({members: buildArray(admin1, candidate), admins: buildArray(admin1), threshold: 1});
+
+        // Call: remove the candidate.
+        harness.modifyMembersViaLibrary({
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(candidate)
+        });
+
+        // Verify: the wasMemberDeleted flag should be set for the removed member.
+        assertTrue(stateHarness.getWasMemberDeletedStatus(candidate), "wasMemberDeleted should be true after removal");
+    }
+
+    /// @dev Verifies that removing a non-existent member (no-op) does not set the `wasMemberDeleted` flag.
+    function test_modifyMembers_removeNonExistentMember_doesNotSetWasMemberDeleted() public {
+        address nonMember = address(0x319);
+        // Setup: configure members/admins for a valid baseline state.
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+
+        // Call: attempt to remove a non-member (no-op).
+        harness.modifyMembersViaLibrary({
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(nonMember)
+        });
+
+        // Verify: the wasMemberDeleted flag should remain false for a non-member no-op removal.
+        assertFalse(
+            stateHarness.getWasMemberDeletedStatus(nonMember), "wasMemberDeleted should remain false for non-member"
+        );
+    }
 }

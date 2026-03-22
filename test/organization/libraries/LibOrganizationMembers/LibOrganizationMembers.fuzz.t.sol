@@ -143,6 +143,28 @@ contract LibOrganizationMembersFuzzTest is LibOrganizationMembersSuiteBase {
     }
 
     /**
+     * @dev Verifies that re-adding any previously removed member always reverts with `MemberAlreadyDeleted`.
+     */
+    function testFuzz_modifyMembers_readdDeletedMember_alwaysReverts(address candidate) public {
+        // Setup: constrain fuzz inputs for valid preconditions.
+        vm.assume(candidate != address(0) && candidate != admin1);
+        // Setup: configure members/admins for a valid baseline state.
+        _setMembersAndAdmins({members: buildArray(admin1, candidate), admins: buildArray(admin1), threshold: 1});
+
+        // Call: remove the member.
+        harness.modifyMembersViaLibrary({
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(candidate)
+        });
+
+        // Verify: re-adding the deleted member should always revert.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.MemberAlreadyDeleted.selector, candidate));
+        // Call: attempt to re-add the removed member.
+        harness.modifyMembersViaLibrary({
+            membersToAdd: buildArray(candidate), membersToRemove: buildEmptyAddressArray()
+        });
+    }
+
+    /**
      * @dev Derives a deterministic set of unique, non-zero addresses from a fuzz seed.
      */
     function _deriveUniqueNonZeroAddresses(uint256 seed, uint256 count)

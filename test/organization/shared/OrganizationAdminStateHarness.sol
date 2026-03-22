@@ -38,6 +38,20 @@ contract OrganizationAdminStateHarness {
     }
 
     /**
+     * @dev Sets wasMemberDeleted status for an address.
+     */
+    function setWasMemberDeletedStatus(address member, bool wasDeleted) external {
+        LibOrganizationMembersStorage.layout().wasMemberDeleted[member] = wasDeleted;
+    }
+
+    /**
+     * @dev Reads wasMemberDeleted status for an address.
+     */
+    function getWasMemberDeletedStatus(address member) external view returns (bool) {
+        return LibOrganizationMembersStorage.layout().wasMemberDeleted[member];
+    }
+
+    /**
      * @dev Sets group existence for a group ID.
      */
     function setGroupStatus(uint256 groupId, bool isGroup) external {

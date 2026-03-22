@@ -51,6 +51,12 @@ interface IOrganizationMembers {
      */
     error InvalidMemberAddress(address member);
 
+    /**
+     * @notice Thrown when trying to add an address that was previously removed from the organization
+     * @param member The address that was previously removed
+     */
+    error MemberAlreadyDeleted(address member);
+
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions
     // ═══════════════════════════════════════════════════════════════════════════

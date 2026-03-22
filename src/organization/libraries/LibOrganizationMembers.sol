@@ -17,8 +17,10 @@ library LibOrganizationMembers {
     /**
      * @dev Adds and/or removes members from the organization.
      *      Adding a duplicate member is a no-op.
+     *      Adding a previously removed member reverts with MemberAlreadyDeleted.
      *      Removing a non-existent member is a no-op.
      *      Removing a member who is an admin reverts with MemberIsAdmin.
+     *      Member addresses are not reusable after removal -- wasMemberDeleted entries persist.
      * @param membersToAdd Addresses to add as members
      * @param membersToRemove Addresses to remove from members
      */
@@ -30,6 +32,9 @@ library LibOrganizationMembers {
         for (uint256 i = 0; i < membersToAdd.length; ++i) {
             address member = membersToAdd[i];
             if (member == address(0)) revert IOrganizationMembers.InvalidMemberAddress(member);
+
+            // Case: Member address was previously removed — cannot be re-added
+            if (membersLayout.wasMemberDeleted[member]) revert IOrganizationMembers.MemberAlreadyDeleted(member);
 
             // No-op if already a member
             if (membersLayout.isMember[member]) continue;
@@ -49,6 +54,7 @@ library LibOrganizationMembers {
             if (adminLayout.isAdmin[member]) revert IOrganizationMembers.MemberIsAdmin(member);
 
             membersLayout.isMember[member] = false;
+            membersLayout.wasMemberDeleted[member] = true;
             emit IOrganizationMembers.MemberRemoved(member);
         }
     }

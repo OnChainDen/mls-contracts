@@ -491,6 +491,36 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         assertFalse(harness.isMember(candidate), "candidate should end non-member");
     }
 
+    /// @dev Verifies that re-adding a previously removed member via the base-contract path reverts with
+    /// `MemberAlreadyDeleted`.
+    function test_modifyMembers_readdDeletedMember_revertsMemberAlreadyDeleted() public {
+        address candidate = address(0x417);
+        // Setup: configure members/admins for a valid baseline state.
+        _setMembersAndAdmins({members: buildArray(admin1, candidate), admins: buildArray(admin1), threshold: 1});
+
+        // Call: remove the candidate through the base-contract wrapper.
+        _executeModifyMembers({
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(candidate), salt: 4120
+        });
+
+        (AdminAuthParams memory auth,) = _buildModifyMembersAuth({
+            membersToAdd: buildArray(candidate),
+            membersToRemove: buildEmptyAddressArray(),
+            salt: 4121,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Verify: re-adding the deleted member must revert.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.MemberAlreadyDeleted.selector, candidate));
+        vm.prank(GUARDIAN);
+        // Call: attempt to re-add the removed member through the base-contract wrapper.
+        harness.modifyMembers({
+            membersToAdd: buildArray(candidate), membersToRemove: buildEmptyAddressArray(), authParams: auth
+        });
+    }
+
     /// @dev Verifies that `modifyMembers` rejects non-guardian callers via `onlyGuardian`.
     function test_modifyMembers_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup: configure members/admins for a valid baseline state.
@@ -619,28 +649,19 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         assertTrue(nonceA != nonceB, "different member-array ordering should produce different nonces");
     }
 
-    /// @dev Verifies `OrganizationMembersBase.modifyMembers` can reapply the same add/remove tuple after a state reset
-    /// when the admin-auth salt changes.
-    function test_modifyMembers_sameTupleDifferentAdminAuthSalts_canBothSucceed() public {
+    /// @dev Verifies that re-adding a removed member via the base-contract path reverts with MemberAlreadyDeleted,
+    /// even when using a different admin-auth salt.
+    function test_modifyMembers_readdDeletedMemberWithDifferentSalt_revertsMemberAlreadyDeleted() public {
         address memberToAdd = address(0x423);
         address memberToRemove = address(0x424);
 
-        // Setup: start from a state where the signed tuple adds one member and removes another, then prepare the same
-        // signed tuple under two distinct admin-auth salts plus an inverse reset operation between them.
+        // Setup: configure a state where the signed tuple adds one member and removes another.
         _setMembersAndAdmins({members: buildArray(admin1, memberToRemove), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory firstAuth, bytes memory operationData) = _buildModifyMembersAuth({
             membersToAdd: buildArray(memberToAdd),
             membersToRemove: buildArray(memberToRemove),
             salt: 4122,
-            expiration: block.timestamp + 1 hours,
-            isApproval: true,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
-        (AdminAuthParams memory secondAuth,) = _buildModifyMembersAuth({
-            membersToAdd: buildArray(memberToAdd),
-            membersToRemove: buildArray(memberToRemove),
-            salt: 4123,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -657,33 +678,24 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         uint256 firstNonce = harness.computeNonce({
             operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4122
         });
-        uint256 secondNonce = harness.computeNonce({
-            operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4123
-        });
 
-        // Call: apply the signed tuple once, restore the original pre-state with the inverse operation, then apply
-        // the exact same tuple again under a different admin-auth salt.
+        // Call: apply the first signed tuple (adds memberToAdd, removes memberToRemove).
         vm.prank(GUARDIAN);
         harness.modifyMembers({
             membersToAdd: buildArray(memberToAdd), membersToRemove: buildArray(memberToRemove), authParams: firstAuth
         });
 
+        // Verify: first execution consumed its nonce and mutated state.
+        assertTrue(harness.getUsedNonce(firstNonce), "first signed tuple should consume its nonce");
+        assertTrue(harness.isMember(memberToAdd), "added member should exist after first execution");
+        assertFalse(harness.isMember(memberToRemove), "removed member should be absent after first execution");
+
+        // Verify: attempting to re-add the removed member reverts with MemberAlreadyDeleted.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.MemberAlreadyDeleted.selector, memberToRemove));
         vm.prank(GUARDIAN);
         harness.modifyMembers({
             membersToAdd: buildArray(memberToRemove), membersToRemove: buildArray(memberToAdd), authParams: resetAuth
         });
-
-        vm.prank(GUARDIAN);
-        harness.modifyMembers({
-            membersToAdd: buildArray(memberToAdd), membersToRemove: buildArray(memberToRemove), authParams: secondAuth
-        });
-
-        // Verify: both original executions succeed because the admin-auth salts isolate nonce space, and the final
-        // member state matches the signed add/remove tuple after the second execution.
-        assertTrue(harness.getUsedNonce(firstNonce), "first signed tuple should consume its nonce");
-        assertTrue(harness.getUsedNonce(secondNonce), "second signed tuple should consume its nonce");
-        assertTrue(harness.isMember(memberToAdd), "added member should exist after the second execution");
-        assertFalse(harness.isMember(memberToRemove), "removed member should stay absent after the second execution");
     }
 
     /// @dev Verifies `OrganizationMembersBase.modifyMembers` rolls back nonce consumption when the downstream member
