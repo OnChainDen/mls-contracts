@@ -12,7 +12,12 @@ import {GroupModification, GroupModificationType} from "types/CommonTypes.sol";
  * @title Lib Organization Groups
  * @dev Library for mapping-based group operations for Organization contracts.
  *      Group existence and group membership are stored in mappings for O(1) lookups.
- *      Group IDs are not reusable after deletion -- isGroupMember entries persist as ghost data.
+ *      Group IDs are not reusable after deletion — isGroupMember entries persist in storage
+ *      intentionally. When a member is removed from the organization (via modifyMembers), their
+ *      isGroupMember bits are not cleared. If the member is later re-added, those persisted
+ *      entries become effective again, restoring their prior group roles. This is by design —
+ *      admins should use modifyGroups to explicitly remove a member from groups if they do not
+ *      want group assignments to survive a member removal/re-addition cycle.
  *      The wasGroupDeleted mapping tracks deleted group IDs to prevent recreation.
  * @author Den Technologies Inc
  */
@@ -164,7 +169,12 @@ library LibOrganizationGroups {
     }
 
     /**
-     * @dev Checks if an address is a member of a group
+     * @dev Checks if an address is a member of a group.
+     *      Validates group existence and current organization membership before reading
+     *      the isGroupMember storage bit. Returns false for removed members even if the raw
+     *      storage bit is still set. However, the raw bit persists intentionally — if the
+     *      member is re-added to the organization, this function will return true again
+     *      without any explicit group reassignment.
      * @param groupId The group ID to check
      * @param memberAddress The address to check
      * @return True if the address is a member of the group, false otherwise

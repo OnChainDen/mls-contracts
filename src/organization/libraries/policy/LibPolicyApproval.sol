@@ -91,6 +91,12 @@ library LibPolicyApproval {
      *      For Group approver type, the signer must be a member of the specified group.
      *      All signers must be members of the organization.
      *      NOTE: Group existence must be verified by the caller before calling this function.
+     *      For Group approver type, this function reads the raw isGroupMember storage mapping
+     *      directly (after confirming organization membership and group existence in the caller).
+     *      Group membership entries persist across member removal/re-addition cycles by design,
+     *      so a member who was previously assigned to a group, removed from the organization,
+     *      and later re-added will be authorized for group-based policy approval without
+     *      requiring explicit group reassignment. This is intentional.
      * @param policy The policy to check against
      * @param signerAddress The address of the signer
      * @return True if the signer is authorized, false otherwise

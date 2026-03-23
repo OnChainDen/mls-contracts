@@ -132,6 +132,9 @@ Admin operations modify organizational state and require admin threshold signatu
 > [!WARNING]
 > **Important consideration when modifying groups:** Modifying a group (via `ModifyGroups`) does **not** automatically update policies that reference that group. If a group's membership is reduced below the reviewer threshold specified in a ManualApproval policy, that policy becomes unusable until admins also update the policy (via `ModifyPolicies`). See [Manual Review Fields](#manual-review-fields-manualapproval-policies) for details.
 
+> [!WARNING]
+> **Important consideration when removing members:** Removing a member from the organization (via `ModifyMembers`) does **not** automatically remove them from any groups. Group membership entries persist in storage, so if the same address is later re-added to the organization, their previous group memberships (and any associated policy authorization, such as reviewer or initiator roles) will be restored automatically. To permanently revoke a member's group assignments, admins must explicitly remove the member from all relevant groups (via `ModifyGroups`) before or in addition to removing them from the organization.
+
 ### Who can approve or reject Admin Operations?
 Only Members who are "Admins" according to the Organization contract can approve or reject Admin Operations.
 

@@ -11,6 +11,10 @@ import {LibOrganizationMembersStorage} from "organization/libraries/storage/LibO
  * @dev Library for mapping-based member operations for Organization contracts.
  *      Members are stored in a mapping for O(1) membership checks.
  *      Removing a member who is an admin reverts — admin status must be removed first.
+ *      Member removal intentionally preserves group memberships — isGroupMember entries are not
+ *      cleared when isMember is set to false. If the member is later re-added, their prior group
+ *      assignments become effective again. Use LibOrganizationGroups.modifyGroups to explicitly
+ *      clear group memberships if a clean slate is desired.
  * @author Den Technologies Inc
  */
 library LibOrganizationMembers {
@@ -19,6 +23,11 @@ library LibOrganizationMembers {
      *      Adding a duplicate member is a no-op.
      *      Removing a non-existent member is a no-op.
      *      Removing a member who is an admin reverts with MemberIsAdmin.
+     *      Removal sets isMember[member] = false but does not iterate over or clear any
+     *      isGroupMember entries. This is intentional — group memberships persist so that
+     *      re-adding the same address restores its previous group roles. To revoke group
+     *      assignments, call modifyGroups on LibOrganizationGroups before or in addition to
+     *      removing the member here.
      * @param membersToAdd Addresses to add as members
      * @param membersToRemove Addresses to remove from members
      */
