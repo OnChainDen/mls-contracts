@@ -131,7 +131,11 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         address recoverySigner = vm.addr(recoveryPk);
         _setTxRecoveryState(recoverySigner, true);
 
-        bytes memory signature = _buildRecoverySignature(_signHash(recoveryPk, MESSAGE_HASH));
+        uint256 expiration = block.timestamp + 1 days;
+        // forgefmt: disable-next-item
+        bytes memory signature = _buildRecoverySignature(
+            expiration, _signRecoverySignature(recoveryPk, ACCOUNT, MESSAGE_HASH, expiration)
+        );
 
         // Call: execute `isValidSignatureViaLibrary` through the recovery-signature route.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
@@ -347,12 +351,15 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         address recoverySigner = vm.addr(recoveryPk);
         _setTxRecoveryState(recoverySigner, true);
 
-        bytes memory goodSignature = _signHash(recoveryPk, MESSAGE_HASH);
-        bytes memory badSignature = _signHash(wrongPk, MESSAGE_HASH);
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory goodSignature =
+            abi.encode(expiration, _signRecoverySignature(recoveryPk, ACCOUNT, MESSAGE_HASH, expiration));
+        bytes memory badSignature =
+            abi.encode(expiration, _signRecoverySignature(wrongPk, ACCOUNT, MESSAGE_HASH, expiration));
 
         // Call: execute recovery validation for matching and mismatching signatures.
-        bytes4 good = harness.validateRecoverySignatureViaLibrary(MESSAGE_HASH, goodSignature);
-        bytes4 bad = harness.validateRecoverySignatureViaLibrary(MESSAGE_HASH, badSignature);
+        bytes4 good = harness.validateRecoverySignatureViaLibrary(ACCOUNT, MESSAGE_HASH, goodSignature);
+        bytes4 bad = harness.validateRecoverySignatureViaLibrary(ACCOUNT, MESSAGE_HASH, badSignature);
 
         // Verify: matching recovery signer should pass; mismatching signer should fail.
         assertEq(good, SignatureUtils.ERC1271_MAGIC_VALUE, "matching recovery signer should return magic");
@@ -384,10 +391,14 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         address recoverySigner = vm.addr(recoveryPk);
         _setTxRecoveryState(configureRecovery ? recoverySigner : address(0), enableRecovery);
 
-        bytes memory signature = _signHash(useMatchingSigner ? recoveryPk : wrongPk, MESSAGE_HASH);
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory signature = abi.encode(
+            expiration,
+            _signRecoverySignature(useMatchingSigner ? recoveryPk : wrongPk, ACCOUNT, MESSAGE_HASH, expiration)
+        );
 
         // Call: validate the recovery signature against the fuzzed tx-recovery configuration.
-        bytes4 actual = harness.validateRecoverySignatureViaLibrary(MESSAGE_HASH, signature);
+        bytes4 actual = harness.validateRecoverySignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
 
         // Verify: only configured, enabled, exact-signer tuples should return the ERC-1271 magic value.
         bytes4 expected = configureRecovery && enableRecovery && useMatchingSigner

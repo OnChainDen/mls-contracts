@@ -84,19 +84,31 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
 
     /// @dev Verifies that valid account callers receive the same result as direct library validation.
     function test_isValidSignatureForAccount_deployedAccountDelegatesToLibraryResult() public {
-        // Setup: align storage fixtures for both harnesses and build a valid recovery payload.
+        // Setup: align storage fixtures for both harnesses and build valid recovery payloads.
+        // Each harness has a different address (different EIP-712 domain), so each needs its own signature.
         harness.setDeployedAccount(ACCOUNT, true);
         _setRecoveryState(harness, guardianSigner, true);
         _setRecoveryState(libHarness, guardianSigner, true);
 
-        bytes memory recoverySignature = abi.encodePacked(uint8(0x00), _signHash(GUARDIAN_PK, MESSAGE_HASH));
+        uint256 expiration = block.timestamp + 1 days;
+        bytes32 baseRecoveryHash = harness.getRecoverySignatureHashViaLibrary(ACCOUNT, MESSAGE_HASH, expiration);
+        // forgefmt: disable-next-item
+        bytes memory baseRecoverySignature = abi.encodePacked(
+            uint8(0x00), abi.encode(expiration, _signHash(GUARDIAN_PK, baseRecoveryHash))
+        );
 
-        // Call: execute base entry-point and direct-library wrapper with the same payload.
+        bytes32 libRecoveryHash = libHarness.getRecoverySignatureHashViaLibrary(ACCOUNT, MESSAGE_HASH, expiration);
+        // forgefmt: disable-next-item
+        bytes memory libRecoverySignature = abi.encodePacked(
+            uint8(0x00), abi.encode(expiration, _signHash(GUARDIAN_PK, libRecoveryHash))
+        );
+
+        // Call: execute base entry-point and direct-library wrapper with domain-matched payloads.
         vm.prank(ACCOUNT);
-        bytes4 viaBase = harness.isValidSignatureForAccount(ACCOUNT, MESSAGE_HASH, recoverySignature);
-        bytes4 viaLibrary = libHarness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, recoverySignature);
+        bytes4 viaBase = harness.isValidSignatureForAccount(ACCOUNT, MESSAGE_HASH, baseRecoverySignature);
+        bytes4 viaLibrary = libHarness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, libRecoverySignature);
 
-        // Verify: delegated result should match direct-library output exactly.
+        // Verify: both paths should return the same magic value when given valid recovery signatures.
         assertEq(viaBase, viaLibrary, "base entrypoint should delegate to library result");
     }
 
@@ -105,7 +117,12 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         // Setup: configure deployed-account + enabled recovery signer and build a valid recovery payload.
         harness.setDeployedAccount(ACCOUNT, true);
         _setRecoveryState(harness, guardianSigner, true);
-        bytes memory recoverySignature = abi.encodePacked(uint8(0x00), _signHash(GUARDIAN_PK, MESSAGE_HASH));
+        uint256 expiration = block.timestamp + 1 days;
+        bytes32 recoveryHash = harness.getRecoverySignatureHashViaLibrary(ACCOUNT, MESSAGE_HASH, expiration);
+        // forgefmt: disable-next-item
+        bytes memory recoverySignature = abi.encodePacked(
+            uint8(0x00), abi.encode(expiration, _signHash(GUARDIAN_PK, recoveryHash))
+        );
 
         // Call: execute `isValidSignatureForAccount` through the base-contract entry point.
         vm.prank(ACCOUNT);
@@ -153,9 +170,17 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         harness.setDeployedAccount(ACCOUNT, true);
         _setRecoveryState(harness, guardianSigner, true);
 
-        bytes memory validSignature = abi.encodePacked(uint8(0x00), _signHash(GUARDIAN_PK, MESSAGE_HASH));
+        uint256 expiration = block.timestamp + 1 days;
+        bytes32 recoveryHash = harness.getRecoverySignatureHashViaLibrary(ACCOUNT, MESSAGE_HASH, expiration);
+        // forgefmt: disable-next-item
+        bytes memory validSignature = abi.encodePacked(
+            uint8(0x00), abi.encode(expiration, _signHash(GUARDIAN_PK, recoveryHash))
+        );
         bytes memory malformedSignature = hex"001b";
-        bytes memory highSSignature = abi.encodePacked(uint8(0x00), _makeHighSSignature(GUARDIAN_PK, MESSAGE_HASH));
+        // forgefmt: disable-next-item
+        bytes memory highSSignature = abi.encodePacked(
+            uint8(0x00), abi.encode(expiration, _makeHighSSignature(GUARDIAN_PK, recoveryHash))
+        );
 
         // Call: validate malformed and malleable recovery signatures through the base entry point.
         vm.startPrank(ACCOUNT);
@@ -207,7 +232,12 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         bool beforeDeployed = harness.isDeployedAccount(ACCOUNT);
         bytes32 beforeRoot = harness.getPoliciesRoot();
 
-        bytes memory recoverySignature = abi.encodePacked(uint8(0x00), _signHash(GUARDIAN_PK, MESSAGE_HASH));
+        uint256 expiration = block.timestamp + 1 days;
+        bytes32 recoveryHash = harness.getRecoverySignatureHashViaLibrary(ACCOUNT, MESSAGE_HASH, expiration);
+        // forgefmt: disable-next-item
+        bytes memory recoverySignature = abi.encodePacked(
+            uint8(0x00), abi.encode(expiration, _signHash(GUARDIAN_PK, recoveryHash))
+        );
 
         // Call: execute `isValidSignatureForAccount` through the base-contract entry point.
         vm.prank(ACCOUNT);
@@ -301,7 +331,12 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         // Setup: deploy the account, enable EOA recovery, and confirm the current recovery signature is valid.
         harness.setDeployedAccount(ACCOUNT, true);
         _setRecoveryState(harness, guardianSigner, true);
-        bytes memory recoverySignature = abi.encodePacked(uint8(0x00), _signHash(GUARDIAN_PK, MESSAGE_HASH));
+        uint256 expiration = block.timestamp + 1 days;
+        bytes32 recoveryHash = harness.getRecoverySignatureHashViaLibrary(ACCOUNT, MESSAGE_HASH, expiration);
+        // forgefmt: disable-next-item
+        bytes memory recoverySignature = abi.encodePacked(
+            uint8(0x00), abi.encode(expiration, _signHash(GUARDIAN_PK, recoveryHash))
+        );
 
         vm.prank(ACCOUNT);
         bytes4 enabledResult = harness.isValidSignatureForAccount(ACCOUNT, MESSAGE_HASH, recoverySignature);

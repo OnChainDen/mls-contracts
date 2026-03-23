@@ -24,7 +24,10 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
     function invariant_typePrefixExclusivity_onlyRecoveryAndPolicyProduceMagic() public {
         // Setup: prepare valid recovery and valid policy payload fixtures.
         _setTxRecoveryState(guardianSigner, true);
-        bytes memory recoverySignature = _buildRecoverySignature(_signHash(GUARDIAN_PK, MESSAGE_HASH));
+        uint256 recoveryExpiration = block.timestamp + 1 days;
+        bytes memory recoverySignature = _buildRecoverySignature(
+            recoveryExpiration, _signRecoverySignature(GUARDIAN_PK, ACCOUNT, MESSAGE_HASH, recoveryExpiration)
+        );
 
         (bytes memory policySignature,,,,,) =
             _buildValidPolicySignature(PolicyType.AutoApprove, DEFAULT_POLICY_ID, block.timestamp + 1 days);
@@ -55,7 +58,10 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
 
         (bytes memory validPolicySignature,,,,,) =
             _buildValidPolicySignature(PolicyType.AutoApprove, DEFAULT_POLICY_ID, block.timestamp + 1 days);
-        bytes memory validRecoverySignature = _buildRecoverySignature(_signHash(GUARDIAN_PK, MESSAGE_HASH));
+        uint256 recoveryExpiration = block.timestamp + 1 days;
+        bytes memory validRecoverySignature = _buildRecoverySignature(
+            recoveryExpiration, _signRecoverySignature(GUARDIAN_PK, ACCOUNT, MESSAGE_HASH, recoveryExpiration)
+        );
 
         bytes[] memory payloads = new bytes[](5);
         payloads[0] = bytes("");
@@ -170,6 +176,26 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
         // Verify: cross-account replay should fail within same organization.
         assertEq(signedAccountResult, SignatureUtils.ERC1271_MAGIC_VALUE, "sanity: signed account should validate");
         assertEq(replayAccountResult, SignatureUtils.ERC1271_INVALID_VALUE, "cross-account replay should be invalid");
+    }
+
+    /// @dev Verifies that recovery signatures valid for one account are invalid for sibling accounts.
+    function invariant_crossAccountRecoveryReplay_isRejectedWithinSameOrganization() public {
+        // Setup: configure enabled recovery and build a valid recovery signature for `ACCOUNT`.
+        _setTxRecoveryState(guardianSigner, true);
+        uint256 recoveryExpiration = block.timestamp + 1 days;
+        bytes memory recoverySignature = _buildRecoverySignature(
+            recoveryExpiration, _signRecoverySignature(GUARDIAN_PK, ACCOUNT, MESSAGE_HASH, recoveryExpiration)
+        );
+
+        // Call: validate recovery signature for signed account and replay against a different account.
+        bytes4 signedAccountResult = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, recoverySignature);
+        bytes4 replayAccountResult = harness.isValidSignatureViaLibrary(OTHER_ACCOUNT, MESSAGE_HASH, recoverySignature);
+
+        // Verify: cross-account recovery replay should fail within same organization.
+        assertEq(signedAccountResult, SignatureUtils.ERC1271_MAGIC_VALUE, "signed account should validate");
+        assertEq(
+            replayAccountResult, SignatureUtils.ERC1271_INVALID_VALUE, "cross-account recovery replay should be invalid"
+        );
     }
 
     /// @dev Verifies that repeated validation with fixed pre-expiration inputs is stable and stateless.

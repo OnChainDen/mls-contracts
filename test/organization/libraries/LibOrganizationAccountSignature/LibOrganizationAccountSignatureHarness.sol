@@ -43,13 +43,43 @@ contract LibOrganizationAccountSignatureHarness is OrganizationPolicyStateHarnes
 
     /**
      * @dev Wrapper around `_validateRecoverySignature`.
+     *      Uses try/catch via staticcall since abi.decode in the source reverts on malformed input.
      */
-    function validateRecoverySignatureViaLibrary(bytes32 hash, bytes calldata signatureData)
+    function validateRecoverySignatureViaLibrary(address account, bytes32 hash, bytes calldata signatureData)
         external
         view
         returns (bytes4)
     {
-        return LibOrganizationAccountSignature._validateRecoverySignature(hash, signatureData);
+        (bool success, bytes memory result) = address(this)
+            .staticcall(abi.encodeCall(this.validateRecoverySignatureUnsafe, (account, hash, signatureData)));
+
+        if (!success || result.length < 32) {
+            return SignatureUtils.ERC1271_INVALID_VALUE;
+        }
+
+        return abi.decode(result, (bytes4));
+    }
+
+    /**
+     * @dev Raw wrapper around `_validateRecoverySignature`.
+     */
+    function validateRecoverySignatureUnsafe(address account, bytes32 hash, bytes calldata signatureData)
+        external
+        view
+        returns (bytes4)
+    {
+        return LibOrganizationAccountSignature._validateRecoverySignature(account, hash, signatureData);
+    }
+
+    /**
+     * @dev Wrapper around `_getRecoverySignatureHash`.
+     */
+    function getRecoverySignatureHashViaLibrary(address account, bytes32 hash, uint256 expirationTimestamp)
+        external
+        view
+        returns (bytes32)
+    {
+        return LibOrganizationAccountSignature._getRecoverySignatureHash(account, hash, expirationTimestamp);
     }
 
     /**

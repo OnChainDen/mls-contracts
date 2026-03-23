@@ -124,9 +124,40 @@ abstract contract LibOrganizationAccountSignatureTestBase is LibOrganizationAcco
 
     /**
      * @dev Builds a type-prefixed recovery signature payload (`0x00`).
+     *      ABI-encodes the expiration timestamp alongside the inner recovery signature.
      */
-    function _buildRecoverySignature(bytes memory recoverySignature) internal pure returns (bytes memory) {
-        return abi.encodePacked(uint8(0x00), recoverySignature);
+    function _buildRecoverySignature(uint256 expirationTimestamp, bytes memory recoverySignature)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodePacked(uint8(0x00), abi.encode(expirationTimestamp, recoverySignature));
+    }
+
+    /**
+     * @dev Signs the EIP-712 recovery hash for a given account, message hash, and expiration.
+     */
+    function _signRecoverySignature(uint256 privateKey, address account, bytes32 hash, uint256 expirationTimestamp)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes32 recoveryHash = harness.getRecoverySignatureHashViaLibrary(account, hash, expirationTimestamp);
+        return _signHash(privateKey, recoveryHash);
+    }
+
+    /**
+     * @dev Signs the EIP-712 recovery hash using the specified harness.
+     */
+    function _signRecoverySignatureWithHarness(
+        LibOrganizationAccountSignatureHarness sigHarness,
+        uint256 privateKey,
+        address account,
+        bytes32 hash,
+        uint256 expirationTimestamp
+    ) internal view returns (bytes memory) {
+        bytes32 recoveryHash = sigHarness.getRecoverySignatureHashViaLibrary(account, hash, expirationTimestamp);
+        return _signHash(privateKey, recoveryHash);
     }
 
     /**

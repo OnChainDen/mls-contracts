@@ -288,16 +288,40 @@ Disaster Recovery Account Signatures that bypass Guardian and policy checks:
 
 ```
 ┌────────┬──────────────────────────────────────────────────────────────┐
-│ 0x00   │ Raw signature from transactionAndERC1271RecoveryAddress      │
+│ 0x00   │ ABI-encoded recovery expiration and signature                │
 └────────┴──────────────────────────────────────────────────────────────┘
 ```
 
-The signature data is simply the raw signature (65 bytes for EOA, or 23+N bytes for ERC-1271) from the recovery address signing the message hash directly.
+The signature data is ABI-encoded with these fields:
+
+```solidity
+abi.encode(
+    uint256 expirationTimestamp,   // When the recovery signature expires
+    bytes recoverySignature        // Signature from transactionAndERC1271RecoveryAddress
+)
+```
+
+Where `recoverySignature` is the raw signature (65 bytes for EOA, or 23+N bytes for ERC-1271) from the recovery address signing an **EIP-712 typed data hash** that binds the signature to a specific account, organization, and expiration:
+
+```solidity
+RecoverySignatureValidation(
+    address organization,
+    address account,
+    bytes32 hash,
+    uint256 expirationTimestamp,
+    uint256 chainId
+)
+```
+
+This binding prevents cross-account replay and enforces time-bounded validity, matching the expiration behavior of all other signature types in the system.
 
 **Validation flow:**
 1. Check `isRecoverySupportedForTransactionsAndERC1271 == true`
 2. Check `isRecoveryEnabledForTransactionsAndERC1271 == true`
-3. Validate signature is from `transactionAndERC1271RecoveryAddress`
+3. Decode `expirationTimestamp` and `recoverySignature` from the ABI-encoded data
+4. Check expiration: reject if `block.timestamp > expirationTimestamp`
+5. Compute account-bound EIP-712 hash from `{organization, account, messageHash, expirationTimestamp, chainId}`
+6. Validate signature over the EIP-712 hash is from `transactionAndERC1271RecoveryAddress`
 
 **Key differences:**
 
@@ -305,8 +329,9 @@ The signature data is simply the raw signature (65 bytes for EOA, or 23+N bytes 
 |--------|----------------------|-------------------|
 | Guardian required | Yes | No |
 | Policy checks | Full validation | Bypassed |
-| Expiration | Required | None |
+| Expiration | Required | Required |
 | Merkle proofs | Required | None |
+| Account binding | Via initiator/review EIP-712 hashes | Via recovery EIP-712 hash |
 | Use case | Normal operations | Emergency access |
 
 Files: `LibOrganizationAccountSignature.sol`, `LibOrganizationTxRecovery.sol`

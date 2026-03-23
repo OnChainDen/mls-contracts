@@ -738,8 +738,9 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         organization.finalizeEnableTransactionAndERC1271Recovery();
 
         bytes32 recoveryHash = keccak256("orec-trf-7-recovery");
-        bytes memory recoverySignature =
-            abi.encodePacked(uint8(0x00), uint8(0), address(recoverySigner), uint16(2), hex"CAFE");
+        uint256 recoveryExpiration = block.timestamp + 1 days;
+        bytes memory contractSig = abi.encodePacked(uint8(0), address(recoverySigner), uint16(2), hex"CAFE");
+        bytes memory recoverySignature = abi.encodePacked(uint8(0x00), abi.encode(recoveryExpiration, contractSig));
 
         // Call: confirm recovery execution and ERC-1271 validation both work while recovery is enabled, then disable
         // recovery through the real entrypoint and retry both behaviors immediately.

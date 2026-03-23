@@ -47,6 +47,12 @@ library LibOrganizationEIP712 {
         "ReviewSignatureValidation(address organization,address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp,uint256 chainId,bytes initiatorSignature)"
     );
 
+    /// @dev Type hash for recovery signatures on ERC-1271 signature validation requests
+    bytes32 internal constant RECOVERY_SIGNATURE_VALIDATION_TYPEHASH = keccak256(
+        // solhint-disable-next-line max-line-length
+        "RecoverySignatureValidation(address organization,address account,bytes32 hash,uint256 expirationTimestamp,uint256 chainId)"
+    );
+
     /**
      * @dev Computes the EIP-712 domain separator for this organization.
      *      Used for all EIP-712 typed data hashes in transaction and signature validation.
