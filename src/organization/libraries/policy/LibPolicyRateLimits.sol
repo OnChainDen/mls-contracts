@@ -130,9 +130,12 @@ library LibPolicyRateLimits {
     /**
      * @dev Computes the usage key for rate limit tracking.
      *      The usage key is a hash of the policy ID, anchor timestamp, time interval hours,
-     *      and scoped entities. Including anchorTimestamp and timeIntervalHours ensures that
-     *      changing either field on a policy resets tracked usage to zero, preventing
-     *      stale-usage collisions from a previous configuration.
+     *      scope enums, and scoped entities. Including anchorTimestamp and timeIntervalHours
+     *      ensures that changing either field on a policy resets tracked usage to zero,
+     *      preventing stale-usage collisions from a previous configuration.
+     *      Each scope enum is encoded alongside its scoped address to prevent collisions
+     *      between `AcrossAll` (which uses address(0) as sentinel) and `PerEntity` when
+     *      the real address is address(0).
      *      If a scope is AcrossAll, address(0) is used for that component.
      *      If a scope is PerEntity, the actual address is used.
      * @param policyId The policy ID
@@ -165,8 +168,11 @@ library LibPolicyRateLimits {
                 policyId,
                 policy.config.rateLimit.anchorTimestamp,
                 policy.config.rateLimit.timeIntervalHours,
+                policy.config.rateLimit.sourceScope,
                 scopedAccount,
+                policy.config.rateLimit.destinationScope,
                 scopedDestination,
+                policy.config.rateLimit.initiatorScope,
                 scopedInitiator
             )
         );
