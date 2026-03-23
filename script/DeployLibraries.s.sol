@@ -109,8 +109,7 @@ contract DeployLibraries is BaseDeployScript {
         initLibs[3] =
             LinkedLibraryInfo({expectedAddress: expected.txRecoveryAddress, name: "LibOrganizationTxRecovery"});
         initLibs[4] = LinkedLibraryInfo({
-            expectedAddress: expected.guardianRecoveryAddress,
-            name: "LibOrganizationGuardianRecovery"
+            expectedAddress: expected.guardianRecoveryAddress, name: "LibOrganizationGuardianRecovery"
         });
         LinkedLibrariesUtils.validateLinkedLibrariesOrRevert(initInitCode, initLibs);
 
@@ -118,8 +117,7 @@ contract DeployLibraries is BaseDeployScript {
         Logger.logSection("Verify Independent Libraries Linked in LibOrganizationAccountSignature");
         bytes memory accountSigInitCode = type(LibOrganizationAccountSignature).creationCode;
         LinkedLibraryInfo[] memory accountSigLibs = new LinkedLibraryInfo[](2);
-        accountSigLibs[0] =
-            LinkedLibraryInfo({expectedAddress: expected.policyAddress, name: "LibOrganizationPolicy"});
+        accountSigLibs[0] = LinkedLibraryInfo({expectedAddress: expected.policyAddress, name: "LibOrganizationPolicy"});
         accountSigLibs[1] =
             LinkedLibraryInfo({expectedAddress: expected.txRecoveryAddress, name: "LibOrganizationTxRecovery"});
         LinkedLibrariesUtils.validateLinkedLibrariesOrRevert(accountSigInitCode, accountSigLibs);
