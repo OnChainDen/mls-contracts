@@ -93,11 +93,16 @@ library LibPolicyRateLimits {
     }
 
     /**
-     * @dev Gets the current usage for a rate-limited policy
+     * @dev Gets the current usage for a rate-limited policy.
+     *
+     *      The `destination` must be the canonical destination derived via
+     *      `LibPolicyDestination.getActualDestination(to, data, value)`. For ERC-20 token
+     *      transfers this is the token recipient, not the token contract address. See
+     *      `IOrganizationPolicy.getPolicyUsage` for full derivation rules.
      * @param policyId The policy ID
      * @param policy The policy data
      * @param account The source account address
-     * @param destination The destination address
+     * @param destination The canonical destination address (see @dev)
      * @param initiator The initiator address
      * @return The current usage amount within the current time window
      */
@@ -138,10 +143,15 @@ library LibPolicyRateLimits {
      *      the real address is address(0).
      *      If a scope is AcrossAll, address(0) is used for that component.
      *      If a scope is PerEntity, the actual address is used.
+     *
+     *      The `destination` must be the canonical destination derived via
+     *      `LibPolicyDestination.getActualDestination(to, data, value)`. For ERC-20 token
+     *      transfers this is the token recipient, not the token contract address. See
+     *      `IOrganizationPolicy.getPolicyUsage` for full derivation rules.
      * @param policyId The policy ID
      * @param policy The policy data
      * @param account The source account address
-     * @param destination The destination address
+     * @param destination The canonical destination address (see @dev)
      * @param initiator The initiator address
      * @return The computed usage key
      */

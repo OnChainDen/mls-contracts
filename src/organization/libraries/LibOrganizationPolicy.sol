@@ -192,10 +192,15 @@ library LibOrganizationPolicy {
     /**
      * @dev Gets the current usage for a rate-limited policy.
      *      Delegates to LibPolicyRateLimits.
+     *
+     *      The `destination` must be the canonical destination derived via
+     *      `LibPolicyDestination.getActualDestination(to, data, value)`. For ERC-20 token
+     *      transfers this is the token recipient, not the token contract address. See
+     *      `IOrganizationPolicy.getPolicyUsage` for full derivation rules.
      * @param policyId The policy ID
      * @param policy The policy data
      * @param account The source account address
-     * @param destination The destination address
+     * @param destination The canonical destination address (see @dev)
      * @param initiator The initiator address
      * @return The current usage amount within the current time window
      */
@@ -270,10 +275,15 @@ library LibOrganizationPolicy {
     /**
      * @notice Computes the usage key for rate limit tracking
      * @dev Delegates to LibPolicyRateLimits.
+     *
+     *      The `destination` must be the canonical destination derived via
+     *      `LibPolicyDestination.getActualDestination(to, data, value)`. For ERC-20 token
+     *      transfers this is the token recipient, not the token contract address. See
+     *      `IOrganizationPolicy.getPolicyUsage` for full derivation rules.
      * @param policyId The policy ID
      * @param policy The policy data
      * @param account The source account address
-     * @param destination The destination address
+     * @param destination The canonical destination address (see @dev)
      * @param initiator The initiator address
      * @return The computed usage key
      */
