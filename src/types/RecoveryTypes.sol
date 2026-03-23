@@ -28,6 +28,7 @@ struct PendingRecoveryInitTimelock {
  * @param timelockDurationSeconds The duration in seconds for tx/ERC1271 recovery enable timelocks
  * @param pendingEnableTimestamp Timestamp when pending tx recovery enable can be finalized (0 = no pending)
  * @param pendingInit Pending deferred initialization state
+ * @param initAttemptId Monotonic counter incremented on each deferred initialization attempt for replay protection
  */
 struct TxRecoveryState {
     address recoveryAddress;
@@ -35,6 +36,7 @@ struct TxRecoveryState {
     uint256 timelockDurationSeconds;
     uint256 pendingEnableTimestamp;
     PendingRecoveryInitTimelock pendingInit;
+    uint256 initAttemptId;
 }
 
 /**
@@ -45,6 +47,7 @@ struct TxRecoveryState {
  * @param timelockDurationSeconds The duration in seconds for guardian recovery timelocks
  * @param pendingGuardianTimestamp When the recovery flow pending update timelock expires (0 = no pending)
  * @param pendingInit Pending deferred initialization state
+ * @param initAttemptId Monotonic counter incremented on each deferred initialization attempt for replay protection
  */
 struct GuardianRecoveryState {
     address recoveryAddress;
@@ -53,4 +56,5 @@ struct GuardianRecoveryState {
     uint256 timelockDurationSeconds;
     uint256 pendingGuardianTimestamp;
     PendingRecoveryInitTimelock pendingInit;
+    uint256 initAttemptId;
 }

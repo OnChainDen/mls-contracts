@@ -157,6 +157,9 @@ library LibOrganizationTxRecovery {
 
         uint256 canFinalizeAtTimestamp = LibOrganizationAdminOperationTimelock.computeCanFinalizeAtTimestamp();
 
+        // Increment attempt counter for replay protection across cancel-and-reinitiate flows
+        ++txRecovery.initAttemptId;
+
         // Store pending initialization values
         txRecovery.pendingInit.pendingRecoveryAddress = transactionAndERC1271RecoveryAddress;
         txRecovery.pendingInit.pendingTimelockDurationSeconds = txRecoveryTimelockDurationSeconds;

@@ -38,11 +38,12 @@ abstract contract OrganizationGuardianBase is OrganizationModifiers, IOrganizati
 
     /// @inheritdoc IOrganizationGuardian
     function finalizeGuardianUpdate(AdminAuthParams calldata authParams) external override onlyGuardian {
-        // Get pending guardian for operation data
+        // Get pending guardian and attempt ID for operation data
         address pendingGuardianAddr = LibOrganizationGuardian.getPendingGuardian();
+        uint256 attemptId = LibOrganizationGuardian.getGuardianUpdateAttemptId();
 
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(pendingGuardianAddr);
+        // Encode the operation data for validation (attemptId binds signatures to this specific attempt)
+        bytes memory operationData = abi.encode(pendingGuardianAddr, attemptId);
 
         // Validate that the current admin has authorized this operation (separate OperationType from initiate)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
@@ -57,11 +58,12 @@ abstract contract OrganizationGuardianBase is OrganizationModifiers, IOrganizati
 
     /// @inheritdoc IOrganizationGuardian
     function cancelGuardianUpdate(AdminAuthParams calldata authParams) external override onlyGuardian {
-        // Get pending guardian for operation data
+        // Get pending guardian and attempt ID for operation data
         address pendingGuardianAddr = LibOrganizationGuardian.getPendingGuardian();
+        uint256 attemptId = LibOrganizationGuardian.getGuardianUpdateAttemptId();
 
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(pendingGuardianAddr);
+        // Encode the operation data for validation (attemptId binds signatures to this specific attempt)
+        bytes memory operationData = abi.encode(pendingGuardianAddr, attemptId);
 
         // Validate that the current admin has authorized this cancellation (dedicated CancelUpdateGuardian type)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
@@ -97,5 +99,10 @@ abstract contract OrganizationGuardianBase is OrganizationModifiers, IOrganizati
     /// @inheritdoc IOrganizationGuardian
     function isGuardianUpdateReadyForAcceptance() external view override returns (bool) {
         return LibOrganizationGuardian.getIsGuardianUpdateReadyForAcceptance();
+    }
+
+    /// @inheritdoc IOrganizationGuardian
+    function guardianUpdateAttemptId() external view override returns (uint256) {
+        return LibOrganizationGuardian.getGuardianUpdateAttemptId();
     }
 }

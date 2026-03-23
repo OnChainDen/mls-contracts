@@ -161,7 +161,8 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
                 pendingRecoveryAddress: address(0xABC3),
                 pendingTimelockDurationSeconds: 4 days,
                 pendingTimestamp: block.timestamp + 4321
-            })
+            }),
+            initAttemptId: 0
         });
         harness.setGuardianRecoveryState(beforeState);
 
@@ -605,5 +606,174 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         }
 
         // Verify
+    }
+
+    /// @dev Verifies that stale finalize signatures are rejected after cancel-and-reinitiate with identical params.
+    /// This is the core replay-protection test for the deferred tx recovery init flow.
+    function test_staleFinalizeAuth_rejectedAfterCancelAndReinitiateSameParams() public {
+        address altTxRecovery = address(0x710AA);
+
+        // Setup: clear recovery state for deferred init
+        _setTxRecoveryState({
+            recoveryAddress: address(0),
+            isEnabled: false,
+            timelockDurationSeconds: 0,
+            pendingEnableTimestamp: 0,
+            pendingRecoveryAddress: address(0),
+            pendingTimelockDurationSeconds: 0,
+            pendingTimestamp: 0
+        });
+
+        (AdminAuthParams memory initAuthA,) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: altTxRecovery,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 51_001,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(altTxRecovery, TX_RECOVERY_TIMELOCK, initAuthA);
+
+        (AdminAuthParams memory staleAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            recoveryAddress: altTxRecovery,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 51_002,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        (AdminAuthParams memory cancelAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: altTxRecovery,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 51_003,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(cancelAuth);
+
+        (AdminAuthParams memory initAuthB,) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: altTxRecovery,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 51_004,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(altTxRecovery, TX_RECOVERY_TIMELOCK, initAuthB);
+
+        // Call: stale finalize from canceled attempt should be rejected
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK);
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(staleAuth);
+
+        (AdminAuthParams memory freshAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            recoveryAddress: altTxRecovery,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 51_005,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(freshAuth);
+
+        assertEq(
+            harness.getTxRecoveryState().recoveryAddress,
+            altTxRecovery,
+            "tx recovery should be configured after fresh finalize"
+        );
+    }
+
+    /// @dev Verifies that stale cancel signatures are rejected after cancel-and-reinitiate with identical params.
+    function test_staleCancelAuth_rejectedAfterCancelAndReinitiateSameParams() public {
+        address altTxRecovery = address(0x710AA);
+
+        // Setup: clear recovery state for deferred init
+        _setTxRecoveryState({
+            recoveryAddress: address(0),
+            isEnabled: false,
+            timelockDurationSeconds: 0,
+            pendingEnableTimestamp: 0,
+            pendingRecoveryAddress: address(0),
+            pendingTimelockDurationSeconds: 0,
+            pendingTimestamp: 0
+        });
+
+        (AdminAuthParams memory initAuthA,) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: altTxRecovery,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 52_001,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(altTxRecovery, TX_RECOVERY_TIMELOCK, initAuthA);
+
+        (AdminAuthParams memory staleCancelAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: altTxRecovery,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 52_002,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        (AdminAuthParams memory firstCancelAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: altTxRecovery,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 52_003,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(firstCancelAuth);
+
+        (AdminAuthParams memory initAuthB,) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: altTxRecovery,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 52_004,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(altTxRecovery, TX_RECOVERY_TIMELOCK, initAuthB);
+
+        // Call: stale cancel auth from the canceled attempt should be rejected
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(staleCancelAuth);
+
+        // Verify: fresh cancel auth succeeds
+        (AdminAuthParams memory freshCancelAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: altTxRecovery,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 52_005,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(freshCancelAuth);
+
+        assertEq(
+            harness.getTxRecoveryState().pendingInit.pendingTimestamp, 0, "fresh cancel should clear the pending init"
+        );
     }
 }

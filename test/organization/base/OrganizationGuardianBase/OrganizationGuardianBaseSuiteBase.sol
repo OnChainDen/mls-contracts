@@ -77,7 +77,7 @@ abstract contract OrganizationGuardianBaseSuiteBase is OrganizationAdminTestBase
         bool isApproval,
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
-        operationData = abi.encode(pendingGuardian);
+        operationData = abi.encode(pendingGuardian, harness.guardianUpdateAttemptId());
         auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.FinalizeUpdateGuardian,
             operationData: operationData,
@@ -98,7 +98,7 @@ abstract contract OrganizationGuardianBaseSuiteBase is OrganizationAdminTestBase
         bool isApproval,
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
-        operationData = abi.encode(pendingGuardian);
+        operationData = abi.encode(pendingGuardian, harness.guardianUpdateAttemptId());
         auth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.CancelUpdateGuardian,
             operationData: operationData,

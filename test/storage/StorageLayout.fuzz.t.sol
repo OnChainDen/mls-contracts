@@ -47,6 +47,7 @@ contract StorageLayoutFuzzTest is StorageLayoutTestBase {
         bool guardianReady = _deriveBool(seedA, 18);
         address pendingGuardian = _deriveAddress(seedA, 19);
         uint256 pendingGuardianTimestamp = _deriveUint(seedA, 20);
+        uint256 guardianUpdateAttemptId = _deriveUint(seedA, 29);
 
         address member = _deriveAddress(seedA, 21);
         bool memberStatus = _deriveBool(seedA, 22);
@@ -94,7 +95,9 @@ contract StorageLayoutFuzzTest is StorageLayoutTestBase {
         harness.setGroupExists(groupId, groupExists);
         harness.setGroupMember(groupId, groupMember, groupMemberStatus);
         harness.setWasGroupDeleted(groupId, groupDeleted);
-        harness.setGuardianState(guardian, guardianReady, pendingGuardian, pendingGuardianTimestamp);
+        harness.setGuardianState(
+            guardian, guardianReady, pendingGuardian, pendingGuardianTimestamp, guardianUpdateAttemptId
+        );
         harness.setMemberStatus(member, memberStatus);
         harness.setPoliciesRoot(policiesRoot);
         harness.setPolicyUsage(usageKey, usageWindow, usageValue);
@@ -127,12 +130,14 @@ contract StorageLayoutFuzzTest is StorageLayoutTestBase {
             address actualGuardian,
             bool actualGuardianReady,
             address actualPendingGuardian,
-            uint256 actualPendingTimestamp
+            uint256 actualPendingTimestamp,
+            uint256 actualAttemptId
         ) = harness.getGuardianState();
         assertEq(actualGuardian, guardian, "guardian mismatch");
         assertEq(actualGuardianReady, guardianReady, "isGuardianUpdateReadyForAcceptance mismatch");
         assertEq(actualPendingGuardian, pendingGuardian, "pendingGuardian mismatch");
         assertEq(actualPendingTimestamp, pendingGuardianTimestamp, "pendingGuardianUpdateTimestamp mismatch");
+        assertEq(actualAttemptId, guardianUpdateAttemptId, "guardianUpdateAttemptId mismatch");
 
         assertEq(harness.getMemberStatus(member), memberStatus, "isMember mapping mismatch");
         assertEq(harness.getPoliciesRoot(), policiesRoot, "policiesRoot mismatch");

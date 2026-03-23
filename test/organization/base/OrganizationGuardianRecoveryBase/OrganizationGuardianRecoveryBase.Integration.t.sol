@@ -141,6 +141,160 @@ contract OrganizationGuardianRecoveryBaseIntegrationTest is OrganizationGuardian
         );
     }
 
+    /// @dev Verifies that stale finalize signatures are rejected after cancel-and-reinitiate with identical params.
+    /// This is the core replay-protection test for the deferred guardian recovery init flow.
+    function test_staleFinalizeAuth_rejectedAfterCancelAndReinitiateSameParams() public {
+        // Setup
+        recoveryStateHarness.resetGuardianRecoveryStorage();
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+
+        (AdminAuthParams memory initAuthA,) = _buildInitiateInitializeGuardianRecoveryAuth({
+            recoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
+            timelockDurationSeconds: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 41_001,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, initAuthA);
+
+        (AdminAuthParams memory staleAuth,) = _buildFinalizeInitializeGuardianRecoveryAuth({
+            pendingAddress: GUARDIAN_RECOVERY_ADDRESS,
+            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 41_002,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        (AdminAuthParams memory cancelAuth,) = _buildCancelInitializeGuardianRecoveryAuth({
+            pendingAddress: GUARDIAN_RECOVERY_ADDRESS,
+            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 41_003,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeGuardianRecovery(cancelAuth);
+
+        (AdminAuthParams memory initAuthB,) = _buildInitiateInitializeGuardianRecoveryAuth({
+            recoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
+            timelockDurationSeconds: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 41_004,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, initAuthB);
+
+        // Call: stale finalize auth from canceled attempt should be rejected
+        vm.warp(block.timestamp + recoveryStateHarness.getAdminOperationTimelockDurationSeconds());
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeGuardianRecovery(staleAuth);
+
+        // Verify: fresh auth succeeds and configures recovery
+        (AdminAuthParams memory freshAuth,) = _buildFinalizeInitializeGuardianRecoveryAuth({
+            pendingAddress: GUARDIAN_RECOVERY_ADDRESS,
+            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 41_005,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeGuardianRecovery(freshAuth);
+
+        assertEq(
+            harness.getGuardianRecoveryState().recoveryAddress,
+            GUARDIAN_RECOVERY_ADDRESS,
+            "recovery should be configured after fresh finalize"
+        );
+    }
+
+    /// @dev Verifies that stale cancel signatures are rejected after cancel-and-reinitiate with identical params.
+    function test_staleCancelAuth_rejectedAfterCancelAndReinitiateSameParams() public {
+        // Setup
+        recoveryStateHarness.resetGuardianRecoveryStorage();
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+
+        (AdminAuthParams memory initAuthA,) = _buildInitiateInitializeGuardianRecoveryAuth({
+            recoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
+            timelockDurationSeconds: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 42_001,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, initAuthA);
+
+        (AdminAuthParams memory staleCancelAuth,) = _buildCancelInitializeGuardianRecoveryAuth({
+            pendingAddress: GUARDIAN_RECOVERY_ADDRESS,
+            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 42_002,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        (AdminAuthParams memory firstCancelAuth,) = _buildCancelInitializeGuardianRecoveryAuth({
+            pendingAddress: GUARDIAN_RECOVERY_ADDRESS,
+            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 42_003,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeGuardianRecovery(firstCancelAuth);
+
+        (AdminAuthParams memory initAuthB,) = _buildInitiateInitializeGuardianRecoveryAuth({
+            recoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
+            timelockDurationSeconds: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 42_004,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, initAuthB);
+
+        // Call: stale cancel auth from the canceled attempt should be rejected
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeGuardianRecovery(staleCancelAuth);
+
+        // Verify: fresh cancel auth succeeds
+        (AdminAuthParams memory freshCancelAuth,) = _buildCancelInitializeGuardianRecoveryAuth({
+            pendingAddress: GUARDIAN_RECOVERY_ADDRESS,
+            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 42_005,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeGuardianRecovery(freshCancelAuth);
+
+        assertEq(
+            harness.getGuardianRecoveryState().pendingInit.pendingTimestamp,
+            0,
+            "fresh cancel should clear the pending init"
+        );
+    }
+
     /// @dev Verifies that unconfigured recovery address causes base recovery entry points to revert via
     /// onlyGuardianRecoveryAddress.
     function test_unconfiguredRecoveryAddress_baseRecoveryEntryPointsAlwaysRevertAndStateUnchanged() public {

@@ -239,18 +239,21 @@ contract StorageLayoutHarness {
      * @param isUpdateReadyForAcceptance Ready-for-acceptance flag.
      * @param pendingGuardian Pending guardian address.
      * @param pendingGuardianUpdateTimestamp Pending guardian timestamp.
+     * @param guardianUpdateAttemptId Guardian update attempt counter.
      */
     function setGuardianState(
         address guardian,
         bool isUpdateReadyForAcceptance,
         address pendingGuardian,
-        uint256 pendingGuardianUpdateTimestamp
+        uint256 pendingGuardianUpdateTimestamp,
+        uint256 guardianUpdateAttemptId
     ) external {
         LibOrganizationGuardianStorage.Layout storage layout = LibOrganizationGuardianStorage.layout();
         layout.guardian = guardian;
         layout.isGuardianUpdateReadyForAcceptance = isUpdateReadyForAcceptance;
         layout.pendingGuardian = pendingGuardian;
         layout.pendingGuardianUpdateTimestamp = pendingGuardianUpdateTimestamp;
+        layout.guardianUpdateAttemptId = guardianUpdateAttemptId;
     }
 
     /**
@@ -259,14 +262,16 @@ contract StorageLayoutHarness {
      * @return isUpdateReadyForAcceptance Ready-for-acceptance flag.
      * @return pendingGuardian Pending guardian address.
      * @return pendingGuardianUpdateTimestamp Pending guardian timestamp.
+     * @return guardianUpdateAttemptId Guardian update attempt counter.
      */
-    function getGuardianState() external view returns (address, bool, address, uint256) {
+    function getGuardianState() external view returns (address, bool, address, uint256, uint256) {
         LibOrganizationGuardianStorage.Layout storage layout = LibOrganizationGuardianStorage.layout();
         return (
             layout.guardian,
             layout.isGuardianUpdateReadyForAcceptance,
             layout.pendingGuardian,
-            layout.pendingGuardianUpdateTimestamp
+            layout.pendingGuardianUpdateTimestamp,
+            layout.guardianUpdateAttemptId
         );
     }
 
@@ -550,6 +555,9 @@ contract StorageLayoutInvariantHandler {
     /// @dev Expected pending guardian timestamp scalar.
     uint256 public expectedPendingGuardianUpdateTimestamp;
 
+    /// @dev Expected guardian update attempt counter.
+    uint256 public expectedGuardianUpdateAttemptId;
+
     /// @dev Expected isMember value for TRACKED_MEMBER.
     bool public expectedTrackedMemberStatus;
 
@@ -726,19 +734,24 @@ contract StorageLayoutInvariantHandler {
      * @param isReady Ready-for-acceptance flag.
      * @param pendingGuardian Pending guardian scalar value.
      * @param pendingGuardianUpdateTimestamp Pending timestamp scalar value.
+     * @param guardianUpdateAttemptId Guardian update attempt counter value.
      */
     function writeGuardian(
         address guardian,
         bool isReady,
         address pendingGuardian,
-        uint256 pendingGuardianUpdateTimestamp
+        uint256 pendingGuardianUpdateTimestamp,
+        uint256 guardianUpdateAttemptId
     ) external {
-        HARNESS.setGuardianState(guardian, isReady, pendingGuardian, pendingGuardianUpdateTimestamp);
+        HARNESS.setGuardianState(
+            guardian, isReady, pendingGuardian, pendingGuardianUpdateTimestamp, guardianUpdateAttemptId
+        );
 
         expectedGuardian = guardian;
         expectedGuardianReadyForAcceptance = isReady;
         expectedPendingGuardian = pendingGuardian;
         expectedPendingGuardianUpdateTimestamp = pendingGuardianUpdateTimestamp;
+        expectedGuardianUpdateAttemptId = guardianUpdateAttemptId;
     }
 
     /**
@@ -822,7 +835,8 @@ contract StorageLayoutInvariantHandler {
             pendingEnableTimestamp: pendingEnableTimestamp,
             pendingInit: _buildPendingRecoveryInit(
                 pendingRecoveryAddress, pendingTimelockDurationSeconds, pendingTimestamp
-            )
+            ),
+            initAttemptId: 0
         });
 
         HARNESS.setTxRecoveryState(txRecoveryState);
@@ -865,7 +879,8 @@ contract StorageLayoutInvariantHandler {
             pendingGuardianTimestamp: pendingGuardianTimestamp,
             pendingInit: _buildPendingRecoveryInit(
                 pendingRecoveryAddress, pendingTimelockDurationSeconds, pendingTimestamp
-            )
+            ),
+            initAttemptId: 0
         });
 
         HARNESS.setGuardianRecoveryState(guardianRecoveryState);
@@ -900,6 +915,7 @@ contract StorageLayoutInvariantHandler {
         expectedGuardianReadyForAcceptance = true;
         expectedPendingGuardian = address(0x6002);
         expectedPendingGuardianUpdateTimestamp = 123_456;
+        expectedGuardianUpdateAttemptId = 789;
         expectedTrackedMemberStatus = true;
         expectedPoliciesRoot = keccak256("seed.policies.root");
         expectedTrackedPolicyUsage = 77;
@@ -947,7 +963,8 @@ contract StorageLayoutInvariantHandler {
             expectedGuardian,
             expectedGuardianReadyForAcceptance,
             expectedPendingGuardian,
-            expectedPendingGuardianUpdateTimestamp
+            expectedPendingGuardianUpdateTimestamp,
+            expectedGuardianUpdateAttemptId
         );
 
         HARNESS.setMemberStatus(TRACKED_MEMBER, expectedTrackedMemberStatus);
@@ -968,7 +985,8 @@ contract StorageLayoutInvariantHandler {
                 expectedTxPendingInitRecoveryAddress,
                 expectedTxPendingInitTimelockDurationSeconds,
                 expectedTxPendingInitTimestamp
-            )
+            ),
+            initAttemptId: 0
         });
         HARNESS.setTxRecoveryState(txRecoveryState);
 
@@ -982,7 +1000,8 @@ contract StorageLayoutInvariantHandler {
                 expectedGuardianPendingInitRecoveryAddress,
                 expectedGuardianPendingInitTimelockDurationSeconds,
                 expectedGuardianPendingInitTimestamp
-            )
+            ),
+            initAttemptId: 0
         });
         HARNESS.setGuardianRecoveryState(guardianRecoveryState);
     }

@@ -140,8 +140,12 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         MockERC1271ValidSigner contractRecovery = new MockERC1271ValidSigner();
         _setRecoveryState(harness, address(contractRecovery), true);
 
-        bytes memory contractSignature =
-            abi.encodePacked(uint8(0x00), uint8(0), address(contractRecovery), uint16(2), hex"CAFE");
+        uint256 expiration = block.timestamp + 1 days;
+        // forgefmt: disable-next-item
+        bytes memory contractSignature = abi.encodePacked(
+            uint8(0x00),
+            abi.encode(expiration, _buildContractSignature(address(contractRecovery), hex"CAFE"))
+        );
 
         // Call: validate the contract-signature recovery payload through the base entry point.
         vm.prank(ACCOUNT);
@@ -176,7 +180,10 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         bytes memory validSignature = abi.encodePacked(
             uint8(0x00), abi.encode(expiration, _signHash(GUARDIAN_PK, recoveryHash))
         );
-        bytes memory malformedSignature = hex"001b";
+        // forgefmt: disable-next-item
+        bytes memory malformedSignature = abi.encodePacked(
+            uint8(0x00), abi.encode(expiration, hex"1b")
+        );
         // forgefmt: disable-next-item
         bytes memory highSSignature = abi.encodePacked(
             uint8(0x00), abi.encode(expiration, _makeHighSSignature(GUARDIAN_PK, recoveryHash))
@@ -205,8 +212,15 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         MockERC1271ValidSigner contractRecovery = new MockERC1271ValidSigner();
         _setRecoveryState(harness, address(contractRecovery), true);
 
-        bytes memory truncatedHeader = abi.encodePacked(uint8(0x00), bytes10(0x0102030405060708090A));
-        bytes memory oversizedInnerLength = abi.encodePacked(uint8(0), address(contractRecovery), uint16(32), hex"CAFE");
+        uint256 expiration = block.timestamp + 1 days;
+        // forgefmt: disable-next-item
+        bytes memory truncatedHeader = abi.encodePacked(
+            uint8(0x00), abi.encode(expiration, abi.encodePacked(uint8(0), bytes10(0x0102030405060708090A)))
+        );
+        // forgefmt: disable-next-item
+        bytes memory oversizedInnerLength = abi.encodePacked(
+            uint8(0x00), abi.encode(expiration, abi.encodePacked(uint8(0), address(contractRecovery), uint16(32), hex"CAFE"))
+        );
 
         // Call: validate malformed ERC-1271 recovery encodings through the base entry point.
         vm.startPrank(ACCOUNT);
@@ -365,7 +379,8 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
     }

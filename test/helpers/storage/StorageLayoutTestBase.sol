@@ -122,7 +122,7 @@ abstract contract StorageLayoutTestBase is Test, StorageLayoutRecoveryBuilders, 
         target.setGroupExists(TEST_GROUP_ID, true);
         target.setGroupMember(TEST_GROUP_ID, TEST_MEMBER, true);
         target.setWasGroupDeleted(TEST_GROUP_ID + 1, true);
-        target.setGuardianState(TEST_GUARDIAN, true, TEST_PENDING_GUARDIAN, 987_654);
+        target.setGuardianState(TEST_GUARDIAN, true, TEST_PENDING_GUARDIAN, 987_654, 42);
         target.setMemberStatus(TEST_MEMBER, true);
         target.setPoliciesRoot(TEST_POLICIES_ROOT);
         target.setPolicyUsage(TEST_POLICY_USAGE_KEY, TEST_POLICY_WINDOW, 8888);
@@ -167,11 +167,14 @@ abstract contract StorageLayoutTestBase is Test, StorageLayoutRecoveryBuilders, 
         assertTrue(target.isGroupMember(TEST_GROUP_ID, TEST_MEMBER), "isGroupMember test fixture mismatch");
         assertTrue(target.wasGroupDeleted(TEST_GROUP_ID + 1), "wasGroupDeleted test fixture mismatch");
 
-        (address guardian, bool ready, address pendingGuardian, uint256 pendingTimestamp) = target.getGuardianState();
+        // forgefmt: disable-next-item
+        (address guardian, bool ready, address pendingGuardian, uint256 pendingTimestamp, uint256 attemptId) =
+            target.getGuardianState();
         assertEq(guardian, TEST_GUARDIAN, "guardian test fixture mismatch");
         assertTrue(ready, "isGuardianUpdateReadyForAcceptance test fixture mismatch");
         assertEq(pendingGuardian, TEST_PENDING_GUARDIAN, "pendingGuardian test fixture mismatch");
         assertEq(pendingTimestamp, 987_654, "pendingGuardianUpdateTimestamp test fixture mismatch");
+        assertEq(attemptId, 42, "guardianUpdateAttemptId test fixture mismatch");
 
         assertTrue(target.getMemberStatus(TEST_MEMBER), "isMember test fixture mismatch");
         assertEq(target.getPoliciesRoot(), TEST_POLICIES_ROOT, "policiesRoot test fixture mismatch");
@@ -232,6 +235,7 @@ abstract contract StorageLayoutTestBase is Test, StorageLayoutRecoveryBuilders, 
             expected.pendingInit.pendingTimestamp,
             "txRecovery.pendingInit.pendingTimestamp mismatch"
         );
+        assertEq(actual.initAttemptId, expected.initAttemptId, "txRecovery.initAttemptId mismatch");
     }
 
     /**
@@ -273,5 +277,6 @@ abstract contract StorageLayoutTestBase is Test, StorageLayoutRecoveryBuilders, 
             expected.pendingInit.pendingTimestamp,
             "guardianRecovery.pendingInit.pendingTimestamp mismatch"
         );
+        assertEq(actual.initAttemptId, expected.initAttemptId, "guardianRecovery.initAttemptId mismatch");
     }
 }

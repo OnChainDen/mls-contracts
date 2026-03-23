@@ -108,7 +108,8 @@ contract LibOrganizationTxRecoveryPlanHarness {
             pendingEnableTimestamp: 0,
             pendingInit: PendingRecoveryInitTimelock({
                 pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-            })
+            }),
+            initAttemptId: 0
         });
     }
 }
@@ -234,7 +235,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
 
@@ -273,7 +275,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: block.timestamp + 1,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
 
@@ -296,7 +299,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: block.timestamp + 1,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
 
@@ -319,7 +323,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         vm.expectRevert(
@@ -346,7 +351,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
 
@@ -362,7 +368,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: block.timestamp + 1,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         vm.expectRevert(IOrganizationTxRecovery.TxRecoveryEnableAlreadyPending.selector);
@@ -491,7 +498,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: pending,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
 
@@ -519,7 +527,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: pending,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
 
@@ -569,7 +578,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         bool enabledResult = harness.isValidRecoverySignature(MESSAGE_HASH, validSignature);
@@ -583,7 +593,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         bool disabledResult = harness.isValidRecoverySignature(MESSAGE_HASH, validSignature);
@@ -725,7 +736,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 123,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         harness.resetTxRecoveryState();
@@ -820,7 +832,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                     pendingRecoveryAddress: address(0x9999),
                     pendingTimelockDurationSeconds: TX_TIMELOCK,
                     pendingTimestamp: pendingTimestamp
-                })
+                }),
+                initAttemptId: 0
             })
         );
 
@@ -904,7 +917,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
 
@@ -919,7 +933,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotConfigured.selector);
@@ -933,7 +948,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotConfigured.selector);
@@ -947,7 +963,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: block.timestamp + 7,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotEnabled.selector);
@@ -962,7 +979,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotConfigured.selector);
@@ -984,7 +1002,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         assertFalse(harness.isValidRecoverySignature(MESSAGE_HASH, bytes("")), "unconfigured should return false");
@@ -997,7 +1016,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
 
@@ -1029,7 +1049,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
 
@@ -1044,7 +1065,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         bytes memory wrongMagicSig = _buildContractSignature(address(wrongMagicContract), hex"ABCD");
@@ -1058,7 +1080,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         bytes memory revertingSig = _buildContractSignature(address(revertingContract), hex"BEEF");
@@ -1081,7 +1104,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         bytes memory shortReturnSig = _buildContractSignature(address(shortReturnContract), hex"CAFE");
@@ -1097,7 +1121,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
 
@@ -1115,7 +1140,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         bool enabledResult = harness.isValidRecoverySignature(MESSAGE_HASH, validEoa);
@@ -1149,7 +1175,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
 
@@ -1208,7 +1235,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                     pendingRecoveryAddress: address(0xABC1),
                     pendingTimelockDurationSeconds: TX_TIMELOCK,
                     pendingTimestamp: block.timestamp + 100
-                })
+                }),
+                initAttemptId: 0
             })
         );
 
@@ -1245,7 +1273,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         vm.expectRevert(IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured.selector);
@@ -1259,7 +1288,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         vm.expectRevert(IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured.selector);
@@ -1273,7 +1303,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         vm.expectRevert(IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured.selector);
@@ -1613,7 +1644,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
             pendingEnableTimestamp: 0,
             pendingInit: PendingRecoveryInitTimelock({
                 pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-            })
+            }),
+            initAttemptId: 0
         });
         TxRecoveryState memory unconfigured = TxRecoveryState({
             recoveryAddress: address(0),
@@ -1622,7 +1654,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
             pendingEnableTimestamp: 0,
             pendingInit: PendingRecoveryInitTimelock({
                 pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-            })
+            }),
+            initAttemptId: 0
         });
         TxRecoveryState memory configuredDisabled = TxRecoveryState({
             recoveryAddress: configuredRecoveryAddress,
@@ -1631,7 +1664,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
             pendingEnableTimestamp: 0,
             pendingInit: PendingRecoveryInitTimelock({
                 pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-            })
+            }),
+            initAttemptId: 0
         });
 
         // Call: evaluate the allowed path plus the unconfigured and disabled rejection branches.
@@ -1669,7 +1703,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         bool eoaFirst = harness.isValidRecoverySignature(MESSAGE_HASH, validEoaSignature);
@@ -1683,7 +1718,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         bool eoaSecond = harness.isValidRecoverySignature(MESSAGE_HASH, validEoaSignature);
@@ -1697,7 +1733,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         bool contractFirst = harness.isValidRecoverySignature(MESSAGE_HASH, validContractSignature);
@@ -1711,7 +1748,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         bool contractSecond = harness.isValidRecoverySignature(MESSAGE_HASH, validContractSignature);
@@ -1745,7 +1783,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
                 pendingEnableTimestamp: 0,
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-                })
+                }),
+                initAttemptId: 0
             })
         );
         bytes memory signature = _signHash(RECOVERY_PK, originalHash);

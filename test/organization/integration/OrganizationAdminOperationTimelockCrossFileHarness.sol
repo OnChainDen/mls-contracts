@@ -177,7 +177,8 @@ contract OrganizationAdminOperationTimelockCrossFileHarness is OrganizationGuard
             pendingEnableTimestamp: 0,
             pendingInit: PendingRecoveryInitTimelock({
                 pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
-            })
+            }),
+            initAttemptId: 0
         });
     }
 }

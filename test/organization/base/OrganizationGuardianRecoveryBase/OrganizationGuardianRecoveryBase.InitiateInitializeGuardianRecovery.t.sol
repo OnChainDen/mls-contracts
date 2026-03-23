@@ -396,14 +396,6 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        (AdminAuthParams memory cancelAuth,) = _buildCancelInitializeGuardianRecoveryAuth({
-            pendingAddress: GUARDIAN_RECOVERY_ADDRESS_B,
-            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
-            salt: 11_021,
-            expiration: block.timestamp + 1 days,
-            isApproval: true,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
         (AdminAuthParams memory secondInitiateAuth,) = _buildInitiateInitializeGuardianRecoveryAuth({
             recoveryAddress: GUARDIAN_RECOVERY_ADDRESS_B,
             timelockDurationSeconds: GUARDIAN_RECOVERY_TIMELOCK,
@@ -423,6 +415,16 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         harness.initiateInitializeGuardianRecovery(
             GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, firstInitiateAuth
         );
+
+        // Build cancelAuth after initiation so the attempt ID in the digest matches the incremented counter.
+        (AdminAuthParams memory cancelAuth,) = _buildCancelInitializeGuardianRecoveryAuth({
+            pendingAddress: GUARDIAN_RECOVERY_ADDRESS_B,
+            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 11_021,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
 
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(cancelAuth);
@@ -507,5 +509,59 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
             GUARDIAN_RECOVERY_TIMELOCK,
             "already-pending revert should preserve the existing pending timelock"
         );
+    }
+
+    /// @dev Verifies that `initAttemptId` increments on each initiation and persists across cancellations.
+    function test_initiateInitializeGuardianRecovery_incrementsInitAttemptId() public {
+        // Setup
+        recoveryStateHarness.resetGuardianRecoveryStorage();
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+
+        // Verify: starts at 0
+        assertEq(harness.getGuardianRecoveryState().initAttemptId, 0, "initAttemptId should start at 0");
+
+        // Call: first initiation
+        (AdminAuthParams memory initAuth1,) = _buildInitiateInitializeGuardianRecoveryAuth({
+            recoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
+            timelockDurationSeconds: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 7001,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, initAuth1);
+
+        assertEq(
+            harness.getGuardianRecoveryState().initAttemptId, 1, "initAttemptId should be 1 after first initiation"
+        );
+
+        // Call: cancel
+        (AdminAuthParams memory cancelAuth,) = _buildCancelInitializeGuardianRecoveryAuth({
+            pendingAddress: GUARDIAN_RECOVERY_ADDRESS,
+            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 7002,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeGuardianRecovery(cancelAuth);
+
+        assertEq(harness.getGuardianRecoveryState().initAttemptId, 1, "initAttemptId should persist after cancel");
+
+        // Call: re-initiate
+        (AdminAuthParams memory initAuth2,) = _buildInitiateInitializeGuardianRecoveryAuth({
+            recoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
+            timelockDurationSeconds: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 7003,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, initAuth2);
+
+        assertEq(harness.getGuardianRecoveryState().initAttemptId, 2, "initAttemptId should be 2 after re-initiation");
     }
 }

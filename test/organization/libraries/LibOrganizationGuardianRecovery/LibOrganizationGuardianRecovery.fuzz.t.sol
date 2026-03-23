@@ -397,7 +397,8 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
                 pendingRecoveryAddress: pendingInitAddress,
                 pendingTimelockDurationSeconds: pendingInitTimelock,
                 pendingTimestamp: pendingInitTimestamp
-            })
+            }),
+            initAttemptId: 0
         });
         recoveryStateHarness.setTxRecoveryState(beforeState);
         _resetAndConfigureRecovery();

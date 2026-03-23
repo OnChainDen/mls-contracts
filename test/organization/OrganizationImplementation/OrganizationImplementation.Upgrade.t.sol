@@ -466,7 +466,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
                 pendingRecoveryAddress: address(0x5552),
                 pendingTimelockDurationSeconds: 7 days,
                 pendingTimestamp: block.timestamp + 1 days
-            })
+            }),
+            initAttemptId: 0
         });
         organizationProxy.setTxRecoveryStateStorage(txRecoveryState);
 
@@ -480,7 +481,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
                 pendingRecoveryAddress: address(0x6663),
                 pendingTimelockDurationSeconds: 8 days,
                 pendingTimestamp: block.timestamp + 2 days
-            })
+            }),
+            initAttemptId: 0
         });
         organizationProxy.setGuardianRecoveryStateStorage(guardianRecoveryState);
 

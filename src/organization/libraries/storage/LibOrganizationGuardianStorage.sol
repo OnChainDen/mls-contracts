@@ -11,18 +11,20 @@ pragma solidity 0.8.33;
 library LibOrganizationGuardianStorage {
     /**
      * @dev Storage layout for guardian functionality (normal flow only).
-     *      Struct is ordered for optimal storage packing (3 slots).
      * @custom:storage-location erc7201:den.mls-wallet.organization.guardian
      * @param guardian The address of the guardian authorized to submit transactions
      * @param isGuardianUpdateReadyForAcceptance True after finalize, waiting for new guardian to accept (normal flow)
      * @param pendingGuardian The proposed new guardian address for normal flow (0 = no pending update)
      * @param pendingGuardianUpdateTimestamp When the normal flow pending update timelock expires (0 = no pending)
+     * @param guardianUpdateAttemptId Monotonic counter incremented on each guardian update attempt for replay
+     * protection
      */
     struct Layout {
         address guardian;
         bool isGuardianUpdateReadyForAcceptance;
         address pendingGuardian;
         uint256 pendingGuardianUpdateTimestamp;
+        uint256 guardianUpdateAttemptId;
     }
 
     /// @dev Storage location for GuardianStorage, following ERC-7201 namespaced storage pattern.

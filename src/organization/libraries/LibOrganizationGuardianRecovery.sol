@@ -188,6 +188,9 @@ library LibOrganizationGuardianRecovery {
 
         uint256 canFinalizeAtTimestamp = LibOrganizationAdminOperationTimelock.computeCanFinalizeAtTimestamp();
 
+        // Increment attempt counter for replay protection across cancel-and-reinitiate flows
+        ++guardianRecovery.initAttemptId;
+
         // Store pending initialization values
         guardianRecovery.pendingInit.pendingRecoveryAddress = guardianRecoveryAddress;
         guardianRecovery.pendingInit.pendingTimelockDurationSeconds = guardianRecoveryTimelockDurationSeconds;

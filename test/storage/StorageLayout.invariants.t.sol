@@ -104,7 +104,9 @@ contract StorageLayoutInvariants is StorageLayoutTestBase {
             "Tracked wasGroupDeleted value mutated unexpectedly"
         );
 
-        (address guardian, bool isReady, address pendingGuardian, uint256 pendingTimestamp) = harness.getGuardianState();
+        // forgefmt: disable-next-item
+        (address guardian, bool isReady, address pendingGuardian, uint256 pendingTimestamp, uint256 attemptId) =
+            harness.getGuardianState();
         assertEq(guardian, handler.expectedGuardian(), "guardian scalar mutated unexpectedly");
         assertEq(
             isReady,
@@ -116,6 +118,9 @@ contract StorageLayoutInvariants is StorageLayoutTestBase {
             pendingTimestamp,
             handler.expectedPendingGuardianUpdateTimestamp(),
             "pendingGuardianUpdateTimestamp scalar mutated unexpectedly"
+        );
+        assertEq(
+            attemptId, handler.expectedGuardianUpdateAttemptId(), "guardianUpdateAttemptId scalar mutated unexpectedly"
         );
 
         assertEq(

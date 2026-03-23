@@ -84,7 +84,8 @@ abstract contract OrganizationTxRecoveryBaseSuiteBase is OrganizationAdminTestBa
                     pendingRecoveryAddress: pendingRecoveryAddress,
                     pendingTimelockDurationSeconds: pendingTimelockDurationSeconds,
                     pendingTimestamp: pendingTimestamp
-                })
+                }),
+                initAttemptId: 0
             })
         );
     }
@@ -100,7 +101,16 @@ abstract contract OrganizationTxRecoveryBaseSuiteBase is OrganizationAdminTestBa
         bool isApproval,
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
-        operationData = abi.encode(recoveryAddress, timelockDurationSeconds);
+        // Finalize and cancel include the attempt ID to bind signatures to a specific initialization attempt
+        if (
+            operationType == OperationType.FinalizeInitializeTransactionRecovery
+                || operationType == OperationType.CancelInitializeTransactionRecovery
+        ) {
+            operationData =
+                abi.encode(recoveryAddress, timelockDurationSeconds, harness.getTxRecoveryState().initAttemptId);
+        } else {
+            operationData = abi.encode(recoveryAddress, timelockDurationSeconds);
+        }
         auth = _buildAdminAuthParamsForEoa({
             operationType: operationType,
             operationData: operationData,

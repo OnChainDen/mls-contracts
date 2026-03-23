@@ -58,6 +58,9 @@ library LibOrganizationGuardian {
 
         uint256 canFinalizeAtTimestamp = LibOrganizationAdminOperationTimelock.computeCanFinalizeAtTimestamp();
 
+        // Increment attempt counter for replay protection across cancel-and-reinitiate flows
+        ++guardianLayout.guardianUpdateAttemptId;
+
         // Set pending state
         guardianLayout.pendingGuardian = newGuardian;
         guardianLayout.pendingGuardianUpdateTimestamp = canFinalizeAtTimestamp;
@@ -199,5 +202,13 @@ library LibOrganizationGuardian {
      */
     function getIsGuardianUpdateReadyForAcceptance() internal view returns (bool) {
         return LibOrganizationGuardianStorage.layout().isGuardianUpdateReadyForAcceptance;
+    }
+
+    /**
+     * @dev Gets the current guardian update attempt ID (normal flow).
+     * @return The monotonic attempt counter (0 if no update has ever been initiated)
+     */
+    function getGuardianUpdateAttemptId() internal view returns (uint256) {
+        return LibOrganizationGuardianStorage.layout().guardianUpdateAttemptId;
     }
 }
