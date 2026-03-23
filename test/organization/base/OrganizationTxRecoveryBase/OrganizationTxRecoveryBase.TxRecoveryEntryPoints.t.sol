@@ -1727,4 +1727,63 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(disabledState.pendingInit.pendingTimelockDurationSeconds, 0, "disabled snapshot: pendingInit timelock");
         assertEq(disabledState.pendingInit.pendingTimestamp, 0, "disabled snapshot: pendingInit timestamp");
     }
+
+    /// @dev Verifies that `initAttemptId` increments on each initiation and persists across cancellations.
+    function test_initiateInitializeTxRecovery_incrementsInitAttemptId() public {
+        // Setup: clear recovery state for deferred init
+        _setTxRecoveryState({
+            recoveryAddress: address(0),
+            isEnabled: false,
+            timelockDurationSeconds: 0,
+            pendingEnableTimestamp: 0,
+            pendingRecoveryAddress: address(0),
+            pendingTimelockDurationSeconds: 0,
+            pendingTimestamp: 0
+        });
+
+        // Verify: starts at 0
+        assertEq(harness.getTxRecoveryState().initAttemptId, 0, "initAttemptId should start at 0");
+
+        // Call: first initiation
+        (AdminAuthParams memory initAuth1,) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 8001,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, initAuth1);
+
+        assertEq(harness.getTxRecoveryState().initAttemptId, 1, "initAttemptId should be 1 after first initiation");
+
+        // Call: cancel
+        (AdminAuthParams memory cancelAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 8002,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(cancelAuth);
+
+        assertEq(harness.getTxRecoveryState().initAttemptId, 1, "initAttemptId should persist after cancel");
+
+        // Call: re-initiate
+        (AdminAuthParams memory initAuth2,) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 8003,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, initAuth2);
+
+        assertEq(harness.getTxRecoveryState().initAttemptId, 2, "initAttemptId should be 2 after re-initiation");
+    }
 }

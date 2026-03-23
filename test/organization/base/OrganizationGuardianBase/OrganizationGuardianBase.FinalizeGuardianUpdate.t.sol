@@ -342,4 +342,53 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         assertEq(harness.pendingGuardian(), NEW_GUARDIAN_A, "pending guardian should remain unchanged");
         assertEq(harness.guardian(), GUARDIAN, "finalize should not directly rotate guardian");
     }
+
+    /// @dev Verifies that stale finalize signatures are rejected after cancel-and-reinitiate with identical params.
+    /// This is the core replay-protection test for the guardian update flow.
+    function test_staleFinalizeAuth_rejectedAfterCancelAndReinitiateSameParams() public {
+        // Setup
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+        _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 5001);
+
+        (AdminAuthParams memory staleAuth,) = _buildFinalizeGuardianUpdateAuth({
+            pendingGuardian: NEW_GUARDIAN_A,
+            salt: 5002,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        (AdminAuthParams memory cancelAuth,) = _buildCancelGuardianUpdateAuth({
+            pendingGuardian: NEW_GUARDIAN_A,
+            salt: 5003,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.cancelGuardianUpdate(cancelAuth);
+
+        _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 5004);
+
+        // Call: stale finalize auth from the canceled attempt should be rejected
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK);
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
+        vm.prank(GUARDIAN);
+        harness.finalizeGuardianUpdate(staleAuth);
+
+        // Verify: fresh auth succeeds
+        (AdminAuthParams memory freshAuth,) = _buildFinalizeGuardianUpdateAuth({
+            pendingGuardian: NEW_GUARDIAN_A,
+            salt: 5005,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.finalizeGuardianUpdate(freshAuth);
+
+        assertTrue(harness.isGuardianUpdateReadyForAcceptance(), "fresh finalize should succeed");
+    }
 }

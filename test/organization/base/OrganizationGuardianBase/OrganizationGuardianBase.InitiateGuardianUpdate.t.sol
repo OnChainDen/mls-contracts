@@ -346,4 +346,33 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
             "re-initiated guardian update should not be ready for acceptance"
         );
     }
+
+    /// @dev Verifies that `guardianUpdateAttemptId` increments on each initiation and persists across cancellations.
+    function test_initiateGuardianUpdate_incrementsAttemptId() public {
+        // Setup
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+
+        // Verify: starts at 0
+        assertEq(harness.guardianUpdateAttemptId(), 0, "attempt ID should start at 0");
+
+        // Call: first initiation
+        _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 6001);
+        assertEq(harness.guardianUpdateAttemptId(), 1, "attempt ID should be 1 after first initiation");
+
+        // Call: cancel and re-initiate
+        (AdminAuthParams memory cancelAuth,) = _buildCancelGuardianUpdateAuth({
+            pendingGuardian: NEW_GUARDIAN_A,
+            salt: 6002,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.cancelGuardianUpdate(cancelAuth);
+
+        assertEq(harness.guardianUpdateAttemptId(), 1, "attempt ID should persist after cancel");
+
+        _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 6003);
+        assertEq(harness.guardianUpdateAttemptId(), 2, "attempt ID should be 2 after re-initiation");
+    }
 }

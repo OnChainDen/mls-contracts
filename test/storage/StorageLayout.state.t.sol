@@ -126,15 +126,17 @@ contract StorageLayoutStateTest is StorageLayoutTestBase {
     function test_guardianStorage_readWrite_allFields() public {
         uint256 pendingTimestamp = block.timestamp + 10 days;
 
-        harness.setGuardianState(TEST_GUARDIAN, true, TEST_PENDING_GUARDIAN, pendingTimestamp);
+        harness.setGuardianState(TEST_GUARDIAN, true, TEST_PENDING_GUARDIAN, pendingTimestamp, 7);
 
-        (address guardian, bool isReady, address pendingGuardian, uint256 pendingGuardianTimestamp) =
-            harness.getGuardianState();
+        // forgefmt: disable-next-item
+        (address guardian, bool isReady, address pendingGuardian, uint256 pendingGuardianTimestamp,
+            uint256 attemptId) = harness.getGuardianState();
 
         assertEq(guardian, TEST_GUARDIAN, "guardian value was not persisted");
         assertTrue(isReady, "isGuardianUpdateReadyForAcceptance value was not persisted");
         assertEq(pendingGuardian, TEST_PENDING_GUARDIAN, "pendingGuardian value was not persisted");
         assertEq(pendingGuardianTimestamp, pendingTimestamp, "pendingGuardianUpdateTimestamp value was not persisted");
+        assertEq(attemptId, 7, "guardianUpdateAttemptId value was not persisted");
     }
 
     /**
@@ -249,7 +251,7 @@ contract StorageLayoutStateTest is StorageLayoutTestBase {
 
         harness.setAdminOperationTimelockDurationSeconds(expectedTimelock);
         harness.setDeployerAddress(expectedDeployer);
-        harness.setGuardianState(expectedGuardian, false, address(0), 123);
+        harness.setGuardianState(expectedGuardian, false, address(0), 123, 0);
 
         harness.setAdminStatus(TEST_ADMIN, true);
         harness.setMemberStatus(TEST_MEMBER, true);
@@ -265,7 +267,7 @@ contract StorageLayoutStateTest is StorageLayoutTestBase {
         );
         assertEq(harness.getDeployerAddress(), expectedDeployer, "deployerAddress scalar was unexpectedly mutated");
 
-        (address guardian,,,) = harness.getGuardianState();
+        (address guardian,,,,) = harness.getGuardianState();
         assertEq(guardian, expectedGuardian, "guardian scalar was unexpectedly mutated");
     }
 
