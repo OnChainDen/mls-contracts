@@ -313,6 +313,13 @@ Parameter constraints provide fine-grained control over what values can be passe
 > - Parameters without defined constraints accept any value
 > - `Array` and `Struct` only support `Any` due to complex ABI encoding
 
+> [!IMPORTANT]
+> **ABI canonical encoding is not enforced for `Bytes` and `String` constraints.** When validating `Bytes` and `String` parameter constraints, the policy engine follows the offset embedded in the parameter head, reads the referenced payload, and compares its keccak256 hash against the stored constraint hash. It does **not** verify that the offset points to the canonical tail location for that parameter, that tails do not overlap, or that offsets follow a monotonic sequence. This means non-canonical but otherwise valid calldata layouts will pass validation as long as the referenced payload matches the expected hash.
+>
+> Standard Solidity ABI decoders follow the same offset mechanism, so destination contracts will decode the same value that was validated. Practical impact is limited to destination contracts that inspect raw calldata layout rather than relying solely on decoded argument values.
+>
+> It is the responsibility of **admins and the Guardian** to ensure that policies contain correctly formatted and encoded constraints, and that calldata submitted to the Organization is canonically ABI-encoded.
+
 See `src/types/PolicyTypes.sol` and `src/organization/libraries/policy/LibPolicyParameterConstraints.sol` for implementation details.
 
 ### Policy Rate Limits
