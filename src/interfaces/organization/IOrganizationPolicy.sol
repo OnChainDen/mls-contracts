@@ -72,10 +72,26 @@ interface IOrganizationPolicy {
 
     /**
      * @notice Gets the current usage for a rate-limited policy within the current time window
+     * @dev The `destination` parameter must be the **canonical** destination that the execution
+     *      path would derive for the transaction. During actual transaction execution, the system
+     *      calls `LibPolicyDestination.getActualDestination(to, data, value)` to canonicalize the
+     *      destination before computing the rate-limit usage key:
+     *        - For ERC-20 token transfers (`transfer`): the canonical destination
+     *          is the **token recipient** extracted from calldata, NOT the token contract address.
+     *        - For native ETH transfers (empty calldata): the canonical destination is the `to` address.
+     *        - For contract interactions (non-token calldata): the canonical destination is the `to` address.
+     *
+     *      When the policy's `destinationScope` is `RateLimitScope.PerEntity`, the destination is
+     *      incorporated into the usage key. Passing a non-canonical destination (e.g., the token
+     *      contract address instead of the token recipient for an ERC-20 transfer) will query a
+     *      different rate-limit bucket than the one enforcement actually uses.
+     *
+     *      When `destinationScope` is `RateLimitScope.AcrossAll`, the destination is not
+     *      incorporated into the usage key, so any value will return the correct result.
      * @param policyId The ID of the policy
      * @param policy The policy data (from calldata)
      * @param account The source account address
-     * @param destination The destination address
+     * @param destination The canonical destination address (see @dev for derivation rules)
      * @param initiator The initiator address
      * @param policyProof The merkle proof verifying the policy exists
      * @return The current usage amount within the current time window
