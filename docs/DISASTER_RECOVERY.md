@@ -97,6 +97,9 @@ Allows replacing the Guardian through a time-locked process using the `guardianR
 
 **Cancellation:** `cancelRecoveryGuardianUpdate()` - Can abort before finalization
 
+> [!NOTE]
+> The recovery guardian update flow is **intentionally independent** from the normal guardian update flow. Both flows can run concurrently — neither checks nor invalidates the other's pending state. If both flows reach acceptance, the last to accept determines the final guardian (last-write-wins). This is by design — see [Concurrent Guardian Update Flows](./GUARDIAN_PROTECTION.md#concurrent-guardian-update-flows-intentional-design) in GUARDIAN_PROTECTION.md for the full design rationale.
+
 Files: `OrganizationGuardianRecoveryBase.sol`, `LibOrganizationGuardianRecovery.sol`
 
 ---
