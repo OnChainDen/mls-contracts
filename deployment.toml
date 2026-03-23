@@ -139,8 +139,8 @@ guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
 [factory.den-prod]
 # Factory
 # TODO: Update after deploying Den Singleton Factory from prod deployer
-factory = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7"
-factory_deployer = "0x0000000000000000000000000000000000000000"
+factory = "0x0000000000000000000000000000000000000000"
+factory_deployer = "0xbc8c3bF2119c250C80d4ae6192e3F4083D9Eb81f"
 
 # Platform Libraries (environment-independent)
 # TODO: Update after deploying libraries via prod Den Singleton Factory
@@ -222,20 +222,19 @@ guardian_executor_eoa = "0x66FB51BF8C7a973a278578A2E381Fb5e89796DE1"
 # ------------------------------------------------------------------------------
 # For mainnet deployments.
 # Uses multi-owner Safes with 2-of-3 threshold.
-# TODO: Update owner addresses before mainnet deployment.
 # ------------------------------------------------------------------------------
 [safe.prod]
 # Guardian Safe config (2-of-3)
 guardian_safe_threshold = 2
-guardian_safe_owner_1 = "0x1111111111111111111111111111111111111111"
-guardian_safe_owner_2 = "0x2222222222222222222222222222222222222222"
-guardian_safe_owner_3 = "0x6666666666666666666666666666666666666666"
+guardian_safe_owner_1 = "0x03eC16594f31BfA79125D7be18394E03f4B1D30E"
+guardian_safe_owner_2 = "0x342d61b90fC553FB2846E68a14e7B1C1B6405A8a"
+guardian_safe_owner_3 = "0x1704170B1C9DEd6c2f0E96Fb7BE0E6dB505d10ce"
 
 # Admin Safe config (2-of-3)
 admin_safe_threshold = 2
-admin_safe_owner_1 = "0x3333333333333333333333333333333333333333"
-admin_safe_owner_2 = "0x4444444444444444444444444444444444444444"
-admin_safe_owner_3 = "0x5555555555555555555555555555555555555555"
+admin_safe_owner_1 = "0x9AC2bc9449d9DdFbFd89f678eEfd0d2d2e27c707"
+admin_safe_owner_2 = "0x9a194c638E239eE4D0eDDf49F6d5bF36358C1660"
+admin_safe_owner_3 = "0x2cE3d6e7137d20735C2278A8A6eC0Bd61082Bf2d"
 
 # Guardian Executor EOA (authorized to execute via Guardian Safe module)
 # TODO: Update with production Guardian Executor EOA address before mainnet deployment
