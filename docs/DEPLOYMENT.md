@@ -252,7 +252,7 @@ Deploys all platform contracts (`OrganizationImplementation`, `AccountImplementa
 make deploy-contracts ACCOUNT=my-deployer FACTORY=arachnid
 ```
 
-> **Under the hood:** Passes `--libraries` flags for all four external libraries to ensure contracts are compiled with the correct linked addresses.
+> **Under the hood:** Passes `--libraries` flags for all eight external libraries to ensure contracts are compiled with the correct linked addresses.
 >
 > See [External Libraries & Library Linking](#external-libraries--library-linking) to learn more.
 
@@ -475,8 +475,8 @@ The `compute_all_addresses.sh` script orchestrates address computation by:
 2. **Computing addresses in dependency order:**
    - Safe infrastructure (singleton, proxy factory, handlers)
    - Safe multisigs (Guardian and Admin Safes for both prod and nonprod)
-   - Independent libraries (Policy, Admin, Members, Groups)
-   - Dependent libraries (Init, AccountSig) — computed with `--libraries` flags
+   - Independent libraries (Policy, Admin, Members, Groups, TxRecovery, GuardianRecovery)
+   - Dependent libraries (Init, AccountSig) — computed with `--libraries` flags for all independent libraries
    - Platform implementations (Organization, Account, Whitelist)
    - Platform contracts (OrganizationFactory, WhitelistProxy) — depends on Safe addresses
    - Guardian Safe Executor Modules — depends on Safe and BatchedTransaction addresses
@@ -581,16 +581,18 @@ Note that our external libraries can be broken down into two groups:
 - **Independent libraries** – External libraries that do not rely on any other external libraries
 - **Dependent libraries** – External libraries that rely on other external libraries (must be deployed after their dependencies) 
 
-The six external libraries that require linking are:
+The eight external libraries that require linking are:
 
 | Library | Purpose | Dependencies |
 |---------|---------|--------------|
 | `LibOrganizationPolicy` | Policy validation and enforcement | None (independent) |
 | `LibOrganizationAdmin` | Admin operations | None (independent) |
+| `LibOrganizationMembers` | Members management | None (independent) |
+| `LibOrganizationGroups` | Groups management | None (independent) |
 | `LibOrganizationTxRecovery` | Transaction and ERC1271 recovery | None (independent) |
 | `LibOrganizationGuardianRecovery` | Guardian recovery operations | None (independent) |
-| `LibOrganizationInitialization` | Organization setup | Depends on `LibOrganizationAdmin` |
-| `LibOrganizationAccountSignature` | Account signature verification | Depends on `LibOrganizationPolicy` |
+| `LibOrganizationInitialization` | Organization setup | Depends on Admin, Members, Groups, TxRecovery, GuardianRecovery |
+| `LibOrganizationAccountSignature` | Account signature verification | Depends on Policy, TxRecovery |
 
 ### Why Linking Matters
 
@@ -613,8 +615,8 @@ These libraries have no dependencies on other platform libraries. They can be de
 
 **Stage 2 - Dependent Libraries (Init and AccountSig):**
 These libraries depend on the independent libraries being linked into their bytecode:
-- `LibOrganizationInitialization` imports and uses `LibOrganizationAdmin`, `LibOrganizationMembers`, and `LibOrganizationGroups`
-- `LibOrganizationAccountSignature` imports and uses `LibOrganizationPolicy`
+- `LibOrganizationInitialization` imports and uses `LibOrganizationAdmin`, `LibOrganizationMembers`, `LibOrganizationGroups`, `LibOrganizationTxRecovery`, and `LibOrganizationGuardianRecovery`
+- `LibOrganizationAccountSignature` imports and uses `LibOrganizationPolicy` and `LibOrganizationTxRecovery`
 
 They must be deployed with a `--libraries` flag that informs the compiler to link the external libraries they're dependent on.
 
@@ -627,12 +629,12 @@ The CREATE2 address formula is:
 address = keccak256(0xff ++ factory ++ salt ++ keccak256(initCode))[12:]
 ```
 
-If `LibOrganizationInitialization` is compiled without `LibOrganizationAdmin`, `LibOrganizationMembers`, and `LibOrganizationGroups` being linked, the initCode will have placeholder bytes. When compiled with the correct `--libraries` flags, those addresses are embedded in the initCode, producing a different hash and therefore a different CREATE2 address.
+If `LibOrganizationInitialization` is compiled without its independent library dependencies being linked, the initCode will have placeholder bytes. When compiled with the correct `--libraries` flags, those addresses are embedded in the initCode, producing a different hash and therefore a different CREATE2 address.
 
 The Makefile handles this automatically with the `deploy-libraries` target (which runs both stages), or you can run them separately:
 
 ```bash
-# Deploy independent libraries (Policy, Admin, Members, Groups)
+# Deploy independent libraries (Policy, Admin, Members, Groups, TxRecovery, GuardianRecovery)
 make deploy-independent-libs ACCOUNT=my-deployer
 
 # Deploy dependent libraries (Init, AccountSig) - requires --libraries flags
@@ -734,7 +736,7 @@ make deploy-libraries NETWORK=https://my-custom-rpc.example.com ACCOUNT=my-deplo
 
 | Command | Description |
 |---------|-------------|
-| `make deploy-independent-libs` | Deploy independent libraries (Policy, Admin, Members, Groups) via CREATE2 |
+| `make deploy-independent-libs` | Deploy independent libraries (Policy, Admin, Members, Groups, TxRecovery, GuardianRecovery) via CREATE2 |
 | `make deploy-dependent-libs` | Deploy dependent libraries (Init, AccountSig) via CREATE2 |
 | `make deploy-libraries` | Deploy all platform libraries (runs both stages) |
 | `make deploy-contracts` | Deploy platform contracts with library linking |

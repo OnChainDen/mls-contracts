@@ -172,14 +172,16 @@ fi
 #   - LibOrganizationAdmin: No deps on other deployed libraries
 #   - LibOrganizationMembers: No deps on other deployed libraries
 #   - LibOrganizationGroups: No deps on other deployed libraries
-#   - LibOrganizationInitialization: Depends on LibOrganizationAdmin, Members, Groups
-#   - LibOrganizationAccountSignature: Depends on LibOrganizationPolicy
+#   - LibOrganizationTxRecovery: No deps on other deployed libraries
+#   - LibOrganizationGuardianRecovery: No deps on other deployed libraries
+#   - LibOrganizationInitialization: Depends on Admin, Members, Groups, TxRecovery, GuardianRecovery
+#   - LibOrganizationAccountSignature: Depends on Policy, TxRecovery
 #
 # We must compute in stages because some libraries have their bytecode affected
 # by the addresses of other libraries they depend on.
 
-# Step 2a: Compute independent library addresses (Policy, Admin, Members, Groups)
-print_progress "  Computing independent library addresses (Policy, Admin, Members, Groups)..."
+# Step 2a: Compute independent library addresses
+print_progress "  Computing independent library addresses..."
 LIB_OUTPUT_INDEPENDENT=$(forge script script/DeployLibraries.s.sol:DeployLibraries \
     --sig "computeIndependentAddresses(address)" "$FACTORY_ADDRESS" --offline 2>&1) || {
     clear_progress
@@ -213,6 +215,8 @@ DEP_LIBRARIES_FLAGS="--libraries ${LIB_ORG_POLICY_PATH}:${LIB_ORG_POLICY_ADDRESS
 DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_ADMIN_PATH}:${LIB_ORG_ADMIN_ADDRESS}"
 DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_MEMBERS_PATH}:${LIB_ORG_MEMBERS_ADDRESS}"
 DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_GROUPS_PATH}:${LIB_ORG_GROUPS_ADDRESS}"
+DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_TX_RECOVERY_PATH}:${LIB_ORG_TX_RECOVERY_ADDRESS}"
+DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_GUARDIAN_RECOVERY_PATH}:${LIB_ORG_GUARDIAN_RECOVERY_ADDRESS}"
 
 LIB_OUTPUT_DEPENDENT=$(forge script script/DeployLibraries.s.sol:DeployLibraries \
     --sig "computeDependentAddresses(address)" "$FACTORY_ADDRESS" \

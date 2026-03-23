@@ -252,7 +252,7 @@ get_guardian_module_address() {
 # Library Flags Builders
 # =============================================================================
 
-# Build --libraries flags for independent libraries (Policy, Admin, Members, Groups)
+# Build --libraries flags for independent libraries
 # Usage: FLAGS=$(build_independent_libraries_flags "arachnid")
 build_independent_libraries_flags() {
     local factory="$1"
@@ -260,13 +260,17 @@ build_independent_libraries_flags() {
     local admin_addr
     local members_addr
     local groups_addr
+    local tx_recovery_addr
+    local guardian_recovery_addr
 
     policy_addr=$(get_lib_org_policy "$factory")
     admin_addr=$(get_lib_org_admin "$factory")
     members_addr=$(get_lib_org_members "$factory")
     groups_addr=$(get_lib_org_groups "$factory")
+    tx_recovery_addr=$(get_lib_org_tx_recovery "$factory")
+    guardian_recovery_addr=$(get_lib_org_guardian_recovery "$factory")
 
-    echo "--libraries ${LIB_ORG_POLICY_PATH}:${policy_addr} --libraries ${LIB_ORG_ADMIN_PATH}:${admin_addr} --libraries ${LIB_ORG_MEMBERS_PATH}:${members_addr} --libraries ${LIB_ORG_GROUPS_PATH}:${groups_addr}"
+    echo "--libraries ${LIB_ORG_POLICY_PATH}:${policy_addr} --libraries ${LIB_ORG_ADMIN_PATH}:${admin_addr} --libraries ${LIB_ORG_MEMBERS_PATH}:${members_addr} --libraries ${LIB_ORG_GROUPS_PATH}:${groups_addr} --libraries ${LIB_ORG_TX_RECOVERY_PATH}:${tx_recovery_addr} --libraries ${LIB_ORG_GUARDIAN_RECOVERY_PATH}:${guardian_recovery_addr}"
 }
 
 # Build --libraries flags for all libraries
