@@ -59,6 +59,10 @@ interface IOrganizationMembers {
      * @notice Adds and/or removes members from the organization
      * @dev Adding a duplicate member is a no-op. Removing a non-existent member is a no-op.
      *      Removing a member who is an admin reverts with MemberIsAdmin.
+     *      Removing a member does NOT clear their group memberships. Group assignment entries
+     *      persist in storage and become effective again if the member is later re-added to the
+     *      organization. To fully revoke a member's group roles, call modifyGroups to remove
+     *      the member from all relevant groups before or in addition to removing them here.
      * @param membersToAdd Addresses to add as members
      * @param membersToRemove Addresses to remove from members
      * @param authParams The authorization parameters (salt, expiration, signatures)

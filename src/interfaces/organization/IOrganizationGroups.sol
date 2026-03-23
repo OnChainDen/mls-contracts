@@ -11,6 +11,10 @@ import {GroupModification} from "types/CommonTypes.sol";
  * @dev Maps to LibOrganizationGroups library functionality.
  *      Groups are stored in mappings for O(1) lookups.
  *      Group IDs are not reusable after deletion.
+ *      Group membership entries (isGroupMember) persist in storage even after a member is removed
+ *      from the organization via modifyMembers. If the member is later re-added, their previous
+ *      group memberships become effective again. Use modifyGroups to explicitly remove a member
+ *      from groups if this behavior is not desired.
  * @author Den Technologies Inc
  */
 interface IOrganizationGroups {
@@ -110,6 +114,9 @@ interface IOrganizationGroups {
 
     /**
      * @notice Checks if an address is a member of a group
+     * @dev Returns false if the group does not exist or if the address is not currently an
+     *      organization member, even if the underlying isGroupMember storage bit is set.
+     *      The raw storage bit persists across member removal/re-addition cycles by design.
      * @param groupId The group ID to check
      * @param memberAddress The address to check
      * @return True if the address is a member of the group, false otherwise

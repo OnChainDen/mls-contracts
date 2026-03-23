@@ -13,6 +13,7 @@ import {OperationType} from "types/CommonTypes.sol";
  * @title OrganizationMembersBase
  * @dev Abstract contract implementing IOrganizationMembers.
  *      Handles member management operations including adding/removing members and verifying membership.
+ *      Member removal does not clear group memberships — see LibOrganizationMembers for details.
  * @author Den Technologies Inc
  */
 abstract contract OrganizationMembersBase is OrganizationModifiers, IOrganizationMembers {
