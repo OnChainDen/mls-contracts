@@ -16,11 +16,15 @@ library LibPolicyTokenTransfer {
     /**
      * @dev Checks if a token transfer transaction is allowed by the policy.
      *      Assumes the caller has already validated that `(to, value, data)` describes
-     *      a token transfer (native or ERC-20).
+     *      a token transfer (native or ERC-20) via `TokenTransferUtils.isTransactionTokenTransfer`.
      *      Validates that:
      *      1. The token being transferred is allowed by the policy
      *      2. The amount being transferred is within policy limits
      *      3. The destination (token recipient) is allowed by the policy
+     *
+     *      When `policy.config.token.anyToken` is true, the `to` address (callee contract)
+     *      is not validated. Only the encoded recipient and amount parameters are checked.
+     *      See `_isTokenAllowedByPolicy` for details.
      * @param policy The policy to check against
      * @param to The transaction destination address (token contract for ERC20)
      * @param value The transaction value in wei
@@ -49,8 +53,12 @@ library LibPolicyTokenTransfer {
 
     /**
      * @dev Checks if the token is allowed by the policy for a token transfer.
-     *      If anyToken is true, always returns true.
-     *      Otherwise, verifies the token address matches the policy's specified token.
+     *      If anyToken is true, always returns true — no validation is performed on the
+     *      `to` address. Because token transfer classification is based on calldata shape
+     *      (see `TokenTransferUtils.isTransactionTokenTransfer`), this means the callee
+     *      contract is unconstrained when `anyToken` is true; any contract exposing
+     *      `transfer(address,uint256)` is reachable.
+     *      When anyToken is false, verifies the token address matches the policy's specified token.
      * @param policy The policy to check against
      * @param to The transaction destination address (token contract for ERC20)
      * @param data The transaction calldata
