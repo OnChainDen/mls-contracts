@@ -22,6 +22,9 @@ library LibPolicyParameterConstraints {
      *      Iterates through each constraint and validates the corresponding parameter.
      *      Each constraint contains its own proof for OneOf constraints, eliminating
      *      the need for separate proof arrays.
+     *
+     *      Constraint validation for dynamic types (Bytes, String) does not enforce ABI
+     *      canonical encoding. See _isBytesOrStringParameterAllowedByConstraint for details.
      * @param parameterConstraints ABI-encoded array of ParameterConstraint structs
      * @param data The transaction calldata
      * @return True if all constraints are satisfied, false otherwise
@@ -310,6 +313,15 @@ library LibPolicyParameterConstraints {
      *      function handles both ParamType.Bytes and ParamType.String.
      *      The paramHeadValue contains the offset to the data location in calldata.
      *      The comparisonData should contain the keccak256 hash of the expected bytes/string.
+     *
+     *      This function does NOT enforce ABI canonical encoding. It follows the offset in
+     *      paramHeadValue to locate the dynamic payload without verifying that the offset
+     *      points to the canonical tail position for that parameter. Non-canonical but
+     *      otherwise valid calldata layouts (e.g., non-monotonic offsets, overlapping tails)
+     *      will pass validation as long as the referenced payload hashes to the expected value.
+     *      Standard Solidity decoders follow the same offset, so destination contracts will
+     *      typically decode the same value that was validated. It is the responsibility of
+     *      admins and the Guardian to ensure that calldata is canonically ABI-encoded.
      * @param constraintType The type of constraint to apply
      * @param comparisonData The expected hash encoded as bytes
      * @param paramHeadValue The parameter value (offset to bytes/string data)

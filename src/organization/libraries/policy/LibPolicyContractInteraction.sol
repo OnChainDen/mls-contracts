@@ -22,6 +22,13 @@ library LibPolicyContractInteraction {
      *      1. The function being called is allowed by the policy
      *      2. The transaction parameters match the policy's constraints
      *      3. The destination (contract being called) is allowed by the policy
+     *
+     *      Parameter constraint validation does not enforce ABI canonical encoding for
+     *      dynamic types (Bytes, String). It is the responsibility of admins and the
+     *      Guardian to ensure that policies and the calldata submitted to the Organization
+     *      contain correctly ABI-encoded parameters. See
+     *      LibPolicyParameterConstraints._isBytesOrStringParameterAllowedByConstraint
+     *      for details.
      * @param policy The policy to check against
      * @param to The transaction destination address (contract being called)
      * @param value The transaction value in wei
