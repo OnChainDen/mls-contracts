@@ -7,14 +7,15 @@
 # functions and aggregates the results.
 #
 # This script handles the dependency chain correctly:
-# 1. Computes Safe infrastructure addresses first
-# 2. Computes Safe multisig addresses for both prod and nonprod configurations
-# 3. Computes library addresses
-# 4. Computes BatchedTransaction address
-# 5. Computes platform implementation addresses (environment-independent)
-# 6. Computes platform contract addresses for both prod and nonprod configurations
+# 1. Computes factory address (for Den factories, derived from factory_deployer at nonce 0)
+# 2. Computes Safe infrastructure addresses
+# 3. Computes Safe multisig addresses for both prod and nonprod configurations
+# 4. Computes library addresses
+# 5. Computes BatchedTransaction address
+# 6. Computes platform implementation addresses (environment-independent)
+# 7. Computes platform contract addresses for both prod and nonprod configurations
 #    (org_factory depends on guardian Safe, whitelist_proxy depends on admin Safe)
-# 7. Computes Safe module addresses for both prod and nonprod configurations
+# 8. Computes Safe module addresses for both prod and nonprod configurations
 #
 # Output is in TOML format to facilitate easy comparison with deployment.toml.
 # Includes both [factory.X.env.nonprod] and [factory.X.env.prod] sections.
@@ -46,15 +47,41 @@ validate_prerequisites
 FACTORY="$1"
 validate_factory "$FACTORY"
 
-# Read factory address from deployment.toml
-FACTORY_ADDRESS=$(get_factory_address "$FACTORY")
+# Helper to check if an address is zero
+ZERO_ADDRESS="0x0000000000000000000000000000000000000000"
+
+# Resolve factory address
+# For Den factories: compute deterministically from factory_deployer at nonce 0
+# For Arachnid: read directly from deployment.toml (uses pre-signed keyless transaction)
+if [[ "$FACTORY" == "den-nonprod" || "$FACTORY" == "den-prod" ]]; then
+    FACTORY_DEPLOYER=$(get_factory_deployer "$FACTORY")
+    DEN_FACTORY_OUTPUT=$(forge script script/DeployDenSingletonFactory.s.sol:DeployDenSingletonFactory \
+        --sig "computeAddress(address)" "$FACTORY_DEPLOYER" --offline 2>&1) || {
+        echo "Error: Failed to compute Den factory address from deployer $FACTORY_DEPLOYER" >&2
+        echo "$DEN_FACTORY_OUTPUT" >&2
+        exit 1
+    }
+    FACTORY_ADDRESS=$(extract_address "$DEN_FACTORY_OUTPUT" "DenSingletonFactory")
+    if [[ -z "$FACTORY_ADDRESS" ]]; then
+        echo "Error: Failed to extract Den factory address from compute output" >&2
+        echo "$DEN_FACTORY_OUTPUT" >&2
+        exit 1
+    fi
+
+    # Warn if deployment.toml has a different non-zero address
+    TOML_FACTORY_ADDRESS=$(get_factory_address "$FACTORY")
+    if [[ "$TOML_FACTORY_ADDRESS" != "$ZERO_ADDRESS" && "$TOML_FACTORY_ADDRESS" != "$FACTORY_ADDRESS" ]]; then
+        echo "  WARNING: deployment.toml factory address does not match computed address" >&2
+        echo "    deployment.toml: $TOML_FACTORY_ADDRESS" >&2
+        echo "    Computed:        $FACTORY_ADDRESS" >&2
+    fi
+else
+    FACTORY_ADDRESS=$(get_factory_address "$FACTORY")
+fi
 
 # Read Guardian executor EOA addresses for both prod and nonprod configurations
 GUARDIAN_EXECUTOR_NONPROD=$(get_guardian_executor "nonprod")
 GUARDIAN_EXECUTOR_PROD=$(get_guardian_executor "prod")
-
-# Helper to check if an address is zero
-ZERO_ADDRESS="0x0000000000000000000000000000000000000000"
 
 # Track number of progress lines printed (for clearing later)
 PROGRESS_LINES=0
@@ -172,14 +199,16 @@ fi
 #   - LibOrganizationAdmin: No deps on other deployed libraries
 #   - LibOrganizationMembers: No deps on other deployed libraries
 #   - LibOrganizationGroups: No deps on other deployed libraries
-#   - LibOrganizationInitialization: Depends on LibOrganizationAdmin, Members, Groups
-#   - LibOrganizationAccountSignature: Depends on LibOrganizationPolicy
+#   - LibOrganizationTxRecovery: No deps on other deployed libraries
+#   - LibOrganizationGuardianRecovery: No deps on other deployed libraries
+#   - LibOrganizationInitialization: Depends on Admin, Members, Groups, TxRecovery, GuardianRecovery
+#   - LibOrganizationAccountSignature: Depends on Policy, TxRecovery
 #
 # We must compute in stages because some libraries have their bytecode affected
 # by the addresses of other libraries they depend on.
 
-# Step 2a: Compute independent library addresses (Policy, Admin, Members, Groups)
-print_progress "  Computing independent library addresses (Policy, Admin, Members, Groups)..."
+# Step 2a: Compute independent library addresses
+print_progress "  Computing independent library addresses..."
 LIB_OUTPUT_INDEPENDENT=$(forge script script/DeployLibraries.s.sol:DeployLibraries \
     --sig "computeIndependentAddresses(address)" "$FACTORY_ADDRESS" --offline 2>&1) || {
     clear_progress
@@ -213,6 +242,8 @@ DEP_LIBRARIES_FLAGS="--libraries ${LIB_ORG_POLICY_PATH}:${LIB_ORG_POLICY_ADDRESS
 DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_ADMIN_PATH}:${LIB_ORG_ADMIN_ADDRESS}"
 DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_MEMBERS_PATH}:${LIB_ORG_MEMBERS_ADDRESS}"
 DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_GROUPS_PATH}:${LIB_ORG_GROUPS_ADDRESS}"
+DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_TX_RECOVERY_PATH}:${LIB_ORG_TX_RECOVERY_ADDRESS}"
+DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_GUARDIAN_RECOVERY_PATH}:${LIB_ORG_GUARDIAN_RECOVERY_ADDRESS}"
 
 LIB_OUTPUT_DEPENDENT=$(forge script script/DeployLibraries.s.sol:DeployLibraries \
     --sig "computeDependentAddresses(address)" "$FACTORY_ADDRESS" \

@@ -76,12 +76,14 @@ LIB_ORG_GUARDIAN_RECOVERY_PATH := $LIB_ORG_GUARDIAN_RECOVERY_PATH
 # ------------------------------------------------------------------------------
 # Library Linking Flags (for deploy-contracts and deploy-dependent-libs)
 # ------------------------------------------------------------------------------
-# Independent libraries (Policy, Admin, Members, Groups) - used for deploy-dependent-libs
+# Independent libraries - used for deploy-dependent-libs
 INDEPENDENT_LIBRARIES_FLAGS = \\
 	--libraries \$(LIB_ORG_POLICY_PATH):\$(LIB_ORG_POLICY_ADDRESS) \\
 	--libraries \$(LIB_ORG_ADMIN_PATH):\$(LIB_ORG_ADMIN_ADDRESS) \\
 	--libraries \$(LIB_ORG_MEMBERS_PATH):\$(LIB_ORG_MEMBERS_ADDRESS) \\
-	--libraries \$(LIB_ORG_GROUPS_PATH):\$(LIB_ORG_GROUPS_ADDRESS)
+	--libraries \$(LIB_ORG_GROUPS_PATH):\$(LIB_ORG_GROUPS_ADDRESS) \\
+	--libraries \$(LIB_ORG_TX_RECOVERY_PATH):\$(LIB_ORG_TX_RECOVERY_ADDRESS) \\
+	--libraries \$(LIB_ORG_GUARDIAN_RECOVERY_PATH):\$(LIB_ORG_GUARDIAN_RECOVERY_ADDRESS)
 
 # All libraries - used for deploy-contracts
 ALL_LIBRARIES_FLAGS = \\

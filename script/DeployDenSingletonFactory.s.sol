@@ -122,6 +122,24 @@ contract DeployDenSingletonFactory is BaseDeployScript {
         Logger.logPass("Deployer funded successfully");
     }
 
+    /**
+     * @notice Compute and print the Den Singleton Factory address without deploying
+     * @dev The factory is deployed via CREATE from the deployer EOA at nonce 0, so the address
+     *      is deterministic based on the deployer address alone. Does not require RPC connection.
+     * @param deployerAddress The deployer EOA address (must deploy at nonce 0)
+     */
+    function computeAddress(address deployerAddress) external pure {
+        require(deployerAddress != address(0), "Deployer address cannot be zero");
+
+        address expectedAddress = vm.computeCreateAddress(deployerAddress, 0);
+
+        Logger.logBoxHeader("Computed Den Singleton Factory Address");
+        Logger.logKeyValue("Deployer", deployerAddress);
+        Logger.logEmptyLine();
+        Logger.logKeyValue("DenSingletonFactory", expectedAddress);
+        Logger.logBoxFooter();
+    }
+
     /// @dev Deploys the Den Singleton Factory using inline assembly
     ///      Uses CREATE opcode from nonce 0 to achieve deterministic address
     function _deployFactory() internal returns (address deployedAtAddress) {
