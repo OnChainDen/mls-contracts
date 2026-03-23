@@ -1561,8 +1561,11 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
                 policyId,
                 policy.config.rateLimit.anchorTimestamp,
                 policy.config.rateLimit.timeIntervalHours,
+                policy.config.rateLimit.sourceScope,
                 scopedAccount,
+                policy.config.rateLimit.destinationScope,
                 scopedDestination,
+                policy.config.rateLimit.initiatorScope,
                 scopedInitiator
             )
         );

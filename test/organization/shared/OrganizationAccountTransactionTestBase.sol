@@ -201,8 +201,11 @@ abstract contract OrganizationAccountTransactionTestBase is OrganizationPolicyTe
                 policyId,
                 policy.config.rateLimit.anchorTimestamp,
                 policy.config.rateLimit.timeIntervalHours,
+                policy.config.rateLimit.sourceScope,
                 scopedAccount,
+                policy.config.rateLimit.destinationScope,
                 scopedDestination,
+                policy.config.rateLimit.initiatorScope,
                 scopedInitiator
             )
         );
