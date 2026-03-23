@@ -611,7 +611,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
     /// @dev Verifies that stale finalize signatures are rejected after cancel-and-reinitiate with identical params.
     /// This is the core replay-protection test for the deferred tx recovery init flow.
     function test_staleFinalizeAuth_rejectedAfterCancelAndReinitiateSameParams() public {
-        address ALT_TX_RECOVERY = address(0x710AA);
+        address altTxRecovery = address(0x710AA);
 
         // Setup: clear recovery state for deferred init
         _setTxRecoveryState({
@@ -626,7 +626,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
 
         (AdminAuthParams memory initAuthA,) = _buildTxRecoveryAuth({
             operationType: OperationType.InitiateInitializeTransactionRecovery,
-            recoveryAddress: ALT_TX_RECOVERY,
+            recoveryAddress: altTxRecovery,
             timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
             salt: 51_001,
             isApproval: true,
@@ -634,11 +634,11 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         });
 
         vm.prank(GUARDIAN);
-        harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, initAuthA);
+        harness.initiateInitializeTransactionAndERC1271Recovery(altTxRecovery, TX_RECOVERY_TIMELOCK, initAuthA);
 
         (AdminAuthParams memory staleAuth,) = _buildTxRecoveryAuth({
             operationType: OperationType.FinalizeInitializeTransactionRecovery,
-            recoveryAddress: ALT_TX_RECOVERY,
+            recoveryAddress: altTxRecovery,
             timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
             salt: 51_002,
             isApproval: true,
@@ -647,7 +647,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
 
         (AdminAuthParams memory cancelAuth,) = _buildTxRecoveryAuth({
             operationType: OperationType.CancelInitializeTransactionRecovery,
-            recoveryAddress: ALT_TX_RECOVERY,
+            recoveryAddress: altTxRecovery,
             timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
             salt: 51_003,
             isApproval: true,
@@ -659,7 +659,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
 
         (AdminAuthParams memory initAuthB,) = _buildTxRecoveryAuth({
             operationType: OperationType.InitiateInitializeTransactionRecovery,
-            recoveryAddress: ALT_TX_RECOVERY,
+            recoveryAddress: altTxRecovery,
             timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
             salt: 51_004,
             isApproval: true,
@@ -667,7 +667,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         });
 
         vm.prank(GUARDIAN);
-        harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, initAuthB);
+        harness.initiateInitializeTransactionAndERC1271Recovery(altTxRecovery, TX_RECOVERY_TIMELOCK, initAuthB);
 
         // Call: stale finalize from canceled attempt should be rejected
         vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
@@ -679,7 +679,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
 
         (AdminAuthParams memory freshAuth,) = _buildTxRecoveryAuth({
             operationType: OperationType.FinalizeInitializeTransactionRecovery,
-            recoveryAddress: ALT_TX_RECOVERY,
+            recoveryAddress: altTxRecovery,
             timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
             salt: 51_005,
             isApproval: true,
@@ -691,7 +691,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
 
         assertEq(
             harness.getTxRecoveryState().recoveryAddress,
-            ALT_TX_RECOVERY,
+            altTxRecovery,
             "tx recovery should be configured after fresh finalize"
         );
     }
