@@ -30,48 +30,48 @@ factory = "0x4e59b44847b379578588920cA78FbF26c0B4956C"
 factory_deployer = "0x3fAB184622Dc19b6109349B94811493BF2a45362"
 
 # Platform Libraries (environment-independent)
-lib_org_policy = "0x1e7670C86001A5f3D998d80dbC4106980F08e326"
-lib_org_admin = "0xeb68Fe1E0Ef971791685Cf3cC895Bdc4eB2BedfF"
-lib_org_members = "0x783ec31E21987372a8E2Ed976D7D57cFf5317410"
-lib_org_groups = "0x3AA15D0c90132E92DF12df760f73D98cB705Ca81"
-lib_org_init = "0xb7a698EBee3bD54ffF4553d73586e23aa11347B0"
-lib_org_account_sig = "0x3668E2E517D9f4f3Fa6C17C64c337AA694355e6F"
-lib_org_tx_recovery = "0xA249619bA052DAFD8054E5F1196Baf020afF7636"
-lib_org_guardian_recovery = "0x270c85651955551A4c1228617afbD232196B7b06"
+lib_org_policy = "0xEe7628935e4C38Bf484736aA7ff940200F933324"
+lib_org_admin = "0x71A73A3998D271242fB6B309c080cD3EBC6df8b5"
+lib_org_members = "0xd04779792fFead42f2d7999e3D118EBB00050fA3"
+lib_org_groups = "0xd779E918c145E649F92C933a6478c49e4dB1F269"
+lib_org_init = "0x683288a4791159414cfED34232Ced23232457F49"
+lib_org_account_sig = "0xDC03a7b4d32DEA38F02e843699bE204d27ddB5D0"
+lib_org_tx_recovery = "0xB8d0f6dD9C6c75e8be367eEd9A08f0FFeDFd64aB"
+lib_org_guardian_recovery = "0x13325B7F5C84a1646eB7Cf5d747FB93A485Af6C6"
 
 # Platform Implementation Contracts (environment-independent)
-whitelist_impl = "0x13B7F4dAEac79DC0cd61698317779087Df04Aa17"
-org_impl = "0x9f574Ba5f3e0eE1cDB37B7898Eb5726545F9B4ed"
-account_impl = "0x6621AA7DCcd191C380C1028462d3068e55ae4260"
+whitelist_impl = "0x60A4DAfb7D9cF17Ac99b49d1a15d491c7621b80e"
+org_impl = "0x4a20a1F1275390e32c3eccACaA3877E089C04Cd2"
+account_impl = "0xe5C2fD374adf348013A7Dae1f657DF8DD63e3559"
 
 # Safe 1.4.1 Infrastructure (environment-independent)
-safe_singleton = "0xc500DCD5d1cde97fdFDfEEbBad9886FDAaF42337"
-safe_proxy_factory = "0xb4909642eBDE4f750F18a43eaDA5300709ef4090"
-safe_fallback_handler = "0xBcB272F59bAd2980D0b74BE7320B84b8a727A489"
-safe_multisend = "0x87edec1f72e54f9e4857795891C13fE2400188FC"
-safe_multisend_call_only = "0x59c8065A1f815A716EF2fB4FF25887C518801f2a"
-safe_create_call = "0xdFf1aBEdCfd878C1F39202fCC7Dbaa171f01aC55"
-safe_simulate_tx_accessor = "0x1509948b99489294899f04aDc7cC89ddA201A48B"
+safe_singleton = "0xBEE29CC9F374C7d5F461A1D3Fb58B988706f8E9C"
+safe_proxy_factory = "0xff76f161A168458f60C43656b7A70aF17B15A1d0"
+safe_fallback_handler = "0x584464Cf6216A0d360fF9fF85E29DC61156ac26D"
+safe_multisend = "0x1E628972706F03A6CF8823511eD1E76Ccdf741f7"
+safe_multisend_call_only = "0x972cC65d1FcfC0AECC5E36f527C313Af76351b83"
+safe_create_call = "0x567eb58dCB87317dC8967710F094805976AdffB6"
+safe_simulate_tx_accessor = "0x380Dc89F36D9F01Bd26d78257E406de2C824a6E8"
 
 # BatchedTransaction (environment-independent)
-batched_transaction = "0xE6310F307Ad41062427d35e0881B42ad4DAcC6D6"
+batched_transaction = "0xAF2f8ff2c76c33280AE343cD470E6298C2a6F246"
 
 # Environment: nonprod (1-of-1 Safe with test executors)
 # Addresses that depend on the nonprod admin Safe
 [factory.arachnid.env.nonprod]
-guardian_safe = "0x673fCe0337Bc55B7D2ade293Ef9C71371D9555C4"
-admin_safe = "0x0999652E086de106439f1a22dEa6bF39C2d53d97"
-org_factory = "0xF573d5a19BeEc5a65776980C5C4babee8f2f177c"
-whitelist_proxy = "0xFca862f751736Df6Fc913a193fdeC287Efd446E1"
-guardian_safe_executor_module = "0x155ed05d1dD5AD80e17461866DaAe35a47EEc933"
+guardian_safe = "0xc1535E4EEb29031e304274493a6D6a6Ed5fC56d9"
+admin_safe = "0x0b9231152C244C7eD734828Ef521332A2E92a460"
+org_factory = "0xAE885fAbB5ae31A3a95f570b13CE5c318B693b98"
+whitelist_proxy = "0x6e5C88cEea9Eb2Eb451Be51e9ce9f78E865902Dc"
+guardian_safe_executor_module = "0x69c1c361f719526f77aaf7f9BfF09A9E9411297a"
 
 # Environment: prod (2-of-3 Safe with production executors)
-# Module addresses NOT_COMPUTED until production executor EOAs are set
+# guardian_safe_executor_module NOT_COMPUTED until production executor EOA is set
 [factory.arachnid.env.prod]
-guardian_safe = "0xDae80bBDD6C7A78d89A3992ae66A91CA471A19e5"
-admin_safe = "0xbFFb89dba27e9CFfB71A0d80a9552f693F77F0a3"
-org_factory = "0x3bC1D1A438FC7BdaCD967C2644fa78E3e3bA43CE"
-whitelist_proxy = "0x4a9824B0993c4206e3Acf555dE57eBaF6e9df027"
+guardian_safe = "0x6B5dCfE562D5C93426C12D1ff31A9dB8A3Ee5b75"
+admin_safe = "0xb2950b94dF8359eE9A81dB17587DCc1d0D3703Ef"
+org_factory = "0x7C6268Cf76bed833886C6d2353B3dF75cF5Af995"
+whitelist_proxy = "0xF9704f4D538fD5DEA99F1ab7678C0421E63Fe39f"
 guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
 
 # ------------------------------------------------------------------------------
@@ -86,48 +86,48 @@ factory = "0xD13cb449d4f79C0D5A868a3D82e892d3d99b05f5"
 factory_deployer = "0xFdA43C00bA0589bb10Bc3b75c3D8E1046e73E328"
 
 # Platform Libraries (environment-independent)
-lib_org_policy = "0x75dbF811356b9E74df2519D8ABd02008aCe713ae"
-lib_org_admin = "0x8F29757a8e6471DAd0caBd33C1d115Cb19a46D50"
-lib_org_members = "0x5E8102D7EfEccc30660DEACa0Eb737eAb94de4FF"
-lib_org_groups = "0x216a649236085Fa47A6322074A4272D2945B40c6"
-lib_org_init = "0xC21d47E0f1F21BFF3E46421B92cE6A7Ab88b5f1b"
-lib_org_account_sig = "0x02255f921a93d332E95c8e1d9c145e5F7D5D0A5E"
-lib_org_tx_recovery = "0x2D7106f4FF8762f449319035979f473Cd2A252e9"
-lib_org_guardian_recovery = "0xF8575c5fa02Cc973DE993c61f92aB2d095576c33"
+lib_org_policy = "0xE9729b425844ec6F396f4fE0690FBdF533855c92"
+lib_org_admin = "0xf32AF4DF4E7b3B8EAe7192e09adAA9c0518375ED"
+lib_org_members = "0x78c09b23C998EcA004B016a404939d223dE807cd"
+lib_org_groups = "0xa58476fAE7205BFa9a41d5322f066ab088bE5D2E"
+lib_org_init = "0x96F1E91Dc498dE654153f84Bc59b36298E8BF5c2"
+lib_org_account_sig = "0xEAb4822bE0B1CB7372a059BbC6345CeaDE4b4b08"
+lib_org_tx_recovery = "0xb166fcf1f88A01eaaF103A610D1b50d4e67999fc"
+lib_org_guardian_recovery = "0x44eEA0bC378387BE91f7D08161C76797e0fBc0F1"
 
 # Platform Implementation Contracts (environment-independent)
-whitelist_impl = "0x795d8928f5e9C829526bb84dF58e8C97Be5ba5B5"
-org_impl = "0x901e961bDe98D3AD6935C6BA237EeBF9C403e28B"
-account_impl = "0x6d4223F2E8d75DaDFc7a90baf42c7A7231d7Ad01"
+whitelist_impl = "0xB1667675daec4f5735A86aB049b854525123c1Cb"
+org_impl = "0xeCea3b4079552aDC3fdCF10B26977BD0Db222486"
+account_impl = "0x866E6007cA74C3553aB163F9dDa08dBBB8afbDe7"
 
 # Safe 1.4.1 Infrastructure (environment-independent)
-safe_singleton = "0x6619F88c34beaB1392bfc579F82F87EAF336AD7e"
-safe_proxy_factory = "0x1a7dB153aB08639Bf3e4CF3821779eEcF419a50d"
-safe_fallback_handler = "0xf54E50B8E6C56Bcc8d7E19450bfA80845938Dde5"
-safe_multisend = "0xd3dD96f5Ee0E194614259e06Ec7AeF659886DcDF"
-safe_multisend_call_only = "0xb76575537DA07B039604BC937DCdaDeDeEC15F5d"
-safe_create_call = "0x9934478BdF70918ad12fe108FEE3bf920f496a3E"
-safe_simulate_tx_accessor = "0xC320c8edA485BAda086791ADAbcC7Eb94e56c931"
+safe_singleton = "0xf91f9fE6280f002E563aE12227269C444761362b"
+safe_proxy_factory = "0x549A55E09eAdED43195AD0fDA8C8ac20Cf4Eb345"
+safe_fallback_handler = "0xA98399e5DF3E7f17A73f5079DA98D83a539A083D"
+safe_multisend = "0x7D089bC39cfE2A39641C46EBF1C660E36391A0Ac"
+safe_multisend_call_only = "0x8d532d8905f868dc1E291D5CC4B50CB8eBa8b79B"
+safe_create_call = "0x865871609d00851764b24D4fdb643088cc2EBC3b"
+safe_simulate_tx_accessor = "0x95cC030527B02c8c0AB1a421f92eF82b71507776"
 
 # BatchedTransaction (environment-independent)
-batched_transaction = "0x382b010b50043e507d6cd72F6C98480A48228528"
+batched_transaction = "0x6102cD63A4d42c0644690a621cB65F0F91F3fE78"
 
 # Environment: nonprod (1-of-1 Safe with test executors)
 # Addresses that depend on the nonprod admin Safe
 [factory.den-nonprod.env.nonprod]
-guardian_safe = "0x0A17fB969164d83629E5901E2E8f609AB4226b27"
-admin_safe = "0xe8a64Ff3A086e3a71b19B23aAe47b234f200cFe6"
-org_factory = "0x92eBB6e21361b21aa33Aae9a627993Fd703E052F"
-whitelist_proxy = "0x7089dFfE9d82A29aB87Fc5aB24e8fEb6cd36557a"
-guardian_safe_executor_module = "0x47985F9B24DD9648c27374d805D7576f1Ca8987B"
+guardian_safe = "0xA6fcdC2878CAdE5Bfa5e5e176978a8002191d0c3"
+admin_safe = "0x83e2b4DA732321b92C4d6443962d230D497Ee369"
+org_factory = "0xaB37F09F06b7F8933A1d1b96e75E16f378123603"
+whitelist_proxy = "0x37852d6b81B548BcE5C5a85A403801ca5149f651"
+guardian_safe_executor_module = "0x9c05013545da98e33d97529B4dc0F5Eb093D0917"
 
 # Environment: prod (2-of-3 Safe with production executors)
-# Module addresses NOT_COMPUTED until production executor EOAs are set
+# guardian_safe_executor_module NOT_COMPUTED until production executor EOA is set
 [factory.den-nonprod.env.prod]
-guardian_safe = "0x4F5E215b7Ef4a1B37d56d12afe79B274F9c65C7F"
-admin_safe = "0xf7e38d16B4b8b1e8E2466a68c6c8AbCe03f14CBa"
-org_factory = "0x335d188EF825Ef232fca59a8df1C630F40943D1a"
-whitelist_proxy = "0x1fAb1C35b3221eCBb617d846Ffcf4c5A62398359"
+guardian_safe = "0xcf4d0C179031c2e363608C69e94Cdc76E8ecFEa5"
+admin_safe = "0x5162ce4747E66837BD75777323EE5F08CbAd02F6"
+org_factory = "0x6f0f800E5F0E27C192c8EA1F5e80f477278D826f"
+whitelist_proxy = "0xaEf24034893DCbD7D1be4B4670DdD98B403FBD43"
 guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
 
 # ------------------------------------------------------------------------------
