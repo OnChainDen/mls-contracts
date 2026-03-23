@@ -379,4 +379,51 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         assertFalse(harness.isGuardianUpdateReadyForAcceptance(), "fresh initiate should reset ready-for-acceptance");
         assertEq(harness.guardian(), GUARDIAN, "guardian should remain unchanged until a later accept step");
     }
+
+    /// @dev Verifies that stale cancel signatures are rejected after cancel-and-reinitiate with identical params.
+    function test_staleCancelAuth_rejectedAfterCancelAndReinitiateSameParams() public {
+        // Setup
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+        _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 4001);
+
+        (AdminAuthParams memory staleCancelAuth,) = _buildCancelGuardianUpdateAuth({
+            pendingGuardian: NEW_GUARDIAN_A,
+            salt: 4002,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        (AdminAuthParams memory firstCancelAuth,) = _buildCancelGuardianUpdateAuth({
+            pendingGuardian: NEW_GUARDIAN_A,
+            salt: 4003,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.cancelGuardianUpdate(firstCancelAuth);
+
+        _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 4004);
+
+        // Call: stale cancel auth from the canceled attempt should be rejected
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
+        vm.prank(GUARDIAN);
+        harness.cancelGuardianUpdate(staleCancelAuth);
+
+        // Verify: fresh cancel auth succeeds
+        (AdminAuthParams memory freshCancelAuth,) = _buildCancelGuardianUpdateAuth({
+            pendingGuardian: NEW_GUARDIAN_A,
+            salt: 4005,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.cancelGuardianUpdate(freshCancelAuth);
+
+        assertEq(harness.pendingGuardian(), address(0), "fresh cancel should clear the pending guardian");
+    }
 }
