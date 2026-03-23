@@ -22,6 +22,11 @@ library TokenTransferUtils {
      *      A transaction is considered a token transfer if:
      *      1. It has value > 0 and no data (native token transfer), OR
      *      2. It calls transfer(address,uint256) for ERC-20 transfers
+     *
+     *      Classification is based on calldata shape and value alone — this function does not
+     *      inspect or validate the transaction's `to` address. Any contract that exposes a
+     *      `transfer(address,uint256)` function (not just ERC-20 tokens) will be classified as
+     *      a token transfer.
      * @param data The transaction calldata
      * @param value The transaction value in wei
      * @return True if the transaction is a token transfer, false otherwise
@@ -51,7 +56,9 @@ library TokenTransferUtils {
     /**
      * @notice Checks if a transaction is an ERC20 token transfer
      * @dev A transaction is considered an ERC20 token transfer if it calls transfer(address,uint256)
-     *      and has no native value attached
+     *      and has no native value attached. Only the function selector and absence of native value
+     *      are checked — the transaction's `to` address is not inspected. This means any contract
+     *      with a `transfer(address,uint256)` function will match, not just ERC-20 tokens.
      * @param data The transaction calldata
      * @param value The transaction value in wei
      * @return True if the transaction is an ERC20 token transfer, false otherwise

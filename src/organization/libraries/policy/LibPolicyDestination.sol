@@ -17,7 +17,10 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 library LibPolicyDestination {
     /**
      * @dev Gets the actual destination address for a transaction.
-     *      For ERC-20 token transfers, the actual destination is the token recipient (extracted from calldata).
+     *      For ERC-20 token transfers, the actual destination is the token recipient (extracted
+     *      from the first parameter of `transfer(address,uint256)` in calldata), not the `to`
+     *      address (the contract being called). This means destination allowlists validate who
+     *      receives the transfer, not which contract is called.
      *      For native token transfers, the actual destination is the `to` address.
      *      For contract interactions, the actual destination is the `to` address.
      * @param to The transaction `to` address

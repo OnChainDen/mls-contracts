@@ -87,6 +87,12 @@ library LibOrganizationPolicy {
      *      3. Initiator authorization (via mapping lookups for membership)
      *      4. Transaction type matching (including token transfer and contract interaction checks)
      *      5. Destination matching
+     *
+     *      Token transfer classification is based on calldata shape alone (see
+     *      `TokenTransferUtils.isTransactionTokenTransfer`) — the `to` address is not
+     *      verified as an ERC-20 token contract. When a `TokenTransfers` policy uses
+     *      `anyToken = true`, the `to` address is not validated at all, so any contract
+     *      exposing `transfer(address,uint256)` is reachable under that policy.
      * @param policyId The unique identifier of the policy
      * @param sourceAccount The account executing the transaction
      * @param to The transaction destination address

@@ -251,6 +251,20 @@ Policies define which transactions they govern using the following fields:
 | **Token Transfer Recipient** | Where tokens can be sent | `Any recipient` · Custom address list |
 | **Token Amount Threshold** | Maximum amount per transaction | Numeric value (policy applies to amounts ≤ this value) |
 
+> [!NOTE]
+> **How token transfers are classified.** The policy engine classifies a transaction as a "token transfer" based on calldata shape alone — it does **not** verify that the `to` address is an ERC-20 token contract. Specifically, a transaction is classified as a token transfer if it meets either of these criteria:
+> 1. **Native token transfer**: `value > 0` with empty calldata.
+> 2. **ERC-20 token transfer**: Calldata begins with the `transfer(address,uint256)` function selector (`0xa9059cbb`), calldata is at least 68 bytes, and `value == 0`.
+>
+> Because classification relies on the function selector rather than the target contract, a call to **any** contract that exposes a `transfer(address,uint256)` function will be classified as a token transfer — even if it is not an ERC-20 token.
+>
+> **Implications for the `Token` field:**
+> - When **Token = `Any token`** (`anyToken = true`): The policy does not validate the `to` address at all. Any contract with a matching `transfer(address,uint256)` function is reachable under this policy.
+> - When **Token = Specific token** (`anyToken = false`): The policy validates that the `to` address matches the configured token contract address, restricting calls to that specific contract.
+>
+> **Implications for `Token Transfer Recipient` (destination validation):**
+> For transactions classified as ERC-20 token transfers, the policy engine treats the **encoded recipient parameter** (the first argument of `transfer(address,uint256)`) as the "destination" — not the `to` address (the contract being called). This means destination allowlists validate who receives the transfer, not which contract is called.
+
 ---
 
 #### Contract Interaction Fields
