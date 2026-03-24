@@ -149,7 +149,7 @@ Only Members who are "Admins" according to the Organization contract can approve
 ### Approving Admin Operations
 
 Steps to approve an Admin Operation:
-1. **Admins sign an approval message** – Needs more than a threshold amount of signatures
+1. **Admins sign an approval message** – Needs at least the threshold number of signatures
 2. **Guardian collects the signatures**
 3. **Guardian sends the signatures to the Organization contract**
 4. **Organization contract performs validations and updates state** – Checks that `msg.sender` is the Guardian, validates admin signatures
@@ -166,7 +166,7 @@ The rejection workflow is nearly identical to the approval workflow. The key dif
 2. Guardian calls `rejectAdminOperation()` instead of the operation-specific function
 
 Steps to reject an Admin Operation:
-1. **Admins sign a rejection message**  – Needs more than a threshold amount of signatures
+1. **Admins sign a rejection message**  – Needs at least the threshold number of signatures
 2. **Guardian collects the signatures**
 3. **Guardian sends the signatures to the Organization contract** – Calls `rejectAdminOperation()`
 4. **Organization contract performs validations and consumes nonce** – Checks that `msg.sender` is the Guardian, validates admin signatures
