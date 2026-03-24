@@ -1,0 +1,13 @@
+# Dependencies
+lib/
+node_modules/
+
+# Build artifacts
+out/
+cache/
+artifacts/
+
+# Test files (different conventions apply)
+test/
+
+# Note: script/ is NOT ignored - it's linted with .solhint.script.json

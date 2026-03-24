@@ -1,0 +1,131 @@
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
+pragma solidity 0.8.33;
+
+import {Test} from "forge-std/Test.sol";
+
+import {TimelockUtils} from "libraries/TimelockUtils.sol";
+
+/**
+ * @dev TimelockUtilsHarness
+ *      Test harness that exposes the internal TimelockUtils.validateTimelockDurationOrRevert
+ *      function and the library constants via public wrappers.
+ */
+contract TimelockUtilsHarness {
+    /// @dev Exposes the timelock validation helper for direct testing.
+    /// @param timelockDurationSeconds Candidate timelock duration in seconds.
+    function validateTimelockDurationOrRevert(uint256 timelockDurationSeconds) external pure {
+        TimelockUtils.validateTimelockDurationOrRevert(timelockDurationSeconds);
+    }
+
+    /// @dev Returns the minimum timelock duration supported by the library.
+    /// @return minDurationSeconds The minimum allowed duration.
+    function minTimelockDuration() external pure returns (uint256) {
+        return TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS;
+    }
+
+    /// @dev Returns the maximum timelock duration supported by the library.
+    /// @return maxDurationSeconds The maximum allowed duration.
+    function maxTimelockDuration() external pure returns (uint256) {
+        return TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS;
+    }
+}
+
+/**
+ * @dev TimelockUtilsTest
+ *      Tests for TimelockUtils library.
+ *      Covers boundary validation for timelock durations:
+ *      - MIN_TIMELOCK_DURATION_SECONDS = 2 days (172800 seconds)
+ *      - MAX_TIMELOCK_DURATION_SECONDS = 30 days (2592000 seconds)
+ *      All tests verify that durations within [MIN, MAX] succeed and durations
+ *      outside that range revert with InvalidTimelockDuration.
+ * @author Den Technologies Inc
+ */
+contract TimelockUtilsTest is Test {
+    TimelockUtilsHarness public harness;
+
+    /// @dev Cached values from the library constants for readability
+    uint256 minDuration;
+    uint256 maxDuration;
+
+    /// @dev Deploys the harness and caches the library timelock bounds for fuzzing.
+    function setUp() public {
+        harness = new TimelockUtilsHarness();
+        minDuration = harness.minTimelockDuration();
+        maxDuration = harness.maxTimelockDuration();
+
+        // Sanity check: verify constants match expected values
+        assertEq(minDuration, 2 days, "MIN should be 2 days");
+        assertEq(maxDuration, 30 days, "MAX should be 30 days");
+    }
+
+    /// @dev Test case: Duration exactly at MIN (2 days) should succeed.
+    function test_validateTimelockDurationOrRevert_atMin_succeeds() public view {
+        // Should not revert
+        harness.validateTimelockDurationOrRevert(minDuration);
+    }
+
+    /// @dev Test case: Duration exactly at MAX (30 days) should succeed.
+    function test_validateTimelockDurationOrRevert_atMax_succeeds() public view {
+        // Should not revert
+        harness.validateTimelockDurationOrRevert(maxDuration);
+    }
+
+    /// @dev Test case: Duration at MIN - 1 should revert with InvalidTimelockDuration.
+    function test_validateTimelockDurationOrRevert_belowMin_reverts() public {
+        uint256 belowMin = minDuration - 1;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(TimelockUtils.InvalidTimelockDuration.selector, belowMin, minDuration, maxDuration)
+        );
+        harness.validateTimelockDurationOrRevert(belowMin);
+    }
+
+    /// @dev Test case: Duration at MAX + 1 should revert with InvalidTimelockDuration.
+    function test_validateTimelockDurationOrRevert_aboveMax_reverts() public {
+        uint256 aboveMax = maxDuration + 1;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(TimelockUtils.InvalidTimelockDuration.selector, aboveMax, minDuration, maxDuration)
+        );
+        harness.validateTimelockDurationOrRevert(aboveMax);
+    }
+
+    /// @dev Test case: Duration of 0 should revert with InvalidTimelockDuration.
+    function test_validateTimelockDurationOrRevert_zero_reverts() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(TimelockUtils.InvalidTimelockDuration.selector, 0, minDuration, maxDuration)
+        );
+        harness.validateTimelockDurationOrRevert(0);
+    }
+
+    /// @dev Test case: Mid-range duration (7 days) should succeed.
+    function test_validateTimelockDurationOrRevert_midRange_succeeds() public view {
+        harness.validateTimelockDurationOrRevert(7 days);
+    }
+
+    /// @dev Test case: Any duration in [MIN, MAX] should succeed.
+    function testFuzz_validateTimelockDurationOrRevert_withinRange_succeeds(uint256 duration) public view {
+        // Setup: bound the fuzzed duration inside the valid timelock range.
+        duration = bound(duration, minDuration, maxDuration);
+
+        // Call: validate the bounded in-range timelock duration.
+        harness.validateTimelockDurationOrRevert(duration);
+
+        // Verify: any in-range duration should succeed without reverting.
+    }
+
+    /// @dev Test case: Any duration outside [MIN, MAX] should revert with InvalidTimelockDuration.
+    function testFuzz_validateTimelockDurationOrRevert_outsideRange_reverts(uint256 duration) public {
+        // Setup: constrain the fuzzed duration outside the valid timelock range.
+        vm.assume(duration < minDuration || duration > maxDuration);
+
+        // Call: validate the out-of-range timelock, expecting `InvalidTimelockDuration`.
+        vm.expectRevert(
+            abi.encodeWithSelector(TimelockUtils.InvalidTimelockDuration.selector, duration, minDuration, maxDuration)
+        );
+        harness.validateTimelockDurationOrRevert(duration);
+
+        // Verify: the revert expectation above proves out-of-range values fail validation.
+    }
+}

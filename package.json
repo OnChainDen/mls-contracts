@@ -1,0 +1,29 @@
+{
+  "name": "mls-wallet-contracts",
+  "version": "1.0.0",
+  "description": "This repository contains the smart contracts for Multi-layer Security (MLS) Wallet.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OnChainDen/mls-contracts.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/OnChainDen/mls-contracts/issues"
+  },
+  "homepage": "https://github.com/OnChainDen/mls-contracts#readme",
+  "devDependencies": {
+    "solhint": "6.1.0"
+  }
+}

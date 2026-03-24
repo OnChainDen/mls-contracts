@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  # JOB 1: Standards, Sizes, & Tests
+  standards:
+    name: "Tests & Standards"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: "1.5.1"
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Install Solhint
+        # Installs the dev dependencies from your package.json
+        run: npm ci
+
+      - name: Check Formatting
+        # Fails if you forgot to run 'forge fmt'
+        run: forge fmt --check
+
+      - name: Check Contract Sizes
+        # Fails if contracts are too large (>24kb)
+        run: forge build --sizes src
+
+      - name: Run Linter
+        # Uses your Makefile to run Solhint
+        run: make lint
+
+      - name: Run Tests
+        # Uses your Makefile to run tests
+        run: make test
+
+  # JOB 2: Security Analysis (Slither) for source contracts
+  slither:
+    name: "Slither Analysis (src)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: "1.5.1"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Slither
+        run: pip install slither-analyzer
+
+      - name: Run Slither on src
+        run: slither src/ --config-file slither.config.json --fail-high
+
+  # JOB 3: Security Analysis (Slither) for deployment scripts
+  slither-scripts:
+    name: "Slither Analysis (scripts)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: "1.5.1"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Slither
+        run: pip install slither-analyzer
+
+      - name: Run Slither on scripts
+        run: slither script/ --config-file slither.script.config.json --fail-high

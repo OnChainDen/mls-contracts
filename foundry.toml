@@ -1,0 +1,124 @@
+# ==============================================================================
+# COMMON CONFIGURATION (Shared by ALL profiles)
+# ==============================================================================
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+test = "test"
+cache_path = "cache"
+solc = "0.8.33"
+evm_version = "paris"
+ignored_error_codes = [2424]  # Suppress deprecated memory-safe-assembly natspec warning from forge-std
+# Skip Safe 1.4.1 contracts (use FOUNDRY_PROFILE=safe to compile them with Solidity 0.7.6)
+skip = ["lib/safe-smart-account/**", "script/safe/**"]
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+bytecode_hash = "none"
+fs_permissions = [{ access = "read-write", path = "./"}]
+remappings = [
+    "@openzeppelin/=lib/openzeppelin-contracts/",
+    "@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+    "@safe/=lib/safe-smart-account/contracts/",
+    "forge-std/=lib/forge-std/src/",
+    "murky/=lib/murky/src/",
+    "account/=src/account/",
+    "implementation-whitelist/=src/implementation-whitelist/",
+    "interfaces/=src/interfaces/",
+    "libraries/=src/libraries/",
+    "organization/=src/organization/",
+    "script/=script/",
+    "types/=src/types/"
+]
+# Lighter local default for stateful invariant testing. CI profile is stricter.
+invariant = { runs = 32, depth = 100 }
+# Skip scripts and tests when generating test coverage reports (only check source contract coverage)
+no_match_coverage = "^(script|test)/.*"
+
+# ------------------------------------------------------------------------------
+# RPC ENDPOINTS (Network Aliases)
+# Available to ALL profiles. Use via: --rpc-url mainnet
+# ------------------------------------------------------------------------------
+[rpc_endpoints]
+# Mainnets
+mainnet = "https://rpc.ankr.com/eth"
+polygon = "https://rpc.ankr.com/polygon"
+arbitrum = "https://rpc.ankr.com/arbitrum"
+optimism = "https://rpc.ankr.com/optimism"
+base = "https://rpc.ankr.com/base"
+
+# Testnets
+sepolia = "https://rpc.ankr.com/eth_sepolia"
+arbitrum-sepolia = "https://rpc.ankr.com/arbitrum_sepolia"
+base-sepolia = "https://rpc.ankr.com/base_sepolia"
+optimism-sepolia = "https://rpc.ankr.com/optimism_sepolia"
+local = "localhost:8545"
+
+# Tenderly Virtual TestNets
+#
+# These aliases are what `make ... NETWORK=<alias>` uses (Makefile passes `--rpc-url $(NETWORK)`).
+# Put the values in `onchain-custody-contracts/.env` (ignored by git). Use the *last* path segment
+# of the Tenderly RPC URL (the VNet ID / API key-ish UUID), not the full URL.
+#
+# Example full RPC URL:
+#   https://virtual.base.us-east.rpc.tenderly.co/<VNET_ID>
+#
+ethereum-fork = "https://virtual.mainnet.us-east.rpc.tenderly.co/${TENDERLY_ETHEREUM_FORK_VNET_ID}"
+base-fork = "https://virtual.base.us-east.rpc.tenderly.co/${TENDERLY_BASE_FORK_VNET_ID}"
+arbitrum-fork = "https://virtual.arbitrum.us-east.rpc.tenderly.co/${TENDERLY_ARBITRUM_FORK_VNET_ID}"
+stage = "https://virtual.base.us-east.rpc.tenderly.co/${STAGE_TENDERLY_VIRTUAL_TESTNET_API_KEY}"
+
+# ==============================================================================
+# CI PROFILE (For Continuous Integration)
+# ==============================================================================
+[profile.ci]
+fuzz = { runs = 256  }
+invariant = { runs = 256 }
+
+# ==============================================================================
+# SAFE 1.4.1 DEPLOYMENT PROFILE
+# Uses Solidity 0.7.6 for deterministic Safe deployments matching official bytecode
+# ==============================================================================
+[profile.safe]
+src = "script/safe"            # Only compile Safe deployment script and its dependencies
+out = "out-safe"               # Separate output directory to avoid conflicts
+libs = ["lib"]
+test = "script/safe"           # No tests for Safe profile
+cache_path = "cache-safe"      # Separate cache to avoid conflicts
+solc = "0.7.6"                 # Safe 1.4.1 official compiler version
+evm_version = "istanbul"       # Safe 1.4.1 was deployed targeting Istanbul
+optimizer = false              # Official Safe deployments don't use optimizer
+via_ir = false                 # Safe 1.4.1 was compiled without IR pipeline
+bytecode_hash = "none"
+fs_permissions = [{ access = "read-write", path = "./"}]
+# Skip 0.8.33 files that are incompatible with Solidity 0.7.6
+skip = ["script/Deploy*.s.sol", "script/libraries/Array*.sol", "script/libraries/Linked*.sol", "test/**", "src/**"]
+remappings = [
+    "@safe/=lib/safe-smart-account/contracts/",
+    "forge-std/=lib/forge-std/src/",
+    "script/=script/"
+]
+
+# ==============================================================================
+# LINTING CONFIGURATION
+# ==============================================================================
+[lint]
+# Disable the asm-keccak256 lint - we prefer readable keccak256() calls over assembly
+exclude_lints = ["asm-keccak256"]
+
+# ==============================================================================
+# FORMATTING CONFIGURATION
+# ==============================================================================
+[fmt]
+int_types = "long"           # Enforces "uint256" over "uint" (Implicit in your examples)
+line_length = 120
+multiline_func_header = "attributes_first" 
+number_underscore = "thousands"
+quote_style = "double"
+tab_width = 4
+wrap_comments = true
+bracket_spacing = false      # Matches "No spaces inside brackets: arr[i]" 
+sort_imports = true          # Enforces "Strictly alphabetize imports"
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

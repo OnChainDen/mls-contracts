@@ -1,0 +1,193 @@
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
+pragma solidity 0.8.33;
+
+import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
+import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
+import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
+import {LibOrganizationGroupsStorage} from "organization/libraries/storage/LibOrganizationGroupsStorage.sol";
+import {GroupModification, GroupModificationType} from "types/CommonTypes.sol";
+
+/**
+ * @title Lib Organization Groups
+ * @dev Library for mapping-based group operations for Organization contracts.
+ *      Group existence and group membership are stored in mappings for O(1) lookups.
+ *      Group IDs are not reusable after deletion — isGroupMember entries persist in storage
+ *      intentionally. When a member is removed from the organization (via modifyMembers), their
+ *      isGroupMember bits are not cleared. If the member is later re-added, those persisted
+ *      entries become effective again, restoring their prior group roles. This is by design —
+ *      admins should use modifyGroups to explicitly remove a member from groups if they do not
+ *      want group assignments to survive a member removal/re-addition cycle.
+ *      The wasGroupDeleted mapping tracks deleted group IDs to prevent recreation.
+ * @author Den Technologies Inc
+ */
+library LibOrganizationGroups {
+    /**
+     * @dev Creates, updates, or deletes groups in the organization.
+     *      Each modification specifies its type via GroupModificationType:
+     *      - Create: creates a new group (reverts if already exists, was deleted, or membersToRemove is non-empty)
+     *      - Update: modifies membership of an existing group (reverts if group doesn't exist)
+     *      - Delete: deletes a group (membersToAdd/membersToRemove must be empty)
+     *      Adding a duplicate group member is a no-op. Removing a non-existent group member is a no-op.
+     *      Group IDs are not reusable after deletion.
+     * @param modifications Array of group modifications to apply
+     */
+    function modifyGroups(GroupModification[] calldata modifications) public {
+        for (uint256 i = 0; i < modifications.length; ++i) {
+            GroupModification calldata mod = modifications[i];
+
+            if (mod.modificationType == GroupModificationType.Create) {
+                _createGroup(mod);
+            } else if (mod.modificationType == GroupModificationType.Update) {
+                _updateGroup(mod);
+            } else if (mod.modificationType == GroupModificationType.Delete) {
+                _deleteGroup(mod);
+            } else {
+                revert IOrganizationGroups.InvalidGroupModificationType(uint8(mod.modificationType));
+            }
+        }
+    }
+
+    /**
+     * @dev Deletes a group. Deleting a non-existent group is a no-op.
+     *      Reverts if members are provided in the delete modification.
+     * @param mod The group modification containing the delete request
+     */
+    function _deleteGroup(GroupModification calldata mod) internal {
+        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
+        uint256 groupId = mod.groupId;
+
+        // Case: Deletion with non-empty member arrays
+        if (mod.membersToAdd.length > 0 || mod.membersToRemove.length > 0) {
+            revert IOrganizationGroups.InvalidGroupDeletionOperation(groupId);
+        }
+
+        // Case: Deleting a non-existent group (no-op).
+        if (!groupsLayout.isGroup[groupId]) return;
+
+        groupsLayout.isGroup[groupId] = false;
+        groupsLayout.wasGroupDeleted[groupId] = true;
+        emit IOrganizationGroups.GroupDeleted(groupId);
+    }
+
+    /**
+     * @dev Creates a new group. Reverts if the group already exists, was previously deleted,
+     *      or if membersToRemove is non-empty.
+     * @param mod The group modification containing initial members to add
+     */
+    function _createGroup(GroupModification calldata mod) internal {
+        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
+        uint256 groupId = mod.groupId;
+
+        // Case: Group ID was previously deleted — cannot be reused
+        if (groupsLayout.wasGroupDeleted[groupId]) revert IOrganizationGroups.GroupAlreadyDeleted(groupId);
+
+        // Case: Group already exists
+        if (groupsLayout.isGroup[groupId]) revert IOrganizationGroups.GroupAlreadyExists(groupId);
+
+        // Case: Creation with non-empty membersToRemove array
+        if (mod.membersToRemove.length > 0) revert IOrganizationGroups.InvalidGroupCreationOperation(groupId);
+
+        groupsLayout.isGroup[groupId] = true;
+        emit IOrganizationGroups.GroupCreated(groupId);
+
+        _addGroupMembers(groupsLayout, groupId, mod.membersToAdd);
+    }
+
+    /**
+     * @dev Updates an existing group's membership. Reverts if the group does not exist.
+     * @param mod The group modification containing members to add/remove
+     */
+    function _updateGroup(GroupModification calldata mod) internal {
+        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
+        uint256 groupId = mod.groupId;
+
+        // Case: Group does not exist
+        if (!groupsLayout.isGroup[groupId]) revert IOrganizationGroups.GroupDoesNotExist(groupId);
+
+        _addGroupMembers(groupsLayout, groupId, mod.membersToAdd);
+        _removeGroupMembers(groupsLayout, groupId, mod.membersToRemove);
+    }
+
+    /**
+     * @dev Adds members to a group. Adding a duplicate group member is a no-op.
+     * @param groupsLayout The groups storage layout
+     * @param groupId The group ID to add members to
+     * @param members The addresses to add
+     */
+    function _addGroupMembers(
+        LibOrganizationGroupsStorage.Layout storage groupsLayout,
+        uint256 groupId,
+        address[] calldata members
+    ) internal {
+        for (uint256 i = 0; i < members.length; ++i) {
+            address member = members[i];
+
+            // Case: Member is the zero address
+            if (member == address(0)) revert IOrganizationMembers.InvalidMemberAddress(member);
+
+            // Case: Member is not an organization member
+            if (!LibOrganizationMembers.isMember(member)) revert IOrganizationMembers.MemberDoesNotExist(member);
+
+            // Case: Member is already in group (no-op).
+            if (groupsLayout.isGroupMember[groupId][member]) continue;
+
+            groupsLayout.isGroupMember[groupId][member] = true;
+            emit IOrganizationGroups.GroupMemberAdded(groupId, member);
+        }
+    }
+
+    /**
+     * @dev Removes members from a group. Removing a non-member is a no-op.
+     * @param groupsLayout The groups storage layout
+     * @param groupId The group ID to remove members from
+     * @param members The addresses to remove
+     */
+    function _removeGroupMembers(
+        LibOrganizationGroupsStorage.Layout storage groupsLayout,
+        uint256 groupId,
+        address[] calldata members
+    ) internal {
+        for (uint256 i = 0; i < members.length; ++i) {
+            address member = members[i];
+
+            // Case: Removing a non-group-member (no-op).
+            if (!groupsLayout.isGroupMember[groupId][member]) continue;
+
+            groupsLayout.isGroupMember[groupId][member] = false;
+            emit IOrganizationGroups.GroupMemberRemoved(groupId, member);
+        }
+    }
+
+    /**
+     * @dev Checks if a group exists in the organization
+     * @param groupId The group ID to check
+     * @return True if the group exists, false otherwise
+     */
+    function isGroup(uint256 groupId) internal view returns (bool) {
+        return LibOrganizationGroupsStorage.layout().isGroup[groupId];
+    }
+
+    /**
+     * @dev Checks if an address is a member of a group.
+     *      Validates group existence and current organization membership before reading
+     *      the isGroupMember storage bit. Returns false for removed members even if the raw
+     *      storage bit is still set. However, the raw bit persists intentionally — if the
+     *      member is re-added to the organization, this function will return true again
+     *      without any explicit group reassignment.
+     * @param groupId The group ID to check
+     * @param memberAddress The address to check
+     * @return True if the address is a member of the group, false otherwise
+     */
+    function isGroupMember(uint256 groupId, address memberAddress) internal view returns (bool) {
+        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
+
+        // Case: Group does not exist
+        if (!groupsLayout.isGroup[groupId]) return false;
+
+        // Case: Member is not an organization member
+        if (!LibOrganizationMembers.isMember(memberAddress)) return false;
+
+        return groupsLayout.isGroupMember[groupId][memberAddress];
+    }
+}
