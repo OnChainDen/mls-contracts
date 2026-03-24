@@ -987,7 +987,7 @@ MLS Wallet implements two independent recovery mechanisms to handle scenarios wh
 
 Both mechanisms use timelocked processes and separate privileged addresses. Recovery can be configured either:
 - **At initialization**: Pass non-zero recovery addresses and timelock durations in `InitializationParams`
-- **Post-deployment**: Call `initializeGuardianRecovery()` or `initializeTransactionAndERC1271Recovery()` with admin authorization (requires Guardian to submit + admin threshold signatures)
+- **Post-deployment**: Use the timelocked deferred initialization flow (initiate → wait for `adminOperationTimelockDurationSeconds` → finalize) with admin authorization. The Guardian calls `initiateInitializeGuardianRecovery()` or `initiateInitializeTransactionAndERC1271Recovery()` to start, then `finalizeInitializeGuardianRecovery()` or `finalizeInitializeTransactionAndERC1271Recovery()` after the timelock expires. Both steps require admin threshold signatures. The pending initialization can be cancelled via `cancelInitializeGuardianRecovery()` or `cancelInitializeTransactionAndERC1271Recovery()`.
 
 Transaction Recovery must be explicitly enabled via a 2-step timelocked process before it can be used.
 
