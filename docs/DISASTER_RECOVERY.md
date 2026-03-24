@@ -33,13 +33,13 @@ Recovery mechanisms can be set up in two ways:
 |------|----------|---------------|---------------|
 | Initiate | `initiateInitializeGuardianRecovery(...)` | Guardian + Admin threshold (isApproval: true) | `InitiateInitializeGuardianRecovery` |
 | Finalize | `finalizeInitializeGuardianRecovery(...)` | Guardian + Admin threshold (isApproval: true) | `FinalizeInitializeGuardianRecovery` |
-| Cancel | `cancelInitializeGuardianRecovery(...)` | Guardian + Admin threshold (isApproval: false) | `InitiateInitializeGuardianRecovery` |
+| Cancel | `cancelInitializeGuardianRecovery(...)` | Guardian + Admin threshold (isApproval: true) | `CancelInitializeGuardianRecovery` |
 
 | Step | Function | Authorization | OperationType |
 |------|----------|---------------|---------------|
 | Initiate | `initiateInitializeTransactionAndERC1271Recovery(...)` | Guardian + Admin threshold (isApproval: true) | `InitiateInitializeTransactionRecovery` |
 | Finalize | `finalizeInitializeTransactionAndERC1271Recovery(...)` | Guardian + Admin threshold (isApproval: true) | `FinalizeInitializeTransactionRecovery` |
-| Cancel | `cancelInitializeTransactionAndERC1271Recovery(...)` | Guardian + Admin threshold (isApproval: false) | `InitiateInitializeTransactionRecovery` |
+| Cancel | `cancelInitializeTransactionAndERC1271Recovery(...)` | Guardian + Admin threshold (isApproval: true) | `CancelInitializeTransactionRecovery` |
 
 ---
 
@@ -164,12 +164,11 @@ RecoverySignatureValidation(address organization, address account, bytes32 hash,
 This ensures each recovery signature is valid only for the specific account it was created for, prevents cross-account replay within the same organization, and enforces time-bounded validity.
 
 **Validation:**
-1. Check transaction recovery is configured (`transactionAndERC1271RecoveryAddress != address(0)`)
-2. Check `isRecoveryEnabledForTransactionsAndERC1271 == true`
-3. Decode `expirationTimestamp` and `recoverySignature` from the ABI-encoded data
-4. Check expiration: reject if `block.timestamp > expirationTimestamp`
-5. Compute account-bound EIP-712 hash from `{organization, account, messageHash, expirationTimestamp, chainId}`
-6. Verify signature over the EIP-712 hash is from `transactionAndERC1271RecoveryAddress`
+1. Check `isRecoveryEnabledForTxAndERC1271() == true` (recovery must be configured and enabled)
+2. Decode `expirationTimestamp` and `recoverySignature` from the ABI-encoded data
+3. Check expiration: reject if `block.timestamp > expirationTimestamp`
+4. Compute account-bound EIP-712 hash from `{organization, account, messageHash, expirationTimestamp, chainId}`
+5. Verify signature over the EIP-712 hash is from `transactionAndERC1271RecoveryAddress` (also rejects if recovery address is zero)
 
 **Compared to Policy-Based (0x01):**
 
@@ -181,7 +180,7 @@ This ensures each recovery signature is valid only for the specific account it w
 | Account binding | Via recovery EIP-712 hash | Via initiator/review EIP-712 hashes |
 | Use case | Emergency access | Normal operations |
 
-File: `LibOrganizationAccountSignature.sol:79`
+File: `LibOrganizationAccountSignature.sol`
 
 ---
 
