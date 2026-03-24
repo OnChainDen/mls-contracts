@@ -33,7 +33,7 @@ The following functions require `msg.sender` to be the Guardian:
 | Category | Functions |
 |----------|-----------|
 | **Admin Management** | `modifyAdmins()`, `rejectAdminOperation()` |
-| **State Management** | `modifyMembers()`, `modifyGroups()`, `modifyPolicies()` |
+| **State Management** | `modifyMembers()`, `modifyGroups()`, `setPolicies()` |
 | **Guardian Updates (Normal)** | `initiateGuardianUpdate()`, `finalizeGuardianUpdate()`, `cancelGuardianUpdate()` |
 | **Account Operations** | `deployAccount()`, `setAccountImplementation()` |
 | **Account Transactions** | `executeAccountTransaction()`, `rejectAccountTransaction()` |

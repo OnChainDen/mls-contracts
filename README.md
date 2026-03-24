@@ -123,14 +123,14 @@ Admin operations modify organizational state and require admin threshold signatu
 | `ModifyAdmins` | Change admin configuration | `OrganizationAdminBase.sol`, `LibOrganizationAdmin.sol` |
 | `ModifyMembers` | Add or remove members | `OrganizationMembersBase.sol`, `LibOrganizationMembers.sol` |
 | `ModifyGroups` | Create, update, or delete groups and their memberships | `OrganizationGroupsBase.sol`, `LibOrganizationGroups.sol` |
-| `ModifyPolicies` | Update policies Merkle root | `OrganizationPolicyBase.sol`, `LibOrganizationPolicy.sol` |
+| `SetPolicies` | Update policies Merkle root | `OrganizationPolicyBase.sol`, `LibOrganizationPolicy.sol` |
 | `UpdateGuardian` | Initiate/finalize Guardian change | `OrganizationGuardianBase.sol`, `LibOrganizationGuardian.sol` |
 | `Upgrade` | Upgrade Organization implementation | `OrganizationImplementation.sol` |
 | `DeployAccount` | Deploy a new Account | `OrganizationAccountFactoryBase.sol` |
 | `UpgradeAccount` | Upgrade Account implementation (beacon) | `OrganizationAccountFactoryBase.sol` |
 
 > [!WARNING]
-> **Important consideration when modifying groups:** Modifying a group (via `ModifyGroups`) does **not** automatically update policies that reference that group. If a group's membership is reduced below the reviewer threshold specified in a ManualApproval policy, that policy becomes unusable until admins also update the policy (via `ModifyPolicies`). See [Manual Review Fields](#manual-review-fields-manualapproval-policies) for details.
+> **Important consideration when modifying groups:** Modifying a group (via `ModifyGroups`) does **not** automatically update policies that reference that group. If a group's membership is reduced below the reviewer threshold specified in a ManualApproval policy, that policy becomes unusable until admins also update the policy (via `setPolicies()`). See [Manual Review Fields](#manual-review-fields-manualapproval-policies) for details.
 
 > [!WARNING]
 > **Important consideration when removing members:** Removing a member from the organization (via `ModifyMembers`) does **not** automatically remove them from any groups. Group membership entries persist in storage, so if the same address is later re-added to the organization, their previous group memberships (and any associated policy authorization, such as reviewer or initiator roles) will be restored automatically. To permanently revoke a member's group assignments, admins must explicitly remove the member from all relevant groups (via `ModifyGroups`) before or in addition to removing them from the organization.
@@ -237,7 +237,7 @@ Policies define which transactions they govern using the following fields:
 *\* If set to a Group, the policy must specify a threshold for how many group members must approve.*
 
 > [!WARNING]
-> **Group updates can make policies unusable.** Updating a group does not automatically update any policies that reference it. If a group's membership is reduced below a policy's reviewer threshold (e.g., a policy requires 3-of-5 approvals from the "Finance" group, and the group is updated to have only 2 members), the policy becomes unusable — it is impossible to collect enough reviewer approvals to approve or reject transactions under that policy. When this happens, admins must update the policy (via `ModifyPolicies`) to either lower the threshold or reference a different group.
+> **Group updates can make policies unusable.** Updating a group does not automatically update any policies that reference it. If a group's membership is reduced below a policy's reviewer threshold (e.g., a policy requires 3-of-5 approvals from the "Finance" group, and the group is updated to have only 2 members), the policy becomes unusable — it is impossible to collect enough reviewer approvals to approve or reject transactions under that policy. When this happens, admins must update the policy (via `setPolicies()`) to either lower the threshold or reference a different group.
 
 ---
 
