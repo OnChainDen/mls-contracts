@@ -270,7 +270,7 @@ abi.encode(
     bytes initiatorSignature,      // Initiator's EIP-712 signature
     bytes reviewSignatures,        // Reviewer signatures (if manual approval policy)
     bytes guardianSignature,       // Guardian's approval signature
-    ValidationProofs proofs        // Merkle proofs for policy and member validation
+    ValidationProofs proofs        // Merkle proofs for policy validation
 )
 ```
 

@@ -26,7 +26,7 @@ In addition to this README.md and [supplemental docs](./docs/), we also recommen
 6. [Account Signatures (ERC-1271)](#account-signatures-erc-1271)
 7. [Full-Revert Semantics (Intentional Design)](#full-revert-semantics-intentional-design)
 8. [Architecture](#architecture)
-   - [Merkle-Based Storage](#merkle-based-storage)
+   - [Storage Architecture](#storage-architecture)
    - [Core Contracts](#core-contracts)
    - [Factory Patterns](#factory-patterns)
    - [Upgradeability (Proxy Patterns)](#upgradeability-proxy-patterns)
@@ -41,7 +41,7 @@ For detailed deep-dives on specific topics, see the following documents in the `
 
 | Document | Description |
 |----------|-------------|
-| [MERKLETREE_ARCHITECTURE.md](./docs/MERKLETREE_ARCHITECTURE.md) | Detailed explanation of Merkle tree storage, nested structures, and proof verification |
+| [MERKLETREE_ARCHITECTURE.md](./docs/MERKLETREE_ARCHITECTURE.md) | Detailed explanation of Merkle tree storage for Policies, nested structures, and proof verification |
 | [GUARDIAN_PROTECTION.md](./docs/GUARDIAN_PROTECTION.md) | Guardian architecture, SafeExecutorModule, BatchedTransaction, and update flows |
 | [SIGNATURES.md](./docs/SIGNATURES.md) | Signature encoding formats, EIP-712, nonces, and signed message types |
 | [DISASTER_RECOVERY.md](./docs/DISASTER_RECOVERY.md) | Guardian recovery and transaction recovery mechanisms |
@@ -55,7 +55,7 @@ MLS Wallet stores organization assets in smart contracts governed by **policies*
 
 - **Policy-based authorization**: Fine-grained control over transaction types, amounts, recipients, and approval requirements
 - **Multiple redundant security layers**: Mobile wallet, offchain Guardian service, and onchain smart contracts independently validate every transaction
-- **Merkle-based storage**: Policies, members, and groups stored as merkle trees (only roots onchain) for gas efficiency
+- **Efficient storage**: Policies stored as a Merkle tree (only the root onchain) for gas efficiency; Members, Groups, and Admins stored directly in onchain mappings
 
 ---
 
@@ -121,9 +121,9 @@ Admin operations modify organizational state and require admin threshold signatu
 | Operation | Description | Files |
 |-----------|-------------|-------|
 | `ModifyAdmins` | Change admin configuration | `OrganizationAdminBase.sol`, `LibOrganizationAdmin.sol` |
-| `ModifyMembers` | Update members merkle root | `OrganizationMembersBase.sol`, `LibOrganizationMembers.sol` |
-| `ModifyGroups` | Update groups merkle root | `OrganizationGroupsBase.sol`, `LibOrganizationGroups.sol` |
-| `ModifyPolicies` | Update policies merkle root | `OrganizationPolicyBase.sol`, `LibOrganizationPolicy.sol` |
+| `ModifyMembers` | Add or remove members | `OrganizationMembersBase.sol`, `LibOrganizationMembers.sol` |
+| `ModifyGroups` | Create, update, or delete groups and their memberships | `OrganizationGroupsBase.sol`, `LibOrganizationGroups.sol` |
+| `ModifyPolicies` | Update policies Merkle root | `OrganizationPolicyBase.sol`, `LibOrganizationPolicy.sol` |
 | `UpdateGuardian` | Initiate/finalize Guardian change | `OrganizationGuardianBase.sol`, `LibOrganizationGuardian.sol` |
 | `Upgrade` | Upgrade Organization implementation | `OrganizationImplementation.sol` |
 | `DeployAccount` | Deploy a new Account | `OrganizationAccountFactoryBase.sol` |
@@ -492,9 +492,9 @@ When an Account Transaction is validated against a Policy, the policy engine val
 
 1. **Policy exists** - Merkle proof against `policiesRoot`
 2. **Source account allowed** - Either `anySourceAccount=true` or account in policy's source accounts tree
-3. **Initiator authorized** - Member/group membership verified via merkle proofs
+3. **Initiator authorized** - Member/group membership verified via onchain mapping lookups
 4. **Transaction type matches** - TokenTransfers, ContractInteractions, or Any
-5. **Destination allowed** - Either any destination or merkle-verified custom list
+5. **Destination allowed** - Either any destination or Merkle-verified custom list
 6. **Token/amount constraints** - For token transfers
 7. **Function/parameter constraints** - For contract interactions
 
@@ -589,7 +589,7 @@ When validating a signature, the same policy checks are performed as Account Tra
 1. **Policy exists** — Merkle proof against `policiesRoot`
 2. **Transaction type matches** — Must be `TransactionType.Signatures`
 3. **Source account allowed** — Either `anySourceAccount=true` or account in policy's source accounts tree
-4. **Initiator authorized** — Member/group membership verified via merkle proofs
+4. **Initiator authorized** — Member/group membership verified via onchain mapping lookups
 
 For signature formats and message types, see [Signatures](#signatures).
 
@@ -635,25 +635,34 @@ For details on nonce mechanics, see [Replay Protection & Non-Sequential Nonces](
 
 ## Architecture
 
-### Merkle-Based Storage
+### Storage Architecture
 
-A key architectural decision in MLS Wallet is the use of **Merkle trees** to store Members, Groups, Admins, and Policies. Instead of storing data directly onchain (which would be prohibitively expensive for large organizations), only 32-byte Merkle roots are stored. The full data lives offchain (on IPFS), and callers provide Merkle proofs to verify membership.
+MLS Wallet uses two storage strategies, chosen based on the complexity and size of the data:
 
-**Why this matters:**
-- **Gas efficiency** — Modifying 1,000 members costs the same as modifying 10 (~20K gas for one `SSTORE`)
-- **Scalability** — Organizations can have thousands of members and complex policies without gas costs scaling linearly
-- **Complex policies** — Policies can reference large lists of source accounts, destinations, and functions with parameter constraints
+**1. Onchain Mappings — Members, Groups, and Admins**
 
-**What's stored as Merkle trees:**
+Members, Groups, and Admins are stored directly in onchain mappings. This provides straightforward access and verification without requiring offchain data or proofs.
+
+| Data | Storage | Verification |
+|------|---------|--------------|
+| Members | `mapping(address => bool) isMember` | Direct mapping lookup |
+| Groups | `mapping(uint256 => bool) isGroup`, `mapping(uint256 => mapping(address => bool)) isGroupMember` | Direct mapping lookup (group membership also requires org membership) |
+| Admins | `mapping(address => bool) isAdmin`, `adminCount`, `votingThreshold` | Direct mapping lookup; admin signatures validated against `isAdmin` |
+
+**2. Merkle Tree — Policies**
+
+Policies have complex, deeply nested structures (source accounts, destinations, functions with parameter constraints) that can reference arbitrarily large lists. Storing these directly onchain would be prohibitively expensive. Instead, only a single 32-byte Merkle root (`policiesRoot`) is stored onchain. The full policy data lives offchain (on IPFS), and callers provide Merkle proofs to verify policy existence and sub-tree membership.
 
 | Data | Root Storage | Structure |
 |------|--------------|-----------|
-| Members | `membersRoot` | Flat tree of member addresses |
-| Groups | `groupsRoot` | Nested: each group has its own members sub-tree |
-| Admins | `adminsRoot` | Flat tree of admin addresses (must also be in Members) |
 | Policies | `policiesRoot` | Multi-level nested (up to 4 levels deep) |
 
-For detailed documentation on the Merkle tree architecture, including nested structures, leaf computation, and how proofs are passed to function calls, see **[MERKLETREE_ARCHITECTURE.md](./docs/MERKLETREE_ARCHITECTURE.md)**.
+**Why Merkle trees for Policies:**
+- **Gas efficiency** — Modifying policies costs the same regardless of count (~20K gas for one `SSTORE` to update the root)
+- **Scalability** — Policies can reference large lists of source accounts, destinations, and functions with parameter constraints without gas costs scaling linearly
+- **Nested structure** — Policies contain sub-trees (source accounts, destinations, allowed functions) that benefit from Merkle verification
+
+For detailed documentation on the Merkle tree architecture for Policies, including nested structures, leaf computation, and how proofs are passed to function calls, see **[MERKLETREE_ARCHITECTURE.md](./docs/MERKLETREE_ARCHITECTURE.md)**.
 
 ---
 
@@ -884,9 +893,9 @@ We use a **storage library pattern** throughout our contracts. Each storage doma
 | Library | Purpose |
 |---------|---------|
 | `LibOrganizationAdminStorage.sol` | Admin configuration |
-| `LibOrganizationMembersStorage.sol` | Members merkle root |
-| `LibOrganizationGroupsStorage.sol` | Groups merkle root |
-| `LibOrganizationPolicyStorage.sol` | Policies merkle root and rate limits |
+| `LibOrganizationMembersStorage.sol` | Members mapping |
+| `LibOrganizationGroupsStorage.sol` | Groups mappings |
+| `LibOrganizationPolicyStorage.sol` | Policies Merkle root and rate limits |
 | `LibOrganizationGuardianStorage.sol` | Guardian address and pending updates |
 | `LibOrganizationSignaturesStorage.sol` | Used nonces |
 | `LibOrganizationAccountFactoryStorage.sol` | Deployed accounts and account implementation address |
@@ -901,12 +910,15 @@ We use a **storage library pattern** throughout our contracts. Each storage doma
 ```solidity
 // LibOrganizationMembersStorage.sol
 library LibOrganizationMembersStorage {
+    /// @custom:storage-location erc7201:den.mls-wallet.organization.members
     struct Layout {
-        bytes32 membersRoot;
+        mapping(address => bool) isMember;
     }
 
-    // EIP-7201 namespaced storage slot
-    // Formula: keccak256(abi.encode(uint256(keccak256("den.mls-wallet.organization.members")) - 1)) & ~bytes32(uint256(0xff))
+    /// @dev Storage location for MembersStorage, following ERC-7201 namespaced storage pattern.
+    /// Formula: keccak256(abi.encode(uint256(keccak256("den.mls-wallet.organization.members")) - 1))
+    ///          & ~bytes32(uint256(0xff))
+    /// Verify: `cast index-erc7201 "den.mls-wallet.organization.members"`
     bytes32 internal constant STORAGE_LOCATION = 0xb80799cfa22e7d42bb36b2b397b5d0bd56930d54ee4f345397b8ece603c6f300;
 
     function layout() internal pure returns (Layout storage _layout) {
