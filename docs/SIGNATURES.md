@@ -270,7 +270,7 @@ abi.encode(
     bytes initiatorSignature,      // Initiator's EIP-712 signature
     bytes reviewSignatures,        // Reviewer signatures (if manual approval policy)
     bytes guardianSignature,       // Guardian's approval signature
-    ValidationProofs proofs        // Merkle proofs for policy and member validation
+    ValidationProofs proofs        // Merkle proofs for policy validation
 )
 ```
 
@@ -316,12 +316,11 @@ RecoverySignatureValidation(
 This binding prevents cross-account replay and enforces time-bounded validity, matching the expiration behavior of all other signature types in the system.
 
 **Validation flow:**
-1. Check `isRecoverySupportedForTransactionsAndERC1271 == true`
-2. Check `isRecoveryEnabledForTransactionsAndERC1271 == true`
-3. Decode `expirationTimestamp` and `recoverySignature` from the ABI-encoded data
-4. Check expiration: reject if `block.timestamp > expirationTimestamp`
-5. Compute account-bound EIP-712 hash from `{organization, account, messageHash, expirationTimestamp, chainId}`
-6. Validate signature over the EIP-712 hash is from `transactionAndERC1271RecoveryAddress`
+1. Check `isRecoveryEnabledForTxAndERC1271() == true` (recovery must be configured and enabled)
+2. Decode `expirationTimestamp` and `recoverySignature` from the ABI-encoded data
+3. Check expiration: reject if `block.timestamp > expirationTimestamp`
+4. Compute account-bound EIP-712 hash from `{organization, account, messageHash, expirationTimestamp, chainId}`
+5. Validate signature over the EIP-712 hash is from `transactionAndERC1271RecoveryAddress` (also rejects if recovery address is zero)
 
 **Key differences:**
 
