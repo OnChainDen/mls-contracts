@@ -127,10 +127,10 @@ Organization
     └── Policy Leaf (policyId + Policy)
         ├── PolicyConfig
         │   ├── transactionType, anySourceAccount, anyFunction, destinationType
-        │   ├── ApprovalConfig (policyType, approverType, threshold)
-        │   ├── InitiatorConfig (anyInitiator, initiatorType, member/group)
-        │   ├── TokenFilter (anyToken, tokenAddress, amountThreshold)
-        │   └── RateLimitConfig (limitType, interval, anchorTimestamp, scopes)
+        │   ├── ApprovalConfig (policyType, approverType, approverMember, approverGroupId, approvalThreshold)
+        │   ├── InitiatorConfig (anyInitiator, initiatorType, initiatorMember, initiatorGroupId)
+        │   ├── TokenFilter (anyToken, tokenAddress, hasAmountThreshold, amountThreshold)
+        │   └── RateLimitConfig (limitType, timeIntervalHours, timeIntervalLimit, anchorTimestamp, initiatorScope, sourceScope, destinationScope)
         └── PolicyRoots
             ├── sourceAccountsRoot
             │   └── Address leaves (if !anySourceAccount)
