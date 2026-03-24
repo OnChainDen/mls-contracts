@@ -57,10 +57,6 @@ local = "localhost:8545"
 
 # Tenderly Virtual TestNets
 #
-# These aliases are what `make ... NETWORK=<alias>` uses (Makefile passes `--rpc-url $(NETWORK)`).
-# Put the values in `onchain-custody-contracts/.env` (ignored by git). Use the *last* path segment
-# of the Tenderly RPC URL (the VNet ID / API key-ish UUID), not the full URL.
-#
 # Example full RPC URL:
 #   https://virtual.base.us-east.rpc.tenderly.co/<VNET_ID>
 #
