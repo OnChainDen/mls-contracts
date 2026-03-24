@@ -15,14 +15,21 @@ The Guardian address is stored on each Organization contract and is the **only a
 
 ### The `onlyGuardian` Modifier
 
-Most external functions on the Organization contract are protected by the `onlyGuardian` modifier:
+Most external functions on the Organization contract are protected by the `onlyGuardian` modifier, which delegates to `LibOrganizationGuardian.enforceOnlyGuardian()`:
 
 ```solidity
+// OrganizationModifiers.sol
 modifier onlyGuardian() {
-    if (msg.sender != LibOrganizationGuardian.getGuardian()) {
-        revert IOrganizationGuardian.UnauthorizedGuardian(msg.sender, expectedGuardian);
-    }
+    LibOrganizationGuardian.enforceOnlyGuardian();
     _;
+}
+
+// LibOrganizationGuardian.sol
+function enforceOnlyGuardian() internal view {
+    LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
+    if (msg.sender != guardianLayout.guardian) {
+        revert IOrganizationGuardian.UnauthorizedGuardian(msg.sender, guardianLayout.guardian);
+    }
 }
 ```
 
