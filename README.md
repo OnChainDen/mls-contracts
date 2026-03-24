@@ -901,6 +901,7 @@ We use a **storage library pattern** throughout our contracts. Each storage doma
 | `LibOrganizationAccountFactoryStorage.sol` | Deployed accounts and account implementation address |
 | `LibOrganizationUpgradeStorage.sol` | Whitelist address and upgrade authorization flag |
 | `LibOrganizationRecoveryStorage.sol` | Recovery configuration and state |
+| `LibOrganizationAdminOperationTimelockStorage.sol` | Admin operation timelock duration for Guardian updates and deferred recovery initialization |
 | `LibOrganizationDeployerAddressStorage.sol` | Factory address for initialization authorization |
 | `LibAccountOrganizationAddressStorage.sol` | Reads Organization address from beacon slot |
 | `LibImplementationWhitelistStorage.sol` | Whitelisted implementations |
