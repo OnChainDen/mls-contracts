@@ -118,16 +118,24 @@ Admin operations modify organizational state and require admin threshold signatu
 
 ### Admin Operation Types
 
-| Operation | Description | Files |
-|-----------|-------------|-------|
-| `ModifyAdmins` | Change admin configuration | `OrganizationAdminBase.sol`, `LibOrganizationAdmin.sol` |
-| `ModifyMembers` | Add or remove members | `OrganizationMembersBase.sol`, `LibOrganizationMembers.sol` |
-| `ModifyGroups` | Create, update, or delete groups and their memberships | `OrganizationGroupsBase.sol`, `LibOrganizationGroups.sol` |
-| `SetPolicies` | Update policies Merkle root | `OrganizationPolicyBase.sol`, `LibOrganizationPolicy.sol` |
-| `UpdateGuardian` | Initiate/finalize Guardian change | `OrganizationGuardianBase.sol`, `LibOrganizationGuardian.sol` |
-| `Upgrade` | Upgrade Organization implementation | `OrganizationImplementation.sol` |
-| `DeployAccount` | Deploy a new Account | `OrganizationAccountFactoryBase.sol` |
-| `UpgradeAccount` | Upgrade Account implementation (beacon) | `OrganizationAccountFactoryBase.sol` |
+| Function | OperationType | Description | Files |
+|----------|---------------|-------------|-------|
+| `modifyAdmins()` | `ModifyAdmins` | Change admin configuration | `OrganizationAdminBase.sol`, `LibOrganizationAdmin.sol` |
+| `modifyMembers()` | `ModifyMembers` | Add or remove members | `OrganizationMembersBase.sol`, `LibOrganizationMembers.sol` |
+| `modifyGroups()` | `ModifyGroups` | Create, update, or delete groups and their memberships | `OrganizationGroupsBase.sol`, `LibOrganizationGroups.sol` |
+| `setPolicies()` | `ModifyPolicies` | Update policies Merkle root | `OrganizationPolicyBase.sol`, `LibOrganizationPolicy.sol` |
+| `initiateGuardianUpdate()` | `InitiateUpdateGuardian` | Start timelocked Guardian change | `OrganizationGuardianBase.sol`, `LibOrganizationGuardian.sol` |
+| `finalizeGuardianUpdate()` | `FinalizeUpdateGuardian` | Finalize Guardian change after timelock | `OrganizationGuardianBase.sol`, `LibOrganizationGuardian.sol` |
+| `cancelGuardianUpdate()` | `CancelUpdateGuardian` | Cancel pending Guardian change | `OrganizationGuardianBase.sol`, `LibOrganizationGuardian.sol` |
+| `upgradeToAndCallWithAuthorization()` | `Upgrade` | Upgrade Organization implementation | `OrganizationImplementation.sol` |
+| `deployAccount()` | `DeployAccount` | Deploy a new Account | `OrganizationAccountFactoryBase.sol` |
+| `setAccountImplementation()` | `UpgradeAccount` | Upgrade Account implementation (beacon) | `OrganizationAccountFactoryBase.sol` |
+| `initiateInitializeGuardianRecovery()` | `InitiateInitializeGuardianRecovery` | Start timelocked deferred Guardian Recovery setup | `OrganizationGuardianRecoveryBase.sol` |
+| `finalizeInitializeGuardianRecovery()` | `FinalizeInitializeGuardianRecovery` | Finalize deferred Guardian Recovery setup | `OrganizationGuardianRecoveryBase.sol` |
+| `cancelInitializeGuardianRecovery()` | `CancelInitializeGuardianRecovery` | Cancel pending Guardian Recovery setup | `OrganizationGuardianRecoveryBase.sol` |
+| `initiateInitializeTransactionAndERC1271Recovery()` | `InitiateInitializeTransactionRecovery` | Start timelocked deferred Transaction Recovery setup | `OrganizationTxRecoveryBase.sol` |
+| `finalizeInitializeTransactionAndERC1271Recovery()` | `FinalizeInitializeTransactionRecovery` | Finalize deferred Transaction Recovery setup | `OrganizationTxRecoveryBase.sol` |
+| `cancelInitializeTransactionAndERC1271Recovery()` | `CancelInitializeTransactionRecovery` | Cancel pending Transaction Recovery setup | `OrganizationTxRecoveryBase.sol` |
 
 > [!WARNING]
 > **Important consideration when modifying groups:** Modifying a group (via `ModifyGroups`) does **not** automatically update policies that reference that group. If a group's membership is reduced below the reviewer threshold specified in a ManualApproval policy, that policy becomes unusable until admins also update the policy (via `setPolicies()`). See [Manual Review Fields](#manual-review-fields-manualapproval-policies) for details.
