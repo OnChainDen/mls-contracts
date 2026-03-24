@@ -38,6 +38,7 @@ The following functions require `msg.sender` to be the Guardian:
 | **Account Operations** | `deployAccount()`, `setAccountImplementation()` |
 | **Account Transactions** | `executeAccountTransaction()`, `rejectAccountTransaction()` |
 | **Upgrades** | `upgradeToAndCallWithAuthorization()` |
+| **Deferred Recovery Init** | `initiateInitializeGuardianRecovery()`, `finalizeInitializeGuardianRecovery()`, `cancelInitializeGuardianRecovery()`, `initiateInitializeTransactionAndERC1271Recovery()`, `finalizeInitializeTransactionAndERC1271Recovery()`, `cancelInitializeTransactionAndERC1271Recovery()` |
 
 In the case of ERC-1271 Account Signatures, any `msg.sender` can call `isValidSignature` on the Account contract, but a signed message from the Guardian must be provided as part of the packed `signature` function parameters. 
 
