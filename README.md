@@ -595,7 +595,7 @@ For signature formats and message types, see [Signatures](#signatures).
 
 For recovery signatures (type `0x00`), see [Disaster Recovery](#disaster-recovery).
 
-Files: `AccountImplementation.sol:54-62`, `OrganizationAccountSignatureBase.sol`, `LibOrganizationAccountSignature.sol`
+Files: `AccountImplementation.sol:54-73`, `OrganizationAccountSignatureBase.sol`, `LibOrganizationAccountSignature.sol`
 
 ---
 
@@ -831,7 +831,7 @@ Each Organization is an **ERC-1967 UUPS Proxy**.
 2. **Admin signatures** — Requires Admin signatures meeting the configured threshold
 3. **Whitelisted implementation** — The new implementation must be whitelisted in the `ImplementationWhitelist` contract
 
-See: `OrganizationImplementation.sol:67-103`
+See: `OrganizationImplementation.sol:76-118`
 
 ---
 
@@ -854,7 +854,7 @@ Accounts use a **Beacon Proxy** pattern where the associated Organization acts a
 2. **Admin signatures** — Requires Admin signatures meeting the configured threshold
 3. **Whitelisted implementation** — The new implementation must be whitelisted in the `ImplementationWhitelist` contract
 
-See: `OrganizationAccountFactoryBase.sol:49-75`
+See: `OrganizationAccountFactoryBase.sol:48-67`
 
 ---
 
