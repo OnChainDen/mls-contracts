@@ -20,6 +20,9 @@ out-safe/
 # TODO list
 .TODO.md
 
+# Cursor
+.cursor/
+
 # Claude
 .claude/
 CLAUDE.md
