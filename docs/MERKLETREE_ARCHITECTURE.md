@@ -111,9 +111,10 @@ For `Address` parameters with `OneOf` constraints (e.g., "recipient must be one 
 
 ```solidity
 struct ParameterConstraint {
-    ParamType paramType;        // ParamType.Address
+    ParamType paramType;            // ParamType.Address
     ConstraintType constraintType;  // ConstraintType.OneOf
-    bytes comparisonData;       // abi.encode(allowedAddressesRoot)
+    uint8 paramCalldataHeadSlotCount; // Number of 32-byte head slots this parameter occupies (must be >= 1)
+    bytes comparisonData;           // abi.encode(allowedAddressesRoot)
     bytes32[] paramValueInListProof;  // Proof for the actual address
 }
 ```
