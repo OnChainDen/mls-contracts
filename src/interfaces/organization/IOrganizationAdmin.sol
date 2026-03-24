@@ -34,6 +34,7 @@ interface IOrganizationAdmin {
      * @param previousVotingThreshold The previous voting threshold
      * @param newVotingThreshold The new voting threshold
      */
+    // solhint-disable-next-line gas-indexed-events
     event VotingThresholdUpdated(uint256 previousVotingThreshold, uint256 newVotingThreshold);
 
     /**

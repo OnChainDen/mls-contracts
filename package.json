@@ -24,6 +24,6 @@
   },
   "homepage": "https://github.com/OnChainDen/mls-contracts#readme",
   "devDependencies": {
-    "solhint": "^6.0.3"
+    "solhint": "6.1.0"
   }
 }
