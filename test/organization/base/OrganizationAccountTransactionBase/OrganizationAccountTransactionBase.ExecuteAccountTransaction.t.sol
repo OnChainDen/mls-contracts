@@ -831,6 +831,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
         bytes memory data = abi.encodeWithSelector(target.ping.selector, uint256(42));
 
         Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
+        policy.config.valueThresholdForContractCalls = callValue;
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signInitiatorTx({

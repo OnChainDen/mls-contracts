@@ -234,6 +234,9 @@ struct RateLimitConfig {
  * @param initiator Initiator authorization configuration
  * @param token Token and amount constraints
  * @param rateLimit Rate limiting configuration
+ * @param valueThresholdForContractCalls Inclusive upper bound on `value` for
+ *        `TransactionType.ContractInteractions` transactions. Use `type(uint256).max`
+ *        for no practical upper bound. Ignored for other transaction types.
  */
 struct PolicyConfig {
     TransactionType transactionType;
@@ -244,6 +247,7 @@ struct PolicyConfig {
     InitiatorConfig initiator;
     TokenFilter token;
     RateLimitConfig rateLimit;
+    uint256 valueThresholdForContractCalls;
 }
 
 /**

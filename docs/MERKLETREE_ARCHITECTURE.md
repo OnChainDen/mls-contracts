@@ -130,7 +130,8 @@ Organization
         │   ├── ApprovalConfig (policyType, approverType, approverMember, approverGroupId, approvalThreshold)
         │   ├── InitiatorConfig (anyInitiator, initiatorType, initiatorMember, initiatorGroupId)
         │   ├── TokenFilter (anyToken, tokenAddress, hasAmountThreshold, amountThreshold)
-        │   └── RateLimitConfig (limitType, timeIntervalHours, timeIntervalLimit, anchorTimestamp, initiatorScope, sourceScope, destinationScope)
+        │   ├── RateLimitConfig (limitType, timeIntervalHours, timeIntervalLimit, anchorTimestamp, initiatorScope, sourceScope, destinationScope)
+        │   └── valueThresholdForContractCalls
         └── PolicyRoots
             ├── sourceAccountsRoot
             │   └── Address leaves (if !anySourceAccount)
