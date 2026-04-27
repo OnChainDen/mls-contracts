@@ -619,6 +619,50 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
     }
 
     /**
+     * @dev Verifies `rejectAccountTransaction` reverts instead of accepting a rejection for contract-interaction
+     *  payloads whose native value exceeds `valueThresholdForContractCalls`.
+     */
+    function test_rejectAccountTransaction_contractInteractionValueThreshold_revertsAboveThreshold() public {
+        // Setup: deploy one account plus one interaction target, then configure a finite call-value threshold.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        MockInteractionTarget target = new MockInteractionTarget();
+
+        bytes memory data = abi.encodeWithSelector(target.ping.selector, uint256(88));
+        uint256 aboveThresholdValue = 1 ether + 1;
+        Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
+        policy.config.valueThresholdForContractCalls = 1 ether;
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9042, policy);
+        (bytes memory approvalSig, uint256 expiration) =
+            _signExecution(INITIATOR_PK_1, address(account), address(target), aboveThresholdValue, data, 47, 9042);
+        bytes memory rejectionSig = _signRejection(
+            INITIATOR_PK_1, address(account), address(target), aboveThresholdValue, data, 47, expiration, 9042
+        );
+        uint256 nonce =
+            _computeAccountTransactionNonce(address(account), address(target), aboveThresholdValue, data, 9042, 47);
+
+        // Call: attempt to reject the above-threshold contract interaction, expecting policy validation to fail closed.
+        _expectPolicyDoesNotApply(9042);
+        vm.prank(GUARDIAN);
+        harness.rejectAccountTransaction({
+            account: address(account),
+            to: address(target),
+            value: aboveThresholdValue,
+            data: data,
+            salt: 47,
+            expirationTimestamp: expiration,
+            policyId: 9042,
+            initiatorSignature: approvalSig,
+            reviewSignatures: rejectionSig,
+            proofs: proofs
+        });
+
+        // Verify: the failed rejection attempt rolls back nonce consumption and never reaches the target.
+        assertFalse(harness.getUsedNonce(nonce), "above-threshold rejection should not consume the nonce");
+        assertEq(target.calls(), 0, "reject path should not execute the target");
+    }
+
+    /**
      * @dev Verifies dynamic bytes exact constraints accept matching payloads and reject mismatched, head-overlap, or
      *  truncated calldata.
      */

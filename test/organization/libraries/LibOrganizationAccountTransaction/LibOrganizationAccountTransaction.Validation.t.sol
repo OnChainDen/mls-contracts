@@ -443,6 +443,61 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
         );
     }
 
+    /// @dev Verifies rejection validation reverts for contract-interaction calls above the value threshold.
+    function test_validateRejection_contractInteractionValueThreshold_revertsAboveThreshold() public {
+        // Setup: build a contract-interaction policy with a finite threshold and a value-carrying rejection payload.
+        bytes memory data = abi.encodeWithSelector(bytes4(0x17191919), uint256(19));
+        uint256 expiration = block.timestamp + 1 days;
+        uint256 aboveThresholdValue = 1 ether + 1;
+
+        Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
+        policy.config.valueThresholdForContractCalls = 1 ether;
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        bytes memory initiatorSig = _signInitiatorTx(
+            address(harness),
+            INITIATOR_PK_1,
+            ACCOUNT,
+            DESTINATION,
+            aboveThresholdValue,
+            data,
+            83,
+            expiration,
+            DEFAULT_POLICY_ID,
+            true
+        );
+        bytes memory rejectionSig = _signInitiatorTx(
+            address(harness),
+            INITIATOR_PK_1,
+            ACCOUNT,
+            DESTINATION,
+            aboveThresholdValue,
+            data,
+            83,
+            expiration,
+            DEFAULT_POLICY_ID,
+            false
+        );
+
+        // Verify: rejection validation still requires the transaction to satisfy the policy's value threshold.
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationAccountTransaction.PolicyDoesNotApply.selector, DEFAULT_POLICY_ID)
+        );
+        // Call: validate a rejection attempt for a contract call whose native value exceeds the configured threshold.
+        harness.validateTransactionRejectionOrRevertViaLibrary(
+            ACCOUNT,
+            DESTINATION,
+            aboveThresholdValue,
+            data,
+            83,
+            expiration,
+            DEFAULT_POLICY_ID,
+            initiatorSig,
+            rejectionSig,
+            proofs
+        );
+    }
+
     /// @dev Verifies unknown approval policy enum values fail closed in approval flow.
     function test_validateApproval_invalidPolicyTypeFailsClosed() public {
         // Setup: build valid approval call data, then mutate policyType enum to unknown value.
