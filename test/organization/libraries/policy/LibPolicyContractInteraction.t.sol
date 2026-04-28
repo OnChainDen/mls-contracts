@@ -88,6 +88,84 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
         assertFalse(allowed, "constraint mismatch should fail");
     }
 
+    /// @dev Verifies that the contract-call value threshold is enforced as an inclusive `<=` bound.
+    function test_isContractInteractionAllowed_valueThreshold_enforcesInclusiveBoundary() public {
+        // Setup: build one allowed contract interaction and configure a finite call-value threshold.
+        address target = address(0xC7041);
+        bytes4 selector = bytes4(keccak256("setValue(uint256)"));
+        bytes memory constraints = _encodeUintExactConstraint(7);
+
+        (Policy memory policy, bytes32[] memory functionProof, bytes32[] memory destinationProof) =
+            _buildPolicyWithSingleAllowedFunctionAndDestination(target, selector, constraints);
+        policy.config.valueThresholdForContractCalls = 5;
+
+        bytes memory data = abi.encodeWithSelector(selector, uint256(7));
+
+        // Call: evaluate below-threshold, equal-threshold, and above-threshold contract calls.
+        bool belowAllowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
+            policy, target, 4, data, functionProof, constraints, destinationProof
+        );
+        bool equalAllowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
+            policy, target, 5, data, functionProof, constraints, destinationProof
+        );
+        bool aboveAllowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
+            policy, target, 6, data, functionProof, constraints, destinationProof
+        );
+
+        // Verify: only values at or below the configured threshold should pass.
+        assertTrue(belowAllowed, "below-threshold value should pass");
+        assertTrue(equalAllowed, "equal-threshold value should pass");
+        assertFalse(aboveAllowed, "above-threshold value should fail");
+    }
+
+    /// @dev Verifies that a zero threshold allows only zero-value contract calls.
+    function test_isContractInteractionAllowed_zeroValueThreshold_allowsOnlyZeroValue() public {
+        // Setup: build one allowed contract interaction and set the value threshold to zero.
+        address target = address(0xC7042);
+        bytes4 selector = bytes4(keccak256("setValue(uint256)"));
+        bytes memory constraints = _encodeUintExactConstraint(7);
+
+        (Policy memory policy, bytes32[] memory functionProof, bytes32[] memory destinationProof) =
+            _buildPolicyWithSingleAllowedFunctionAndDestination(target, selector, constraints);
+        policy.config.valueThresholdForContractCalls = 0;
+
+        bytes memory data = abi.encodeWithSelector(selector, uint256(7));
+
+        // Call: compare zero-value and non-zero-value executions.
+        bool zeroAllowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
+            policy, target, 0, data, functionProof, constraints, destinationProof
+        );
+        bool nonZeroAllowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
+            policy, target, 1, data, functionProof, constraints, destinationProof
+        );
+
+        // Verify: zero is allowed, any positive value is rejected.
+        assertTrue(zeroAllowed, "zero threshold should still allow zero-value calls");
+        assertFalse(nonZeroAllowed, "zero threshold should reject non-zero-value calls");
+    }
+
+    /// @dev Verifies that `type(uint256).max` acts as an effectively unbounded contract-call threshold.
+    function test_isContractInteractionAllowed_maxValueThreshold_behavesAsUnbounded() public {
+        // Setup: build one allowed contract interaction and use the sentinel max threshold.
+        address target = address(0xC7043);
+        bytes4 selector = bytes4(keccak256("setValue(uint256)"));
+        bytes memory constraints = _encodeUintExactConstraint(7);
+
+        (Policy memory policy, bytes32[] memory functionProof, bytes32[] memory destinationProof) =
+            _buildPolicyWithSingleAllowedFunctionAndDestination(target, selector, constraints);
+        policy.config.valueThresholdForContractCalls = type(uint256).max;
+
+        bytes memory data = abi.encodeWithSelector(selector, uint256(7));
+
+        // Call: evaluate a call carrying the largest possible value.
+        bool allowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
+            policy, target, type(uint256).max, data, functionProof, constraints, destinationProof
+        );
+
+        // Verify: the sentinel threshold should not cap otherwise-valid calls in practice.
+        assertTrue(allowed, "max threshold should behave as unbounded");
+    }
+
     /// @dev Verifies that `anyFunction == true` bypasses function-proof check but still enforces destination + params.
     function test_isContractInteractionAllowed_anyFunctionBypassesProofStillEnforcesDestinationAndParams() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for `anyFunction == true` bypasses

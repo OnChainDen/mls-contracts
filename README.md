@@ -283,7 +283,10 @@ Policies define which transactions they govern using the following fields:
 |-------|-------------|----------------|
 | **Contracts** | Which contracts can be called | `Any contract` · Custom contract list |
 | **Functions** | Which functions can be called | `Any function` · Custom function list |
+| **Value Threshold For Contract Calls** | Maximum native token value that may accompany the call | Numeric value (policy applies to `value <= threshold`; use `type(uint256).max` for no practical limit) |
 | **Function Arguments** | Parameter constraints for allowed functions | See [Parameter Constraints](#parameter-constraints) below |
+
+> **Note:** This threshold applies only to transactions classified as **contract interactions**. Native token transfers with empty calldata are still classified as **token transfers**, not contract interactions.
 
 ---
 
@@ -504,7 +507,7 @@ When an Account Transaction is validated against a Policy, the policy engine val
 4. **Transaction type matches** - TokenTransfers, ContractInteractions, or Any
 5. **Destination allowed** - Either any destination or Merkle-verified custom list
 6. **Token/amount constraints** - For token transfers
-7. **Function/parameter constraints** - For contract interactions
+7. **Function/parameter/value constraints** - For contract interactions
 
 For signature formats and message types, see [Signatures](#signatures).
 

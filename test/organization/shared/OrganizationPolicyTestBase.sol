@@ -112,7 +112,8 @@ abstract contract OrganizationPolicyTestBase is OrganizationGroupsTestBase, Byte
                     initiatorScope: RateLimitScope.AcrossAll,
                     sourceScope: RateLimitScope.AcrossAll,
                     destinationScope: RateLimitScope.AcrossAll
-                })
+                }),
+                valueThresholdForContractCalls: type(uint256).max
             }),
             roots: PolicyRoots({
                 sourceAccountsRoot: bytes32(0), customDestinationsRoot: bytes32(0), allowedFunctionsRoot: bytes32(0)

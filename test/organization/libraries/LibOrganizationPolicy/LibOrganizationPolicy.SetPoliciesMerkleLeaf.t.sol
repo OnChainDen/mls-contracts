@@ -278,6 +278,21 @@ contract LibOrganizationPolicySetPoliciesMerkleLeafTest is LibOrganizationPolicy
         assertTrue(baseLeaf != differentPolicyLeaf, "policy fields must be hash-bound");
     }
 
+    /// @dev Verifies that changing `valueThresholdForContractCalls` changes the policy leaf.
+    function test_computePolicyLeaf_valueThresholdForContractCalls_changesLeaf() public {
+        // Setup: build two otherwise-identical policies that differ only by the contract-call value threshold.
+        Policy memory basePolicy = _buildBasePolicy();
+        Policy memory mutatedPolicy = _buildBasePolicy();
+        mutatedPolicy.config.valueThresholdForContractCalls = 123;
+
+        // Call: compute leaves for the same policy id under the two threshold variants.
+        bytes32 baseLeaf = harness.computePolicyLeafViaLibrary(2006, basePolicy);
+        bytes32 mutatedLeaf = harness.computePolicyLeafViaLibrary(2006, mutatedPolicy);
+
+        // Verify: the threshold must be bound into the Merkle leaf.
+        assertTrue(baseLeaf != mutatedLeaf, "contract-call value threshold must change the leaf");
+    }
+
     /// @dev Verifies that helper output matches double-hash and differs from single-hash.
     function test_computePolicyLeaf_doubleHashNotSingleHash() public {
         // Setup: configure a valid fixture for helper output matches double-hash and differs from single-hash.

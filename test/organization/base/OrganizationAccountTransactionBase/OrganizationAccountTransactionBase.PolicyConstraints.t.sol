@@ -574,6 +574,95 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
     }
 
     /**
+     * @dev Verifies contract-interaction policies enforce `valueThresholdForContractCalls` as an inclusive `<=`
+     *  boundary in the real execution path.
+     */
+    function test_executeAccountTransaction_contractInteractionValueThreshold_enforcesInclusiveBoundary() public {
+        // Setup: deploy one account plus one interaction target, then configure a finite call-value threshold.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        MockInteractionTarget target = new MockInteractionTarget();
+        vm.deal(address(account), 3 ether);
+
+        bytes memory data = abi.encodeWithSelector(target.ping.selector, uint256(77));
+        Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
+        policy.config.valueThresholdForContractCalls = 1 ether;
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9041, policy);
+        (bytes memory belowSig, uint256 belowExpiration) =
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0.9 ether, data, 44, 9041);
+        (bytes memory equalSig, uint256 equalExpiration) =
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 1 ether, data, 45, 9041);
+        (bytes memory aboveSig, uint256 aboveExpiration) =
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 1 ether + 1, data, 46, 9041);
+
+        // Call: execute below-threshold and equal-threshold contract calls.
+        _executeAsGuardian(
+            address(account), address(target), 0.9 ether, data, 44, belowExpiration, 9041, belowSig, bytes(""), proofs
+        );
+        _executeAsGuardian(
+            address(account), address(target), 1 ether, data, 45, equalExpiration, 9041, equalSig, bytes(""), proofs
+        );
+
+        // Verify: both allowed branches reach the target and forward the requested value.
+        assertEq(target.calls(), 2, "below/equal-threshold calls should both execute");
+        assertEq(target.lastValue(), 1 ether, "equal-threshold call should forward the full value");
+        assertEq(target.total(), 154, "allowed calls should reach the target payload cumulatively");
+
+        // Call: execute one value above the threshold, expecting policy validation to fail closed.
+        _expectPolicyDoesNotApply(9041);
+        _executeAsGuardian(
+            address(account), address(target), 1 ether + 1, data, 46, aboveExpiration, 9041, aboveSig, bytes(""), proofs
+        );
+
+        // Verify: the rejected branch does not add another successful call.
+        assertEq(target.calls(), 2, "above-threshold call should not execute");
+    }
+
+    /**
+     * @dev Verifies `rejectAccountTransaction` reverts instead of accepting a rejection for contract-interaction
+     *  payloads whose native value exceeds `valueThresholdForContractCalls`.
+     */
+    function test_rejectAccountTransaction_contractInteractionValueThreshold_revertsAboveThreshold() public {
+        // Setup: deploy one account plus one interaction target, then configure a finite call-value threshold.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        MockInteractionTarget target = new MockInteractionTarget();
+
+        bytes memory data = abi.encodeWithSelector(target.ping.selector, uint256(88));
+        uint256 aboveThresholdValue = 1 ether + 1;
+        Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
+        policy.config.valueThresholdForContractCalls = 1 ether;
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9042, policy);
+        (bytes memory approvalSig, uint256 expiration) =
+            _signExecution(INITIATOR_PK_1, address(account), address(target), aboveThresholdValue, data, 47, 9042);
+        bytes memory rejectionSig = _signRejection(
+            INITIATOR_PK_1, address(account), address(target), aboveThresholdValue, data, 47, expiration, 9042
+        );
+        uint256 nonce =
+            _computeAccountTransactionNonce(address(account), address(target), aboveThresholdValue, data, 9042, 47);
+
+        // Call: attempt to reject the above-threshold contract interaction, expecting policy validation to fail closed.
+        _expectPolicyDoesNotApply(9042);
+        vm.prank(GUARDIAN);
+        harness.rejectAccountTransaction({
+            account: address(account),
+            to: address(target),
+            value: aboveThresholdValue,
+            data: data,
+            salt: 47,
+            expirationTimestamp: expiration,
+            policyId: 9042,
+            initiatorSignature: approvalSig,
+            reviewSignatures: rejectionSig,
+            proofs: proofs
+        });
+
+        // Verify: the failed rejection attempt rolls back nonce consumption and never reaches the target.
+        assertFalse(harness.getUsedNonce(nonce), "above-threshold rejection should not consume the nonce");
+        assertEq(target.calls(), 0, "reject path should not execute the target");
+    }
+
+    /**
      * @dev Verifies dynamic bytes exact constraints accept matching payloads and reject mismatched, head-overlap, or
      *  truncated calldata.
      */

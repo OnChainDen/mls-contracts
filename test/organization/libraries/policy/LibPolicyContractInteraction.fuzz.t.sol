@@ -3,12 +3,43 @@
 pragma solidity 0.8.33;
 
 import {PolicyLibrariesFuzzTestBase} from "test/organization/libraries/policy/PolicyLibrariesFuzzTestBase.sol";
-import {Policy} from "types/PolicyTypes.sol";
+import {DestinationType, Policy} from "types/PolicyTypes.sol";
 
 /**
  * @dev Fuzz tests for `LibPolicyContractInteraction`.
  */
 contract LibPolicyContractInteractionFuzzTest is PolicyLibrariesFuzzTestBase {
+    /// @dev Verifies the contract-call value threshold is enforced as an inclusive `<=` bound.
+    /// @param rawThreshold Fuzzed threshold constrained below `type(uint256).max` so an above-threshold case exists.
+    /// @param rawAllowedValue Fuzzed value bounded into the allowed `[0, threshold]` range.
+    function testFuzz_isContractInteractionAllowed_valueThresholdIsInclusive(
+        uint256 rawThreshold,
+        uint256 rawAllowedValue
+    ) public {
+        // Setup: configure a contract-interaction policy whose other checks are fully open.
+        vm.assume(rawThreshold < type(uint256).max);
+        Policy memory policy = _buildBasePolicy();
+        policy.config.destinationType = DestinationType.Any;
+        policy.config.anyFunction = true;
+        policy.config.valueThresholdForContractCalls = rawThreshold;
+
+        uint256 allowedValue = bound(rawAllowedValue, 0, rawThreshold);
+        uint256 disallowedValue = rawThreshold + 1;
+        bytes memory data = abi.encodePacked(bytes4(keccak256("f()")));
+
+        // Call: evaluate one value at/below threshold and one value strictly above threshold.
+        bool allowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
+            policy, address(0xCA11), allowedValue, data, new bytes32[](0), bytes(""), new bytes32[](0)
+        );
+        bool disallowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
+            policy, address(0xCA11), disallowedValue, data, new bytes32[](0), bytes(""), new bytes32[](0)
+        );
+
+        // Verify: only the value that stays within the configured threshold should pass.
+        assertTrue(allowed, "allowed value should satisfy the inclusive threshold");
+        assertFalse(disallowed, "value above threshold should fail");
+    }
+
     /// @dev Verifies `LibPolicyContractInteraction._isFunctionAllowedByPolicy` bypasses proof validation when
     /// `anyFunction` is enabled.
     /// @param data Arbitrary calldata supplied to the function filter.

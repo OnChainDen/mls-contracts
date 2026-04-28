@@ -20,8 +20,9 @@ library LibPolicyContractInteraction {
      * @dev Checks if a contract interaction transaction is allowed by the policy.
      *      Validates that:
      *      1. The function being called is allowed by the policy
-     *      2. The transaction parameters match the policy's constraints
-     *      3. The destination (contract being called) is allowed by the policy
+     *      2. The native-token value is at or below the policy threshold
+     *      3. The transaction parameters match the policy's constraints
+     *      4. The destination (contract being called) is allowed by the policy
      *
      *      Parameter constraint validation does not enforce ABI canonical encoding for
      *      dynamic types (Bytes, String). It is the responsibility of admins and the
@@ -55,8 +56,21 @@ library LibPolicyContractInteraction {
                 data: data,
                 destinationProof: destinationProof
             })
+            && _isValueAllowedByPolicy(policy, value)
             && _isFunctionAllowedByPolicy(policy, data, functionProof, constraints)
             && LibPolicyParameterConstraints.areParametersAllowedByConstraints(constraints, data);
+    }
+
+    /**
+     * @dev Checks if the native-token value is allowed by a contract-interaction policy.
+     *      The threshold is always enforced for `TransactionType.ContractInteractions`.
+     *      Use `type(uint256).max` in policy config to represent no practical limit.
+     * @param policy The policy to check against
+     * @param value The transaction value in wei
+     * @return True if the value is at or below the inclusive threshold, false otherwise
+     */
+    function _isValueAllowedByPolicy(Policy calldata policy, uint256 value) internal pure returns (bool) {
+        return value <= policy.config.valueThresholdForContractCalls;
     }
 
     /**

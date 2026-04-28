@@ -121,7 +121,8 @@ contract OrganizationPolicyInvariantHandler {
                     initiatorScope: RateLimitScope.PerEntity,
                     sourceScope: RateLimitScope.PerEntity,
                     destinationScope: RateLimitScope.PerEntity
-                })
+                }),
+                valueThresholdForContractCalls: type(uint256).max
             }),
             roots: PolicyRoots({
                 sourceAccountsRoot: bytes32(0), customDestinationsRoot: bytes32(0), allowedFunctionsRoot: bytes32(0)

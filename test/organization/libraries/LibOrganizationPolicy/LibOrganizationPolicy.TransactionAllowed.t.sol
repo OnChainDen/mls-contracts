@@ -217,14 +217,15 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         assertFalse(aboveThresholdAllowed, "above-threshold transfer should fail");
     }
 
-    /// @dev Verifies that contract-interaction policy branch checks function proof and constraints.
-    function test_isTransactionAllowed_contractInteractionBranch_checksFunctionAndConstraints() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for contract-interaction policy
-        // branch checks function proof and constraints.
+    /// @dev Verifies that contract-interaction policy branch checks function proof, constraints, and value threshold.
+    function test_isTransactionAllowed_contractInteractionBranch_checksFunctionConstraintsAndValueThreshold() public {
+        // Setup: prepare contrasting fixtures to cover the contract-interaction validator, including a finite
+        // contract-call value threshold.
         Policy memory policy = _buildBasePolicy();
         policy.config.transactionType = TransactionType.ContractInteractions;
         policy.config.destinationType = DestinationType.CustomList;
         policy.config.anyFunction = false;
+        policy.config.valueThresholdForContractCalls = 5;
 
         address[] memory destinations = new address[](1);
         destinations[0] = INTERACTION_TARGET;
@@ -263,10 +264,15 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
         // Call: run `isTransactionAllowedByPolicyViaLibrary` across the prepared variants.
         bool validAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
-            3006, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, callData, initiator1, proofs
+            3006, SOURCE_ACCOUNT, INTERACTION_TARGET, 5, callData, initiator1, proofs
         );
         // Verify: assert each variant returns the expected branch outcome.
         assertTrue(validAllowed, "valid contract interaction should pass");
+
+        bool belowThresholdAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3006, SOURCE_ACCOUNT, INTERACTION_TARGET, 4, callData, initiator1, proofs
+        );
+        assertTrue(belowThresholdAllowed, "below-threshold contract interaction should pass");
 
         bool tokenTransferInput = harness.isTransactionAllowedByPolicyViaLibrary(
             3006, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 10), initiator1, proofs
@@ -293,6 +299,11 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             3006, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, mismatchedData, initiator1, proofs
         );
         assertFalse(badConstraintAllowed, "parameter mismatch should fail");
+
+        bool aboveThresholdAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3006, SOURCE_ACCOUNT, INTERACTION_TARGET, 6, callData, initiator1, proofs
+        );
+        assertFalse(aboveThresholdAllowed, "above-threshold contract interaction should fail");
     }
 
     /// @dev Verifies that `Any` type destination checks and fail-closed enum handling.
