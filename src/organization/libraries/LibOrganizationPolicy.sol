@@ -144,6 +144,7 @@ library LibOrganizationPolicy {
                 data: data,
                 functionProof: proofs.functionProof,
                 constraints: proofs.constraints,
+                constraintOneOfProofs: proofs.constraintOneOfProofs,
                 destinationProof: proofs.destinationProof
             });
         }

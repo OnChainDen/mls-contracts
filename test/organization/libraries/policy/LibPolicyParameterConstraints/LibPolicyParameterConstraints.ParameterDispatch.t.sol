@@ -30,13 +30,12 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
                 paramType: supportedTypes[i],
                 constraintType: ConstraintType.Any,
                 paramCalldataHeadSlotCount: 1,
-                comparisonData: bytes(""),
-                paramValueInListProof: _emptyProof()
+                comparisonData: bytes("")
             });
 
             // Call: execute `isParameterAllowedByConstraintViaPolicyLibrary` with the happy-path payload.
             bool allowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
-                anyConstraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1))
+                anyConstraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1)), new bytes32[](0)
             );
 
             // Verify: assert the expected success result and state updates.
@@ -52,13 +51,12 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
             paramType: ParamType.Bool,
             constraintType: ConstraintType.Range,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(uint256(0), uint256(1)),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(uint256(0), uint256(1))
         });
 
         // Call: execute `isParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
-            invalidConstraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, true)
+            invalidConstraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, true), new bytes32[](0)
         );
 
         // Verify: assert that the request is denied and state remains unchanged.
@@ -75,13 +73,12 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
             paramType: ParamType.Address,
             constraintType: ConstraintType.Any,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: hex"01020304",
-            paramValueInListProof: malformedProof
+            comparisonData: hex"01020304"
         });
 
         // Call: dispatch with Any using malformed comparison/proof fields.
         bool allowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
-            anyConstraint, bytes32(uint256(1234)), abi.encodeWithSelector(BASE_SELECTOR, reviewer1)
+            anyConstraint, bytes32(uint256(1234)), abi.encodeWithSelector(BASE_SELECTOR, reviewer1), malformedProof
         );
 
         // Verify: Any should return true before entering type-specific decoding.
@@ -95,23 +92,24 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
             paramType: ParamType.Array,
             constraintType: ConstraintType.Any,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: bytes(""),
-            paramValueInListProof: _emptyProof()
+            comparisonData: bytes("")
         });
         ParameterConstraint memory structAny = ParameterConstraint({
             paramType: ParamType.Struct,
             constraintType: ConstraintType.Any,
             paramCalldataHeadSlotCount: 2,
-            comparisonData: bytes(""),
-            paramValueInListProof: _emptyProof()
+            comparisonData: bytes("")
         });
 
         // Call: dispatch both constraints through the generic parameter validator.
         bool arrayAllowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
-            arrayAny, bytes32(uint256(32)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1))
+            arrayAny, bytes32(uint256(32)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1)), new bytes32[](0)
         );
         bool structAllowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
-            structAny, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1), uint256(2))
+            structAny,
+            bytes32(uint256(1)),
+            abi.encodeWithSelector(BASE_SELECTOR, uint256(1), uint256(2)),
+            new bytes32[](0)
         );
 
         // Verify: Any should authorize both complex parameter categories.
@@ -126,13 +124,15 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
             paramType: ParamType.Array,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 2,
-            comparisonData: abi.encode(bytes32(uint256(1))),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(bytes32(uint256(1)))
         });
 
         // Call: execute `isParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
-            constraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1), uint256(2))
+            constraint,
+            bytes32(uint256(1)),
+            abi.encodeWithSelector(BASE_SELECTOR, uint256(1), uint256(2)),
+            new bytes32[](0)
         );
 
         // Verify: assert that the request is denied and state remains unchanged.
@@ -146,13 +146,15 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
             paramType: ParamType.Struct,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 2,
-            comparisonData: abi.encode(bytes32(uint256(1))),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(bytes32(uint256(1)))
         });
 
         // Call: execute `isParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
-            constraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1), uint256(2))
+            constraint,
+            bytes32(uint256(1)),
+            abi.encodeWithSelector(BASE_SELECTOR, uint256(1), uint256(2)),
+            new bytes32[](0)
         );
 
         // Verify: assert that the request is denied and state remains unchanged.
@@ -166,12 +168,11 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(uint256(1)),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(uint256(1))
         });
         bytes memory callData = abi.encodeCall(
             harness.isParameterAllowedByConstraintViaPolicyLibrary,
-            (constraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1)))
+            (constraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1)), new bytes32[](0))
         );
         uint256 constraintOffset = _readWord(callData, 4);
         _setWord(callData, 4 + constraintOffset, type(uint8).max);
@@ -190,12 +191,11 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
             paramType: ParamType.Bool,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: hex"01",
-            paramValueInListProof: _emptyProof()
+            comparisonData: hex"01"
         });
         bytes memory callData = abi.encodeCall(
             harness.isParameterAllowedByConstraintViaPolicyLibrary,
-            (constraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, true))
+            (constraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, true), new bytes32[](0))
         );
 
         // Call: invoke the dispatcher via low-level `staticcall` so revert-vs-false behavior is observable.
@@ -216,13 +216,12 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
             paramType: ParamType.Address,
             constraintType: ConstraintType.OneOf,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(root),
-            paramValueInListProof: proof
+            comparisonData: abi.encode(root)
         });
 
         // Call: execute `isParameterAllowedByConstraintViaPolicyLibrary` with the happy-path payload.
         bool allowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
-            constraint, _encodeAddressHead(reviewer2), abi.encodeWithSelector(BASE_SELECTOR, reviewer2)
+            constraint, _encodeAddressHead(reviewer2), abi.encodeWithSelector(BASE_SELECTOR, reviewer2), proof
         );
 
         // Verify: assert the expected success result and state updates.
@@ -236,13 +235,15 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
             paramType: ParamType.Address,
             constraintType: ConstraintType.OneOf,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: hex"ABCD",
-            paramValueInListProof: _emptyProof()
+            comparisonData: hex"ABCD"
         });
 
         // Call: dispatch through Address[OneOf] with malformed root bytes.
         bool allowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
-            malformedRootConstraint, _encodeAddressHead(reviewer1), abi.encodeWithSelector(BASE_SELECTOR, reviewer1)
+            malformedRootConstraint,
+            _encodeAddressHead(reviewer1),
+            abi.encodeWithSelector(BASE_SELECTOR, reviewer1),
+            new bytes32[](0)
         );
 
         // Verify: malformed OneOf root bytes must fail closed.
@@ -259,13 +260,13 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
             paramType: ParamType.Bytes,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(keccak256(expectedBytes)),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(keccak256(expectedBytes))
         });
 
         // Call: execute `isParameterAllowedByConstraintViaPolicyLibrary` with the happy-path payload.
-        bool bytesAllowed =
-            harness.isParameterAllowedByConstraintViaPolicyLibrary(bytesConstraint, bytes32(uint256(32)), bytesData);
+        bool bytesAllowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
+            bytesConstraint, bytes32(uint256(32)), bytesData, new bytes32[](0)
+        );
         // Verify: assert the expected success result and state updates.
         assertTrue(bytesAllowed, "dynamic bytes hash match should pass");
 
@@ -276,12 +277,12 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
             paramType: ParamType.String,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(keccak256(bytes(expectedString))),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(keccak256(bytes(expectedString)))
         });
 
-        bool stringAllowed =
-            harness.isParameterAllowedByConstraintViaPolicyLibrary(stringConstraint, bytes32(uint256(32)), stringData);
+        bool stringAllowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
+            stringConstraint, bytes32(uint256(32)), stringData, new bytes32[](0)
+        );
         assertTrue(stringAllowed, "string hash match should pass");
     }
 
@@ -294,13 +295,13 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
             paramType: ParamType.Bytes,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(keccak256(bytes("abc"))),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(keccak256(bytes("abc")))
         });
 
         // Call: execute `isParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization decision.
-        bool allowed =
-            harness.isParameterAllowedByConstraintViaPolicyLibrary(bytesConstraint, bytes32(uint256(4096)), data);
+        bool allowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
+            bytesConstraint, bytes32(uint256(4096)), data, new bytes32[](0)
+        );
 
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "invalid dynamic offset should fail closed");
@@ -327,12 +328,11 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
                 paramType: supportedTypes[i],
                 constraintType: ConstraintType.Exact,
                 paramCalldataHeadSlotCount: 1,
-                comparisonData: abi.encode(uint256(1)),
-                paramValueInListProof: _emptyProof()
+                comparisonData: abi.encode(uint256(1))
             });
             bytes memory callData = abi.encodeCall(
                 harness.isParameterAllowedByConstraintViaPolicyLibrary,
-                (constraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1)))
+                (constraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1)), new bytes32[](0))
             );
             uint256 constraintOffset = _readWord(callData, 4);
             _setWord(callData, 4 + constraintOffset + 32, type(uint8).max);

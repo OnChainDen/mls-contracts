@@ -72,7 +72,8 @@ abstract contract LibOrganizationAccountSignatureTestBase is LibOrganizationAcco
             sourceAccountProof: empty,
             destinationProof: empty,
             functionProof: empty,
-            constraints: bytes("")
+            constraints: bytes(""),
+            constraintOneOfProofs: bytes("")
         });
     }
 

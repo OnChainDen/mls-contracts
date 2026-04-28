@@ -115,9 +115,15 @@ struct ParameterConstraint {
     ConstraintType constraintType;  // ConstraintType.OneOf
     uint8 paramCalldataHeadSlotCount; // Number of 32-byte head slots this parameter occupies (must be >= 1)
     bytes comparisonData;           // abi.encode(allowedAddressesRoot)
-    bytes32[] paramValueInListProof;  // Proof for the actual address
 }
 ```
+
+The merkle inclusion proof for the runtime parameter value is **not** stored on
+`ParameterConstraint`. The constraint blob is hashed into the function leaf in
+`allowedFunctionsRoot` (see [OneOf Constraint Proof Layout](#oneof-constraint-proof-layout)),
+so embedding a proof would bind a single specific allowed address to the function leaf and
+make multi-address `OneOf` semantics impossible. Inclusion proofs are supplied at
+validation time via `ValidationProofs.constraintOneOfProofs` instead.
 
 ### Visual Hierarchy
 
@@ -160,13 +166,41 @@ struct ValidationProofs {
     bytes32[] sourceAccountProof;    // Proof for source account (if not anySourceAccount)
     bytes32[] destinationProof;      // Proof for destination (if CustomList)
     bytes32[] functionProof;         // Proof for function (if not anyFunction)
-    bytes constraints;               // ABI-encoded ParameterConstraint[] (includes OneOf proofs)
+    bytes constraints;               // ABI-encoded ParameterConstraint[]
+    bytes constraintOneOfProofs;     // ABI-encoded bytes32[][] of OneOf inclusion proofs (compact, traversal-ordered)
 }
 ```
 
 > **Note:** Group IDs for initiator and approver verification are obtained directly from the policy's
 > `InitiatorConfig.initiatorGroupId` and `ApprovalConfig.approverGroupId` fields rather than being
 > passed separately in the proofs struct.
+
+#### OneOf Constraint Proof Layout
+
+`constraintOneOfProofs` is the runtime payload that supplies merkle inclusion proofs for
+every `Address+OneOf` parameter constraint declared by `constraints`. The field uses two
+deliberate design choices:
+
+1. **`bytes` instead of `bytes32[][]` on the public ABI surface.** The `OrganizationImplementation`
+   contract is close to the EVM 24KB bytecode limit. Declaring the field as `bytes32[][]` on the
+   external entrypoints would force the compiler to inline a nested-array ABI decoder into the
+   implementation's bytecode. By keeping it as `bytes` (containing `abi.encode(bytes32[][])`),
+   the nested decode happens inside the dynamically linked policy libraries, which have ample
+   bytecode headroom.
+2. **Compact, traversal-ordered indexing.** The decoded outer array contains exactly one entry
+   per `Address+OneOf` constraint encountered while iterating `constraints` in order. Constraints
+   that are not `Address+OneOf` (including `Address+Exact` or any non-`Address` constraint) consume
+   no slot. The i-th entry is the inclusion proof for the i-th `Address+OneOf` constraint.
+
+Validation fails closed when:
+
+- the bytes payload is non-empty but shorter than the 64-byte ABI envelope minimum,
+- the bytes payload cannot decode as `bytes32[][]`,
+- the number of decoded proofs does not match the number of `Address+OneOf` constraints
+  (extras after iteration end fail closed; a missing proof at consumption time fails closed).
+
+Pass an empty `bytes("")` when `constraints` declares no `Address+OneOf` constraints.
+
 
 ### Validation Flow Example
 

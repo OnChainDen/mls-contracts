@@ -95,7 +95,8 @@ abstract contract OrganizationAccountTransactionTestBase is OrganizationPolicyTe
             sourceAccountProof: empty,
             destinationProof: empty,
             functionProof: empty,
-            constraints: bytes("")
+            constraints: bytes(""),
+            constraintOneOfProofs: bytes("")
         });
     }
 

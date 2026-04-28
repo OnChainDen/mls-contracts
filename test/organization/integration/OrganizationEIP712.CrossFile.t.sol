@@ -582,7 +582,8 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
             sourceAccountProof: empty,
             destinationProof: empty,
             functionProof: empty,
-            constraints: bytes("")
+            constraints: bytes(""),
+            constraintOneOfProofs: bytes("")
         });
     }
 

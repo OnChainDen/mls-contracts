@@ -317,7 +317,7 @@ Parameter constraints provide fine-grained control over what values can be passe
 | `Any` | Wildcard - no constraint | No validation performed |
 | `Exact` | Must match exactly | Direct comparison; `Bytes`/`String` use keccak256 hash comparison |
 | `Range` | Must be within bounds | `value >= min && value <= max` (inclusive) |
-| `OneOf` | Must be in allowed set | Merkle proof verification against root of allowed values |
+| `OneOf` | Must be in allowed set | Merkle proof verification against root of allowed values. Inclusion proofs are supplied at validation time via `ValidationProofs.constraintOneOfProofs`. See [docs/MERKLETREE_ARCHITECTURE.md](docs/MERKLETREE_ARCHITECTURE.md#oneof-constraint-proof-layout). |
 
 **Compatibility Matrix:**
 

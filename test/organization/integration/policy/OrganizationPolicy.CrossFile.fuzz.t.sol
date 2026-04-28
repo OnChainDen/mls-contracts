@@ -445,8 +445,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             paramType: ParamType.Bytes,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(expectedHash),
-            paramValueInListProof: noProof
+            comparisonData: abi.encode(expectedHash)
         });
         bytes memory bytesConstraints = _encodeSingleConstraint(bytesConstraint);
 
@@ -454,8 +453,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             paramType: ParamType.String,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(expectedHash),
-            paramValueInListProof: noProof
+            comparisonData: abi.encode(expectedHash)
         });
         bytes memory stringConstraints = _encodeSingleConstraint(stringConstraint);
 
@@ -464,9 +462,9 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
 
         // Call: execute `areParametersAllowedByConstraintsViaPolicyLibrary` and capture the authorization decision.
         bool bytesOffsetResult =
-            harness.areParametersAllowedByConstraintsViaPolicyLibrary(bytesConstraints, badOffsetData);
+            harness.areParametersAllowedByConstraintsViaPolicyLibrary(bytesConstraints, bytes(""), badOffsetData);
         bool stringOffsetResult =
-            harness.areParametersAllowedByConstraintsViaPolicyLibrary(stringConstraints, badOffsetData);
+            harness.areParametersAllowedByConstraintsViaPolicyLibrary(stringConstraints, bytes(""), badOffsetData);
 
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(bytesOffsetResult, "bytes offset OOB should fail closed");
@@ -476,9 +474,9 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         bytes memory badLengthData = abi.encodePacked(bytes4(0xABCD0002), bytes32(uint256(32)), bytes32(badLength));
 
         bool bytesLengthResult =
-            harness.areParametersAllowedByConstraintsViaPolicyLibrary(bytesConstraints, badLengthData);
+            harness.areParametersAllowedByConstraintsViaPolicyLibrary(bytesConstraints, bytes(""), badLengthData);
         bool stringLengthResult =
-            harness.areParametersAllowedByConstraintsViaPolicyLibrary(stringConstraints, badLengthData);
+            harness.areParametersAllowedByConstraintsViaPolicyLibrary(stringConstraints, bytes(""), badLengthData);
 
         assertFalse(bytesLengthResult, "bytes length OOB should fail closed");
         assertFalse(stringLengthResult, "string length OOB should fail closed");
@@ -525,7 +523,8 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             sourceAccountProof: new bytes32[](0),
             destinationProof: destinationProof,
             functionProof: new bytes32[](0),
-            constraints: bytes("")
+            constraints: bytes(""),
+            constraintOneOfProofs: bytes("")
         });
 
         // Verify: only actual token transfers that match both the token filter and the destination proof should pass.
@@ -561,8 +560,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(allowedArg),
-            paramValueInListProof: new bytes32[](0)
+            comparisonData: abi.encode(allowedArg)
         });
         bytes memory constraints = _encodeSingleConstraint(exactArgConstraint);
         bytes4[] memory selectors = new bytes4[](1);
@@ -586,7 +584,8 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             sourceAccountProof: new bytes32[](0),
             destinationProof: destinationProof,
             functionProof: functionProof,
-            constraints: constraints
+            constraints: constraints,
+            constraintOneOfProofs: bytes("")
         });
 
         bytes memory validData = abi.encodeWithSelector(selector, allowedArg);
@@ -673,7 +672,8 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             sourceAccountProof: new bytes32[](0),
             destinationProof: destinationProof,
             functionProof: new bytes32[](0),
-            constraints: bytes("")
+            constraints: bytes(""),
+            constraintOneOfProofs: bytes("")
         });
 
         (bool allowedResult, bool deniedResult) = _evaluateAnyPolicyTransactionClass(
@@ -720,7 +720,8 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             sourceAccountProof: new bytes32[](0),
             destinationProof: new bytes32[](0),
             functionProof: new bytes32[](0),
-            constraints: bytes("")
+            constraints: bytes(""),
+            constraintOneOfProofs: bytes("")
         });
 
         PolicyTransactionCase memory txCase = _buildSignaturesPolicyTransactionCase(

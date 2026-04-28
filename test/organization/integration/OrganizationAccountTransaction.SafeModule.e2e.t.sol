@@ -5,6 +5,7 @@ pragma solidity 0.8.33;
 import {BatchedTransaction} from "../../../src/safe-module/BatchedTransaction.sol";
 import {SafeExecutorModule} from "../../../src/safe-module/SafeExecutorModule.sol";
 import {MerkleUtils} from "libraries/MerkleUtils.sol";
+import {Merkle} from "murky/Merkle.sol";
 import {SignatureTestHelpers} from "test/helpers/SignatureTestHelpers.sol";
 import {
     MockERC20ForAccountTransaction,
@@ -247,6 +248,87 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
         assertEq(organization.guardian(), guardianSafe, "guardian should remain the Safe after ERC-20 execution");
     }
 
+    /// @dev Verifies that a single contract-interaction policy with one `Address+OneOf` parameter constraint
+    ///      authorizes two distinct allowed addresses across two separate executions, by varying only the
+    ///      runtime inclusion proof in `ValidationProofs.constraintOneOfProofs`. This is the auditor-reported
+    ///      bug: previously the inclusion proof lived inside the constraint blob (and therefore inside the
+    ///      function leaf), pinning the policy to a single allowed address.
+    function test_executeAccountTransaction_safeModuleGuardianContractInteractionOneOf_supportsTwoAddresses() public {
+        // Setup: deploy a Safe guardian plus module, initialize the organization with that Safe as guardian.
+        (address guardianSafe, SafeExecutorModule module) = _deployGuardianSafeModule(19_881);
+        OrganizationImplementationHarness organization =
+            _deployOrganizationHarness(bytes32(uint256(19_882)), _buildInitializationParams(guardianSafe));
+
+        // Setup: build a contract-interaction policy whose function leaf authorizes `notify(address)` with a
+        // single `Address+OneOf` parameter constraint over a 3-leaf address tree. The proof for each runtime
+        // recipient is supplied at execution time, not hashed into the function leaf.
+        MockInteractionTarget target = new MockInteractionTarget();
+        address[] memory allowedRecipients = buildArray(address(0xAA01), address(0xAA02), address(0xAA03));
+        bytes32[] memory addressLeaves = new bytes32[](allowedRecipients.length);
+        for (uint256 i = 0; i < allowedRecipients.length; i++) {
+            addressLeaves[i] = MerkleUtils.computeAddressLeaf(allowedRecipients[i]);
+        }
+        Merkle merkle = new Merkle();
+        bytes32 allowedAddressesRoot = merkle.getRoot(addressLeaves);
+
+        ParameterConstraint memory oneOfConstraint = ParameterConstraint({
+            paramType: ParamType.Address,
+            constraintType: ConstraintType.OneOf,
+            paramCalldataHeadSlotCount: 1,
+            comparisonData: abi.encode(allowedAddressesRoot)
+        });
+        bytes memory constraints = _encodeSingleConstraint(oneOfConstraint);
+
+        Policy memory policy = _buildManualApprovalPolicy(TransactionType.ContractInteractions);
+        policy.config.anyFunction = false;
+        policy.roots.allowedFunctionsRoot = _computeFunctionLeaf(target.notify.selector, keccak256(constraints));
+
+        ValidationProofs memory proofs =
+            _setPoliciesViaModule(organization, module, INTERACTION_POLICY_ID, policy, 19_883);
+        proofs.constraints = constraints;
+
+        address account = _deployAccountViaModule(organization, module, bytes32(uint256(19_884)), 19_885);
+
+        // Execute the same policy with two different runtime recipients, each backed by its own proof.
+        for (uint256 idx = 0; idx < 2; idx++) {
+            address recipient = allowedRecipients[idx];
+            bytes32[] memory addressProof = merkle.getProof(addressLeaves, idx);
+
+            bytes32[][] memory proofsForOneOf = new bytes32[][](1);
+            proofsForOneOf[0] = addressProof;
+            proofs.constraintOneOfProofs = abi.encode(proofsForOneOf);
+
+            bytes memory data = abi.encodeWithSelector(target.notify.selector, recipient);
+            uint256 saltAndPolicyTag = 19_886 + idx;
+            ModuleExecutionAuth memory auth = _buildModuleExecutionAuth(
+                organization, account, address(target), 0, data, saltAndPolicyTag, INTERACTION_POLICY_ID
+            );
+
+            // Call: execute the OneOf-constrained interaction through the Safe-module guardian path.
+            _executeAccountTransactionViaModule({
+                module: module,
+                organization: organization,
+                account: account,
+                to: address(target),
+                value: 0,
+                data: data,
+                salt: saltAndPolicyTag,
+                expirationTimestamp: auth.expirationTimestamp,
+                policyId: INTERACTION_POLICY_ID,
+                initiatorSignature: auth.initiatorSignature,
+                reviewSignatures: auth.reviewSignature,
+                proofs: proofs
+            });
+
+            // Verify: the target observes each distinct recipient under the same policy.
+            assertEq(target.lastRecipient(), recipient, "target should record the runtime allowed recipient");
+        }
+
+        // Verify: both executions hit the target through the OneOf-constrained policy.
+        assertEq(target.calls(), 2, "target should be invoked once per allowed runtime address");
+        assertEq(organization.guardian(), guardianSafe, "guardian should remain the Safe after OneOf executions");
+    }
+
     /// @dev Verifies the full contract-interaction execute path succeeds with a whitelisted selector and exact
     /// parameter constraint enforced through a Safe-module guardian caller.
     function test_executeAccountTransaction_safeModuleGuardianContractInteractionFlow_succeeds() public {
@@ -261,8 +343,7 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(uint256(42)),
-            paramValueInListProof: new bytes32[](0)
+            comparisonData: abi.encode(uint256(42))
         });
         bytes memory constraints = _encodeSingleConstraint(exactConstraint);
 
@@ -860,7 +941,8 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
             sourceAccountProof: empty,
             destinationProof: empty,
             functionProof: empty,
-            constraints: bytes("")
+            constraints: bytes(""),
+            constraintOneOfProofs: bytes("")
         });
     }
 

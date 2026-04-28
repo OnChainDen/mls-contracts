@@ -1424,7 +1424,8 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
             sourceAccountProof: emptyProof,
             destinationProof: emptyProof,
             functionProof: emptyProof,
-            constraints: bytes("")
+            constraints: bytes(""),
+            constraintOneOfProofs: bytes("")
         });
     }
 

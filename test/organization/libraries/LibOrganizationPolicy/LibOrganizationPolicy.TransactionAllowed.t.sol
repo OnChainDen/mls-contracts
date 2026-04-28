@@ -50,7 +50,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             sourceAccountProof: _emptyProof(),
             destinationProof: _emptyProof(),
             functionProof: _emptyProof(),
-            constraints: ""
+            constraints: "",
+            constraintOneOfProofs: bytes("")
         });
 
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
@@ -79,7 +80,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             sourceAccountProof: sourceProof,
             destinationProof: _emptyProof(),
             functionProof: _emptyProof(),
-            constraints: ""
+            constraints: "",
+            constraintOneOfProofs: bytes("")
         });
 
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
@@ -105,7 +107,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             sourceAccountProof: _emptyProof(),
             destinationProof: _emptyProof(),
             functionProof: _emptyProof(),
-            constraints: ""
+            constraints: "",
+            constraintOneOfProofs: bytes("")
         });
 
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
@@ -127,7 +130,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             sourceAccountProof: _emptyProof(),
             destinationProof: _emptyProof(),
             functionProof: _emptyProof(),
-            constraints: ""
+            constraints: "",
+            constraintOneOfProofs: bytes("")
         });
 
         bytes memory nonTokenData = abi.encodeWithSignature("foo(uint256)", 1);
@@ -160,7 +164,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             sourceAccountProof: _emptyProof(),
             destinationProof: destinationProof,
             functionProof: _emptyProof(),
-            constraints: ""
+            constraints: "",
+            constraintOneOfProofs: bytes("")
         });
 
         // Call: run `isTransactionAllowedByPolicyViaLibrary` across the prepared variants.
@@ -197,7 +202,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             sourceAccountProof: _emptyProof(),
             destinationProof: _emptyProof(),
             functionProof: _emptyProof(),
-            constraints: ""
+            constraints: "",
+            constraintOneOfProofs: bytes("")
         });
 
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` for equal-threshold and above-threshold transfers.
@@ -239,8 +245,7 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(uint256(5)),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(uint256(5))
         });
         bytes memory constraints = _encodeSingleConstraint(exactFive);
 
@@ -259,7 +264,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             sourceAccountProof: _emptyProof(),
             destinationProof: destinationProof,
             functionProof: functionProof,
-            constraints: constraints
+            constraints: constraints,
+            constraintOneOfProofs: bytes("")
         });
 
         // Call: run `isTransactionAllowedByPolicyViaLibrary` across the prepared variants.
@@ -287,7 +293,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             sourceAccountProof: _emptyProof(),
             destinationProof: destinationProof,
             functionProof: invalidFunctionProof,
-            constraints: constraints
+            constraints: constraints,
+            constraintOneOfProofs: bytes("")
         });
         bool badFunctionAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3006, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, callData, initiator1, badFunctionProofs
@@ -326,7 +333,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             sourceAccountProof: _emptyProof(),
             destinationProof: destinationProof,
             functionProof: _emptyProof(),
-            constraints: ""
+            constraints: "",
+            constraintOneOfProofs: bytes("")
         });
 
         // Call: run `isTransactionAllowedByPolicyViaLibrary` across the prepared variants.
@@ -350,7 +358,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             sourceAccountProof: _emptyProof(),
             destinationProof: destinationProof,
             functionProof: _emptyProof(),
-            constraints: ""
+            constraints: "",
+            constraintOneOfProofs: bytes("")
         });
         bool signaturesTxAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3008, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, abi.encodeWithSignature("foo()"), initiator1, signaturesProofs
@@ -385,7 +394,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             sourceAccountProof: _emptyProof(),
             destinationProof: _emptyProof(),
             functionProof: _emptyProof(),
-            constraints: malformedConstraints
+            constraints: malformedConstraints,
+            constraintOneOfProofs: bytes("")
         });
 
         // Verify: malformed constraints should revert in the current implementation.
@@ -409,7 +419,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             sourceAccountProof: _emptyProof(),
             destinationProof: _emptyProof(),
             functionProof: _emptyProof(),
-            constraints: ""
+            constraints: "",
+            constraintOneOfProofs: bytes("")
         });
 
         // Verify: assert that the request is denied and state remains unchanged.
@@ -489,7 +500,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             sourceAccountProof: _emptyProof(),
             destinationProof: destinationProof,
             functionProof: _emptyProof(),
-            constraints: ""
+            constraints: "",
+            constraintOneOfProofs: bytes("")
         });
 
         bytes memory validTransfer = _encodeErc20Transfer(RECIPIENT, 10);
@@ -533,7 +545,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             sourceAccountProof: _emptyProof(),
             destinationProof: emptyDestinationProof,
             functionProof: _emptyProof(),
-            constraints: ""
+            constraints: "",
+            constraintOneOfProofs: bytes("")
         });
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` with the happy-path payload.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
@@ -555,7 +568,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             sourceAccountProof: _emptyProof(),
             destinationProof: _emptyProof(),
             functionProof: _emptyProof(),
-            constraints: ""
+            constraints: "",
+            constraintOneOfProofs: bytes("")
         });
 
         bytes memory payload = abi.encodePacked(selector, bytes32(uint256(uint160(RECIPIENT))), bytes32(uint256(1)));

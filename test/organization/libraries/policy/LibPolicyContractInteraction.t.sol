@@ -23,7 +23,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
 
         // Call: execute `isContractInteractionAllowedByPolicyViaPolicyLibrary` with the happy-path payload.
         bool allowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, target, 0, data, functionProof, constraints, destinationProof
+            policy, target, 0, data, functionProof, constraints, bytes(""), destinationProof
         );
         // Verify: assert the expected success result and state updates.
         assertTrue(allowed, "valid destination/function/params should pass");
@@ -43,7 +43,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
         bytes memory data = abi.encodeWithSelector(selector, uint256(7));
         // Call: execute `isContractInteractionAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, actualTarget, 0, data, functionProof, constraints, new bytes32[](0)
+            policy, actualTarget, 0, data, functionProof, constraints, bytes(""), new bytes32[](0)
         );
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "disallowed destination should fail");
@@ -63,7 +63,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
         bytes memory data = abi.encodeWithSelector(actualSelector, uint256(7));
         // Call: execute `isContractInteractionAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, target, 0, data, functionProof, constraints, destinationProof
+            policy, target, 0, data, functionProof, constraints, bytes(""), destinationProof
         );
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "selector mismatch should fail function check");
@@ -82,7 +82,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
         bytes memory data = abi.encodeWithSelector(selector, uint256(8));
         // Call: execute `isContractInteractionAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, target, 0, data, functionProof, constraints, destinationProof
+            policy, target, 0, data, functionProof, constraints, bytes(""), destinationProof
         );
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "constraint mismatch should fail");
@@ -103,13 +103,13 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
 
         // Call: evaluate below-threshold, equal-threshold, and above-threshold contract calls.
         bool belowAllowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, target, 4, data, functionProof, constraints, destinationProof
+            policy, target, 4, data, functionProof, constraints, bytes(""), destinationProof
         );
         bool equalAllowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, target, 5, data, functionProof, constraints, destinationProof
+            policy, target, 5, data, functionProof, constraints, bytes(""), destinationProof
         );
         bool aboveAllowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, target, 6, data, functionProof, constraints, destinationProof
+            policy, target, 6, data, functionProof, constraints, bytes(""), destinationProof
         );
 
         // Verify: only values at or below the configured threshold should pass.
@@ -133,10 +133,10 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
 
         // Call: compare zero-value and non-zero-value executions.
         bool zeroAllowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, target, 0, data, functionProof, constraints, destinationProof
+            policy, target, 0, data, functionProof, constraints, bytes(""), destinationProof
         );
         bool nonZeroAllowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, target, 1, data, functionProof, constraints, destinationProof
+            policy, target, 1, data, functionProof, constraints, bytes(""), destinationProof
         );
 
         // Verify: zero is allowed, any positive value is rejected.
@@ -159,7 +159,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
 
         // Call: evaluate a call carrying the largest possible value.
         bool allowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, target, type(uint256).max, data, functionProof, constraints, destinationProof
+            policy, target, type(uint256).max, data, functionProof, constraints, bytes(""), destinationProof
         );
 
         // Verify: the sentinel threshold should not cap otherwise-valid calls in practice.
@@ -183,10 +183,10 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
 
         // Call: run `isContractInteractionAllowedByPolicyViaPolicyLibrary` across the prepared variants.
         bool pass = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, target, 0, data, new bytes32[](0), passingConstraints, destinationProof
+            policy, target, 0, data, new bytes32[](0), passingConstraints, bytes(""), destinationProof
         );
         bool fail = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, target, 0, data, new bytes32[](0), failingConstraints, destinationProof
+            policy, target, 0, data, new bytes32[](0), failingConstraints, bytes(""), destinationProof
         );
 
         // Verify: assert each variant returns the expected branch outcome.
@@ -207,7 +207,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
 
         // Call: execute `isContractInteractionAllowedByPolicyViaPolicyLibrary` with the happy-path payload.
         bool allowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, target, 0, abi.encodePacked(selector), functionProof, constraints, destinationProof
+            policy, target, 0, abi.encodePacked(selector), functionProof, constraints, bytes(""), destinationProof
         );
         // Verify: assert the expected success result and state updates.
         assertTrue(allowed, "empty constraints should validate when function leaf was built with empty hash");
@@ -228,7 +228,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
         bytes memory data = abi.encodeWithSelector(selector, uint256(34));
         // Call: execute `isContractInteractionAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, target, 0, data, functionProof, constraintsB, destinationProof
+            policy, target, 0, data, functionProof, constraintsB, bytes(""), destinationProof
         );
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "constraint-hash mismatch should invalidate function proof");
@@ -244,7 +244,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
 
         // Call: execute `isContractInteractionAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, address(0xC708), 0, hex"010203", new bytes32[](0), bytes(""), new bytes32[](0)
+            policy, address(0xC708), 0, hex"010203", new bytes32[](0), bytes(""), bytes(""), new bytes32[](0)
         );
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "data shorter than selector should fail when anyFunction is false");
@@ -270,6 +270,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
             abi.encodePacked(bytes4(keccak256("f()"))),
             new bytes32[](0),
             malformedConstraints,
+            bytes(""),
             new bytes32[](0)
         );
     }
@@ -476,8 +477,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(expectedValue),
-            paramValueInListProof: new bytes32[](0)
+            comparisonData: abi.encode(expectedValue)
         });
 
         ParameterConstraint[] memory constraints = new ParameterConstraint[](1);

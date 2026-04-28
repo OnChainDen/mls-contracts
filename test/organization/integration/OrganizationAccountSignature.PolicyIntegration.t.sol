@@ -1917,7 +1917,8 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
             sourceAccountProof: empty,
             destinationProof: empty,
             functionProof: empty,
-            constraints: bytes("")
+            constraints: bytes(""),
+            constraintOneOfProofs: bytes("")
         });
     }
 
