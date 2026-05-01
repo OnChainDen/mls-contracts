@@ -219,8 +219,21 @@ if (!isInitiatorAuthorized(proofs.policy, initiator)) revert;
 // 4. Verify destination is allowed (Merkle proof)
 if (!isDestinationAllowedByPolicy(proofs.policy, to, data, proofs.destinationProof)) revert;
 
-// 5. Verify function and parameters (Merkle proof for function, constraints)
-if (!isFunctionAllowedByPolicy(proofs.policy, data, proofs.functionProof, proofs.constraints)) revert;
+// 5. Verify function and parameters (Merkle proof for function, constraints, OneOf proofs)
+// `proofs.constraints` carries the ABI-encoded ParameterConstraint[] for every constraint type.
+// `proofs.constraintOneOfProofs` carries the runtime-only inclusion proofs for Address+OneOf
+// constraints: an `abi.encode(bytes32[][])` payload with one entry per Address+OneOf constraint
+// in traversal order, or `bytes("")` when the function declares no Address+OneOf constraints.
+// Extras or missing entries fail closed (see "OneOf Constraint Proof Layout" above).
+if (
+    !isFunctionAllowedByPolicy(
+        proofs.policy,
+        data,
+        proofs.functionProof,
+        proofs.constraints,
+        proofs.constraintOneOfProofs
+    )
+) revert;
 
 // 6. Verify approvals (signatures, group ID obtained from policy config)
 if (!areApprovalsValid(proofs.policy, signatures, hash)) revert;
