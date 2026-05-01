@@ -237,8 +237,8 @@ contract LibPolicyParameterConstraintsAreParametersAllowedByConstraintsTest is L
 
     /// @dev Verifies that two `Address+OneOf` constraints in one function leaf both validate
     ///      against their own merkle roots when given a compact, traversal-ordered proof array.
-    ///      This is the auditor's fix: previously a single function leaf could only carry one
-    ///      proof embedded in `ParameterConstraint`, so multi-OneOf constraints were impossible.
+    ///      Previously a single function leaf could only carry one proof embedded in
+    ///      `ParameterConstraint`, so multi-OneOf constraints were impossible.
     function test_areParametersAllowedByConstraints_multipleOneOfConstraints_succeedsWithCompactProofArray() public {
         // Setup: two distinct allowed-address sets; the function takes two address args.
         address[] memory firstAllowed = buildArray(reviewer1, reviewer2, initiator1);
@@ -270,12 +270,23 @@ contract LibPolicyParameterConstraintsAreParametersAllowedByConstraintsTest is L
 
         // Verify: both OneOf constraints validate independently against their own roots.
         assertTrue(allowed, "two address-OneOf constraints should both pass with compact proofs");
+
+        // Call: swap the two proofs so each is supplied against the wrong constraint's root.
+        // Both proofs are individually valid, but bound to the opposite position.
+        bytes memory encodedProofsForDiffConstraints = _encodeOneOfProofs(_twoOneOfProofs(secondProof, firstProof));
+        bool swappedAllowed = harness.areParametersAllowedByConstraintsViaPolicyLibrary(
+            encodedConstraints, encodedProofsForDiffConstraints, data
+        );
+
+        // Verify: proofs are positionally bound to their constraint; swapping them must fail closed
+        // even when each individual proof is valid for a different root in the same constraints array.
+        assertFalse(swappedAllowed, "proofs supplied against the wrong constraint position must fail closed");
     }
 
-    /// @dev Verifies that the same OneOf constraint definition can validate two different
+    /// @dev Verifies that the same OneOf constraint definition can validate three different
     ///      runtime addresses across separate calls by supplying different inclusion proofs.
-    ///      Directly demonstrates the auditor-reported issue is fixed: the function leaf is
-    ///      stable across runtime addresses, only the runtime proof changes.
+    ///      The function leaf is stable across runtime addresses; only the runtime proof
+    ///      changes between executions.
     function test_areParametersAllowedByConstraints_singleOneOfWithDifferentRuntimeAddresses_succeeds() public {
         // Setup: a 3-leaf address tree backing a single Address+OneOf constraint.
         address[] memory allowed = buildArray(reviewer1, reviewer2, initiator1);

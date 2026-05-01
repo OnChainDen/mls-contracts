@@ -250,9 +250,9 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
 
     /// @dev Verifies that a single contract-interaction policy with one `Address+OneOf` parameter constraint
     ///      authorizes two distinct allowed addresses across two separate executions, by varying only the
-    ///      runtime inclusion proof in `ValidationProofs.constraintOneOfProofs`. This is the auditor-reported
-    ///      bug: previously the inclusion proof lived inside the constraint blob (and therefore inside the
-    ///      function leaf), pinning the policy to a single allowed address.
+    ///      runtime inclusion proof in `ValidationProofs.constraintOneOfProofs`. Previously the inclusion
+    ///      proof lived inside the constraint blob (and therefore inside the function leaf), pinning the
+    ///      policy to a single allowed address.
     function test_executeAccountTransaction_safeModuleGuardianContractInteractionOneOf_supportsTwoAddresses() public {
         // Setup: deploy a Safe guardian plus module, initialize the organization with that Safe as guardian.
         (address guardianSafe, SafeExecutorModule module) = _deployGuardianSafeModule(19_881);
