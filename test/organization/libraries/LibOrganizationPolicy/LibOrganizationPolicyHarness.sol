@@ -269,10 +269,11 @@ contract LibOrganizationPolicyHarness is OrganizationPolicyStateHarness {
         bytes calldata data,
         bytes32[] calldata functionProof,
         bytes calldata constraints,
+        bytes calldata constraintOneOfProofs,
         bytes32[] calldata destinationProof
     ) external pure returns (bool) {
         return LibPolicyContractInteraction.isContractInteractionAllowedByPolicy(
-            policy, to, value, data, functionProof, constraints, destinationProof
+            policy, to, value, data, functionProof, constraints, constraintOneOfProofs, destinationProof
         );
     }
 
@@ -302,24 +303,27 @@ contract LibOrganizationPolicyHarness is OrganizationPolicyStateHarness {
     /**
      * @dev Wrapper around `LibPolicyParameterConstraints.areParametersAllowedByConstraints`.
      */
-    function areParametersAllowedByConstraintsViaPolicyLibrary(bytes calldata parameterConstraints, bytes calldata data)
-        external
-        pure
-        returns (bool)
-    {
-        return LibPolicyParameterConstraints.areParametersAllowedByConstraints(parameterConstraints, data);
+    function areParametersAllowedByConstraintsViaPolicyLibrary(
+        bytes calldata parameterConstraints,
+        bytes calldata constraintOneOfProofs,
+        bytes calldata data
+    ) external pure returns (bool) {
+        return LibPolicyParameterConstraints.areParametersAllowedByConstraints(
+            parameterConstraints, constraintOneOfProofs, data
+        );
     }
 
     /**
      * @dev Wrapper around `LibPolicyParameterConstraints._processConstraints`.
      */
-    function processConstraintsViaPolicyLibrary(ParameterConstraint[] calldata constraints, bytes calldata data)
-        external
-        pure
-        returns (bool)
-    {
+    function processConstraintsViaPolicyLibrary(
+        ParameterConstraint[] calldata constraints,
+        bytes32[][] calldata oneOfProofs,
+        bytes calldata data
+    ) external pure returns (bool) {
         ParameterConstraint[] memory constraintsMemory = constraints;
-        return LibPolicyParameterConstraints._processConstraints(constraintsMemory, data);
+        bytes32[][] memory oneOfProofsMemory = oneOfProofs;
+        return LibPolicyParameterConstraints._processConstraints(constraintsMemory, oneOfProofsMemory, data);
     }
 
     /**
@@ -328,10 +332,14 @@ contract LibOrganizationPolicyHarness is OrganizationPolicyStateHarness {
     function isParameterAllowedByConstraintViaPolicyLibrary(
         ParameterConstraint calldata constraint,
         bytes32 paramHeadValue,
-        bytes calldata data
+        bytes calldata data,
+        bytes32[] calldata oneOfProof
     ) external pure returns (bool) {
         ParameterConstraint memory constraintMemory = constraint;
-        return LibPolicyParameterConstraints._isParameterAllowedByConstraint(constraintMemory, paramHeadValue, data);
+        bytes32[] memory oneOfProofMemory = oneOfProof;
+        return LibPolicyParameterConstraints._isParameterAllowedByConstraint(
+            constraintMemory, paramHeadValue, data, oneOfProofMemory
+        );
     }
 
     /**

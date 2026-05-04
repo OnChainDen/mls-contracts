@@ -132,14 +132,12 @@ enum ConstraintType {
  * @param constraintType How the constraint should be evaluated
  * @param paramCalldataHeadSlotCount Number of 32-byte head slots this parameter occupies in calldata (must be >= 1)
  * @param comparisonData ABI-encoded data used for comparison based on constraintType
- * @param paramValueInListProof Merkle proof for OneOf constraints (empty for other constraint types)
  */
 struct ParameterConstraint {
     ParamType paramType;
     ConstraintType constraintType;
     uint8 paramCalldataHeadSlotCount; // Number of 32-byte head slots this parameter occupies (must be >= 1)
     bytes comparisonData;
-    bytes32[] paramValueInListProof; // Merkle proof for OneOf constraints (empty otherwise)
 }
 
 /**
@@ -288,7 +286,18 @@ struct Policy {
  * @param sourceAccountProof Proof that source account is allowed by policy
  * @param destinationProof Proof that destination is allowed by policy
  * @param functionProof Proof that function selector is allowed by policy
- * @param constraints ABI-encoded parameter constraints for function calls (includes proofs for OneOf constraints)
+ * @param constraints ABI-encoded `ParameterConstraint[]` describing per-parameter rules for function calls
+ * @param constraintOneOfProofs ABI-encoded `bytes32[][]` of merkle inclusion proofs for OneOf parameter
+ *        constraints. Encoded as `bytes` (rather than `bytes32[][]`) so that the auto-generated ABI decoder
+ *        for nested arrays does not bloat `OrganizationImplementation.sol` bytecode. Decoding happens
+ *        inside the dynamically linked policy libraries which have spare bytecode size budget.
+ *
+ *        Layout: compact and traversal-ordered. The outer array contains exactly one entry per
+ *        `Address+OneOf` constraint encountered while iterating `constraints` in order. Constraints that
+ *        are not `Address+OneOf` consume no slot. The i-th entry is the merkle inclusion proof for the
+ *        i-th `Address+OneOf` constraint.
+ *
+ *        May be empty (`bytes("")`) when there are no `Address+OneOf` constraints.
  */
 struct ValidationProofs {
     Policy policy;
@@ -297,4 +306,5 @@ struct ValidationProofs {
     bytes32[] destinationProof;
     bytes32[] functionProof;
     bytes constraints;
+    bytes constraintOneOfProofs;
 }

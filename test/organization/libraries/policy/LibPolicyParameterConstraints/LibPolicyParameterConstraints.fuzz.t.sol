@@ -21,9 +21,9 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
         ParameterConstraint[] memory emptyConstraints = new ParameterConstraint[](0);
 
         // Call: evaluate the raw-empty and ABI-empty payload forms.
-        bool emptyBytesAllowed = harness.areParametersAllowedByConstraintsViaPolicyLibrary(bytes(""), data);
+        bool emptyBytesAllowed = harness.areParametersAllowedByConstraintsViaPolicyLibrary(bytes(""), bytes(""), data);
         bool emptyArrayAllowed =
-            harness.areParametersAllowedByConstraintsViaPolicyLibrary(abi.encode(emptyConstraints), data);
+            harness.areParametersAllowedByConstraintsViaPolicyLibrary(abi.encode(emptyConstraints), bytes(""), data);
 
         // Verify: both empty encodings should allow the calldata unconditionally.
         assertTrue(emptyBytesAllowed, "empty constraint bytes should allow");
@@ -128,22 +128,19 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
             paramType: ParamType.String,
             constraintType: ConstraintType.Range,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(keccak256(payload)),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(keccak256(payload))
         });
         ParameterConstraint memory arrayConstraint = ParameterConstraint({
             paramType: ParamType.Array,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: bytes(""),
-            paramValueInListProof: _emptyProof()
+            comparisonData: bytes("")
         });
         ParameterConstraint memory structConstraint = ParameterConstraint({
             paramType: ParamType.Struct,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: bytes(""),
-            paramValueInListProof: _emptyProof()
+            comparisonData: bytes("")
         });
 
         // Call: evaluate unsupported combinations that should all fail closed.
@@ -170,12 +167,15 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
         bool bytesRange = harness.isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Range, abi.encode(keccak256(payload)), bytes32(uint256(32)), bytesData
         );
-        bool stringRange =
-            harness.isParameterAllowedByConstraintViaPolicyLibrary(stringConstraint, bytes32(uint256(32)), bytesData);
-        bool arrayExact =
-            harness.isParameterAllowedByConstraintViaPolicyLibrary(arrayConstraint, bytes32(uint256(32)), bytesData);
-        bool structExact =
-            harness.isParameterAllowedByConstraintViaPolicyLibrary(structConstraint, bytes32(uint256(32)), bytesData);
+        bool stringRange = harness.isParameterAllowedByConstraintViaPolicyLibrary(
+            stringConstraint, bytes32(uint256(32)), bytesData, new bytes32[](0)
+        );
+        bool arrayExact = harness.isParameterAllowedByConstraintViaPolicyLibrary(
+            arrayConstraint, bytes32(uint256(32)), bytesData, new bytes32[](0)
+        );
+        bool structExact = harness.isParameterAllowedByConstraintViaPolicyLibrary(
+            structConstraint, bytes32(uint256(32)), bytesData, new bytes32[](0)
+        );
 
         // Verify: every unsupported combination should return false instead of silently accepting.
         assertFalse(uintOneOf, "uint one-of should fail");
@@ -311,13 +311,14 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
             paramType: ParamType.Array,
             constraintType: ConstraintType.Any,
             paramCalldataHeadSlotCount: headSlots,
-            comparisonData: bytes(""),
-            paramValueInListProof: _emptyProof()
+            comparisonData: bytes("")
         });
         bytes memory data = bytes.concat(BASE_SELECTOR, new bytes(uint256(dataSlots) * 32));
 
         // Call: evaluate the fuzzed shape and capture whether the helper accepted or rejected it.
-        try harness.processConstraintsViaPolicyLibrary(_constraints(constraint), data) returns (bool allowed) {
+        try harness.processConstraintsViaPolicyLibrary(_constraints(constraint), new bytes32[][](0), data) returns (
+            bool allowed
+        ) {
             uint256 requiredHeadBytes = 4 + (uint256(headSlots) * 32);
 
             // Verify: the helper should return a sensible boolean result without ever panicking.

@@ -113,7 +113,8 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
             sourceAccountProof: empty,
             destinationProof: empty,
             functionProof: empty,
-            constraints: bytes("")
+            constraints: bytes(""),
+            constraintOneOfProofs: bytes("")
         });
 
         bool txAllowed = checkHarness.isTransactionAllowedByPolicyViaLibrary({
@@ -198,13 +199,12 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
             paramType: ParamType.Bool,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(true),
-            paramValueInListProof: noProof
+            comparisonData: abi.encode(true)
         });
 
         bytes memory invalidConstraintCall = abi.encodeCall(
             checkHarness.isParameterAllowedByConstraintViaPolicyLibrary,
-            (constraint, bytes32(uint256(1)), abi.encodeWithSelector(bytes4(0x11111111), uint256(1)))
+            (constraint, bytes32(uint256(1)), abi.encodeWithSelector(bytes4(0x11111111), uint256(1)), new bytes32[](0))
         );
         uint256 constraintOffset = _readWord(invalidConstraintCall, 4);
         _setWord(invalidConstraintCall, 4 + constraintOffset + 32, 9);
@@ -214,7 +214,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
 
         bytes memory invalidParamCall = abi.encodeCall(
             checkHarness.isParameterAllowedByConstraintViaPolicyLibrary,
-            (constraint, bytes32(uint256(1)), abi.encodeWithSelector(bytes4(0x11111111), uint256(1)))
+            (constraint, bytes32(uint256(1)), abi.encodeWithSelector(bytes4(0x11111111), uint256(1)), new bytes32[](0))
         );
         constraintOffset = _readWord(invalidParamCall, 4);
         _setWord(invalidParamCall, 4 + constraintOffset, 11);
@@ -312,7 +312,8 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
             sourceAccountProof: empty,
             destinationProof: empty,
             functionProof: functionProof,
-            constraints: malformedConstraints
+            constraints: malformedConstraints,
+            constraintOneOfProofs: bytes("")
         });
 
         // Verify: malformed constraints should revert and must not authorize.

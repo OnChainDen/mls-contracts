@@ -420,7 +420,8 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
             sourceAccountProof: empty,
             destinationProof: empty,
             functionProof: empty,
-            constraints: bytes("")
+            constraints: bytes(""),
+            constraintOneOfProofs: bytes("")
         });
     }
 
@@ -470,7 +471,8 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
             sourceAccountProof: empty,
             destinationProof: empty,
             functionProof: empty,
-            constraints: bytes("")
+            constraints: bytes(""),
+            constraintOneOfProofs: bytes("")
         });
 
         bytes memory signatureData =

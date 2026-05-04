@@ -998,7 +998,8 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
             sourceAccountProof: empty,
             destinationProof: empty,
             functionProof: empty,
-            constraints: bytes("")
+            constraints: bytes(""),
+            constraintOneOfProofs: bytes("")
         });
     }
 
@@ -1050,7 +1051,8 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
             sourceAccountProof: new bytes32[](0),
             destinationProof: new bytes32[](0),
             functionProof: new bytes32[](0),
-            constraints: bytes("")
+            constraints: bytes(""),
+            constraintOneOfProofs: bytes("")
         });
     }
 

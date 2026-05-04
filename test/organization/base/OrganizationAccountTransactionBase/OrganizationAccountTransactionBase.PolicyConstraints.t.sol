@@ -483,8 +483,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(uint256(7)),
-            paramValueInListProof: new bytes32[](0)
+            comparisonData: abi.encode(uint256(7))
         });
         bytes memory sevenConstraints = _encodeSingleConstraint(exactSeven);
 
@@ -678,8 +677,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             paramType: ParamType.Bytes,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(keccak256(expectedPayload)),
-            paramValueInListProof: new bytes32[](0)
+            comparisonData: abi.encode(keccak256(expectedPayload))
         });
         bytes memory payloadConstraints = _encodeSingleConstraint(payloadConstraint);
 

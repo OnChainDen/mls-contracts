@@ -186,6 +186,18 @@ contract MockInteractionTarget {
         lastPayload = payload;
         payloadHash = keccak256(payload);
     }
+
+    /// @dev Records the recipient of a notify call. Used as a fixture for `Address+OneOf`
+    ///      parameter-constraint tests that vary the recipient across executions.
+    address public lastRecipient;
+
+    function notify(address recipient) external payable {
+        calls++;
+        lastValue = msg.value;
+        lastCallData = msg.data;
+        lastCaller = msg.sender;
+        lastRecipient = recipient;
+    }
 }
 
 /**

@@ -81,8 +81,7 @@ abstract contract PolicyLibrariesFuzzTestBase is PolicyLibrariesSuiteBase {
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(expectedValue),
-            paramValueInListProof: new bytes32[](0)
+            comparisonData: abi.encode(expectedValue)
         });
 
         ParameterConstraint[] memory array = new ParameterConstraint[](1);

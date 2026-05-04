@@ -20,20 +20,23 @@ library LibPolicyParameterConstraints {
     /**
      * @dev Checks if transaction parameters match the specified constraints.
      *      Iterates through each constraint and validates the corresponding parameter.
-     *      Each constraint contains its own proof for OneOf constraints, eliminating
-     *      the need for separate proof arrays.
+     *      OneOf inclusion proofs are read from `constraintOneOfProofs` (compact,
+     *      traversal-ordered, see contract-level dev doc).
      *
      *      Constraint validation for dynamic types (Bytes, String) does not enforce ABI
      *      canonical encoding. See _isBytesOrStringParameterAllowedByConstraint for details.
      * @param parameterConstraints ABI-encoded array of ParameterConstraint structs
+     * @param constraintOneOfProofs ABI-encoded `bytes32[][]` of merkle inclusion proofs, one per
+     *        `Address+OneOf` constraint in iteration order. May be empty when there are no
+     *        `Address+OneOf` constraints.
      * @param data The transaction calldata
      * @return True if all constraints are satisfied, false otherwise
      */
-    function areParametersAllowedByConstraints(bytes calldata parameterConstraints, bytes calldata data)
-        internal
-        pure
-        returns (bool)
-    {
+    function areParametersAllowedByConstraints(
+        bytes calldata parameterConstraints,
+        bytes calldata constraintOneOfProofs,
+        bytes calldata data
+    ) internal pure returns (bool) {
         // Case: No constraints defined, any parameters are accepted
         if (parameterConstraints.length == 0) return true;
 
@@ -47,26 +50,45 @@ library LibPolicyParameterConstraints {
         // Case: No constraints in the array
         if (constraints.length == 0) return true;
 
+        // Decode the OneOf proofs payload (if any). Empty payload is treated as zero proofs.
+        bytes32[][] memory oneOfProofs;
+        if (constraintOneOfProofs.length == 0) {
+            oneOfProofs = new bytes32[][](0);
+        } else {
+            // Case: Malformed proofs ABI envelope fails closed before decode.
+            // `abi.encode(bytes32[][])` must contain at least offset + length (2 words).
+            if (constraintOneOfProofs.length < 64) return false;
+            oneOfProofs = abi.decode(constraintOneOfProofs, (bytes32[][]));
+        }
+
         // Use a helper function to process constraints (reduces stack depth)
-        return _processConstraints(constraints, data);
+        return _processConstraints(constraints, oneOfProofs, data);
     }
 
     /**
      * @dev Internal helper to process parameter constraints.
      *      Separated to manage stack depth in the main function.
-     *      Each constraint is self-contained with its own merkle proof for OneOf constraints.
+     *      Walks the constraints array, advancing the calldata head offset, and routes
+     *      `Address+OneOf` constraints to their compact-indexed inclusion proof.
+     *      The number of `Address+OneOf` constraints encountered must match
+     *      `oneOfProofs.length` exactly; otherwise validation fails closed.
      * @param constraints The array of parameter constraints to validate
+     * @param oneOfProofs Compact, traversal-ordered list of merkle inclusion proofs, one per
+     *        `Address+OneOf` constraint.
      * @param data The full transaction calldata
      * @return True if all constraints are satisfied, false otherwise
      */
-    function _processConstraints(ParameterConstraint[] memory constraints, bytes calldata data)
-        internal
-        pure
-        returns (bool)
-    {
+    function _processConstraints(
+        ParameterConstraint[] memory constraints,
+        bytes32[][] memory oneOfProofs,
+        bytes calldata data
+    ) internal pure returns (bool) {
         // Validate each parameter against its constraint
         // Parameters start at byte 4 (after the selector)
         uint256 paramCalldataOffset = ContractInteractionUtils.SELECTOR_LENGTH;
+
+        // Index in `oneOfProofs` array. Advanced for each `Address+OneOf` constraint encountered.
+        uint256 oneOfProofIndex = 0;
 
         for (uint256 i = 0; i < constraints.length; ++i) {
             // Case: Primitive and dynamic single-head types cannot declare multi-slot heads.
@@ -97,9 +119,21 @@ library LibPolicyParameterConstraints {
             bytes32 paramHeadValue =
                 bytes32(data[paramCalldataOffset:paramCalldataOffset + ContractInteractionUtils.SLOT_SIZE]);
 
+            // Look up the OneOf proof for this constraint, if applicable.
+            // For non-OneOf constraints, an empty proof array is forwarded but unused.
+            bytes32[] memory oneOfProof;
+            if (constraints[i].paramType == ParamType.Address && constraints[i].constraintType == ConstraintType.OneOf)
+            {
+                // Case: Fewer proofs supplied than `Address+OneOf` constraints declared.
+                if (oneOfProofIndex >= oneOfProofs.length) return false;
+                oneOfProof = oneOfProofs[oneOfProofIndex];
+                unchecked {
+                    ++oneOfProofIndex;
+                }
+            }
+
             // Case: The parameter does not satisfy its constraint
-            // Each constraint carries its own proof for OneOf constraints
-            if (!_isParameterAllowedByConstraint(constraints[i], paramHeadValue, data)) {
+            if (!_isParameterAllowedByConstraint(constraints[i], paramHeadValue, data, oneOfProof)) {
                 return false;
             }
 
@@ -107,22 +141,29 @@ library LibPolicyParameterConstraints {
             paramCalldataOffset += paramCalldataHeadSize;
         }
 
+        // Case: More proofs supplied than `Address+OneOf` constraints declared. Fail closed so
+        // every supplied proof is observably consumed.
+        if (oneOfProofIndex != oneOfProofs.length) return false;
+
         return true;
     }
 
     /**
      * @dev Validates a single parameter against its constraint.
      *      Dispatches to type-specific validation functions based on parameter type.
-     *      For Address+OneOf constraints, the merkle proof is read from constraint.paramValueInListProof.
-     * @param constraint The constraint to validate against (includes proof for OneOf constraints)
+     *      For `Address+OneOf` constraints, the merkle proof is forwarded via `oneOfProof`.
+     *      For all other constraint types `oneOfProof` is unused.
+     * @param constraint The constraint to validate against
      * @param paramHeadValue The parameter value (first 32 bytes)
      * @param data The full transaction calldata (for dynamic types)
+     * @param oneOfProof Merkle inclusion proof for `Address+OneOf` constraints (empty otherwise)
      * @return True if the parameter satisfies the constraint, false otherwise
      */
     function _isParameterAllowedByConstraint(
         ParameterConstraint memory constraint,
         bytes32 paramHeadValue,
-        bytes calldata data
+        bytes calldata data,
+        bytes32[] memory oneOfProof
     ) internal pure returns (bool) {
         ConstraintType constraintType = constraint.constraintType;
         ParamType pType = constraint.paramType;
@@ -147,9 +188,7 @@ library LibPolicyParameterConstraints {
         }
 
         if (pType == ParamType.Address) {
-            return _isAddressParameterAllowedByConstraint(
-                constraintType, comparisonData, paramHeadValue, constraint.paramValueInListProof
-            );
+            return _isAddressParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue, oneOfProof);
         }
 
         if (pType == ParamType.FixedBytes) {

@@ -18,7 +18,7 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
         bytes memory data = abi.encodeWithSelector(BASE_SELECTOR);
 
         // Call: run the processing loop over an empty constraints list.
-        bool allowed = harness.processConstraintsViaPolicyLibrary(constraints, data);
+        bool allowed = harness.processConstraintsViaPolicyLibrary(constraints, new bytes32[][](0), data);
 
         // Verify: with no constraints, processing should trivially succeed.
         assertTrue(allowed, "empty constraints array should pass");
@@ -33,29 +33,26 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(uint256(77)),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(uint256(77))
         });
         ParameterConstraint memory arrayAnyConstraint = ParameterConstraint({
             paramType: ParamType.Array,
             constraintType: ConstraintType.Any,
             paramCalldataHeadSlotCount: 2,
-            comparisonData: bytes(""),
-            paramValueInListProof: _emptyProof()
+            comparisonData: bytes("")
         });
         ParameterConstraint memory addressConstraint = ParameterConstraint({
             paramType: ParamType.Address,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(reviewer1),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(reviewer1)
         });
 
         bytes memory data = abi.encodeWithSelector(BASE_SELECTOR, uint256(77), staticArray, reviewer1);
 
         // Call: execute `processConstraintsViaPolicyLibrary` with the happy-path payload.
         bool allowed = harness.processConstraintsViaPolicyLibrary(
-            _constraints(uintConstraint, arrayAnyConstraint, addressConstraint), data
+            _constraints(uintConstraint, arrayAnyConstraint, addressConstraint), new bytes32[][](0), data
         );
 
         // Verify: assert the expected success result and state updates.
@@ -69,13 +66,12 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 0,
-            comparisonData: abi.encode(uint256(1)),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(uint256(1))
         });
 
         // Call: execute `processConstraintsViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.processConstraintsViaPolicyLibrary(
-            _constraints(invalidConstraint), abi.encodeWithSelector(BASE_SELECTOR, uint256(1))
+            _constraints(invalidConstraint), new bytes32[][](0), abi.encodeWithSelector(BASE_SELECTOR, uint256(1))
         );
 
         // Verify: assert that the request is denied and state remains unchanged.
@@ -89,14 +85,14 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(uint256(1)),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(uint256(1))
         });
 
         bytes memory truncatedData = bytes.concat(BASE_SELECTOR, bytes16(uint128(1)));
 
         // Call: execute `processConstraintsViaPolicyLibrary` and capture the authorization decision.
-        bool allowed = harness.processConstraintsViaPolicyLibrary(_constraints(constraint), truncatedData);
+        bool allowed =
+            harness.processConstraintsViaPolicyLibrary(_constraints(constraint), new bytes32[][](0), truncatedData);
 
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "truncated calldata head should fail");
@@ -109,13 +105,12 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(uint256(1)),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(uint256(1))
         });
         bytes memory data = bytes.concat(BASE_SELECTOR, abi.encode(uint256(1)));
 
         // Call: evaluate a constraints list whose required head bytes match calldata length exactly.
-        bool allowed = harness.processConstraintsViaPolicyLibrary(_constraints(constraint), data);
+        bool allowed = harness.processConstraintsViaPolicyLibrary(_constraints(constraint), new bytes32[][](0), data);
 
         // Verify: exact-sized calldata heads should pass without requiring extra trailing bytes.
         assertTrue(allowed, "exact head bytes should be sufficient");
@@ -128,22 +123,20 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(uint256(2)),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(uint256(2))
         });
         ParameterConstraint memory secondWouldRevertIfEvaluated = ParameterConstraint({
             paramType: ParamType.Bool,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: hex"01",
-            paramValueInListProof: _emptyProof()
+            comparisonData: hex"01"
         });
 
         bytes memory data = abi.encodeWithSelector(BASE_SELECTOR, uint256(1), true);
 
         // Call: execute `processConstraintsViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.processConstraintsViaPolicyLibrary(
-            _constraints(firstFailingConstraint, secondWouldRevertIfEvaluated), data
+            _constraints(firstFailingConstraint, secondWouldRevertIfEvaluated), new bytes32[][](0), data
         );
 
         // Verify: assert that the request is denied and state remains unchanged.
@@ -157,15 +150,15 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
             paramType: ParamType.Struct,
             constraintType: ConstraintType.Any,
             paramCalldataHeadSlotCount: 2,
-            comparisonData: bytes(""),
-            paramValueInListProof: _emptyProof()
+            comparisonData: bytes("")
         });
 
         // Tuple(uint256,address) encoded in-head occupies 2 slots.
         bytes memory data = bytes.concat(BASE_SELECTOR, abi.encode(uint256(1234), reviewer2));
 
         // Call: execute `processConstraintsViaPolicyLibrary` with the happy-path payload.
-        bool allowed = harness.processConstraintsViaPolicyLibrary(_constraints(structAnyConstraint), data);
+        bool allowed =
+            harness.processConstraintsViaPolicyLibrary(_constraints(structAnyConstraint), new bytes32[][](0), data);
 
         // Verify: assert the expected success result and state updates.
         assertTrue(allowed, "multi-slot struct Any constraint should process without decode errors");
@@ -178,20 +171,20 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
             paramType: ParamType.Array,
             constraintType: ConstraintType.Any,
             paramCalldataHeadSlotCount: 2,
-            comparisonData: bytes(""),
-            paramValueInListProof: _emptyProof()
+            comparisonData: bytes("")
         });
         ParameterConstraint memory secondUint = ParameterConstraint({
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(uint256(9)),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(uint256(9))
         });
         bytes memory data = bytes.concat(BASE_SELECTOR, abi.encode(uint256(1), uint256(2)));
 
         // Call: run processing where the second constraint starts beyond available head bytes.
-        bool allowed = harness.processConstraintsViaPolicyLibrary(_constraints(firstArrayAny, secondUint), data);
+        bool allowed = harness.processConstraintsViaPolicyLibrary(
+            _constraints(firstArrayAny, secondUint), new bytes32[][](0), data
+        );
 
         // Verify: the out-of-bounds second head read should fail closed.
         assertFalse(allowed, "offset advancement beyond calldata should fail");
@@ -204,13 +197,12 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
             paramType: ParamType.Bool,
             constraintType: ConstraintType.Any,
             paramCalldataHeadSlotCount: 2,
-            comparisonData: bytes(""),
-            paramValueInListProof: _emptyProof()
+            comparisonData: bytes("")
         });
         bytes memory data = bytes.concat(BASE_SELECTOR, abi.encode(true, uint256(3)));
 
         // Call: process a malformed primitive constraint shape.
-        bool allowed = harness.processConstraintsViaPolicyLibrary(_constraints(primitiveAny), data);
+        bool allowed = harness.processConstraintsViaPolicyLibrary(_constraints(primitiveAny), new bytes32[][](0), data);
 
         // Verify: primitive types with headSlots>1 must fail closed regardless of constraint type.
         assertFalse(allowed, "primitive Any with headSlots>1 should fail");
@@ -223,15 +215,15 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
             paramType: ParamType.Bool,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 2,
-            comparisonData: abi.encode(true),
-            paramValueInListProof: _emptyProof()
+            comparisonData: abi.encode(true)
         });
 
         // First head slot is canonical true; second slot is unrelated payload.
         bytes memory data = abi.encodeWithSelector(BASE_SELECTOR, true, uint256(999));
 
         // Call: execute `processConstraintsViaPolicyLibrary` and capture the authorization decision.
-        bool allowed = harness.processConstraintsViaPolicyLibrary(_constraints(primitiveConstraint), data);
+        bool allowed =
+            harness.processConstraintsViaPolicyLibrary(_constraints(primitiveConstraint), new bytes32[][](0), data);
 
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "primitive constraints should fail closed when headSlots>1");

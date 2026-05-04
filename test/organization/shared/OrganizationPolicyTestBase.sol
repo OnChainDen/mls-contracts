@@ -256,4 +256,33 @@ abstract contract OrganizationPolicyTestBase is OrganizationGroupsTestBase, Byte
         constraints[0] = constraint;
         return abi.encode(constraints);
     }
+
+    /**
+     * @dev ABI-encodes a `bytes32[][]` of OneOf inclusion proofs into the `bytes` payload
+     *      consumed by `ValidationProofs.constraintOneOfProofs` and the policy libraries.
+     */
+    function _encodeOneOfProofs(bytes32[][] memory oneOfProofs) internal pure returns (bytes memory) {
+        return abi.encode(oneOfProofs);
+    }
+
+    /**
+     * @dev Builds a `bytes32[][]` containing exactly one OneOf inclusion proof.
+     */
+    function _singleOneOfProof(bytes32[] memory proof) internal pure returns (bytes32[][] memory wrapped) {
+        wrapped = new bytes32[][](1);
+        wrapped[0] = proof;
+    }
+
+    /**
+     * @dev Builds a `bytes32[][]` containing two OneOf inclusion proofs.
+     */
+    function _twoOneOfProofs(bytes32[] memory first, bytes32[] memory second)
+        internal
+        pure
+        returns (bytes32[][] memory wrapped)
+    {
+        wrapped = new bytes32[][](2);
+        wrapped[0] = first;
+        wrapped[1] = second;
+    }
 }

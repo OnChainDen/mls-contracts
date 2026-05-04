@@ -29,10 +29,10 @@ contract LibPolicyContractInteractionFuzzTest is PolicyLibrariesFuzzTestBase {
 
         // Call: evaluate one value at/below threshold and one value strictly above threshold.
         bool allowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, address(0xCA11), allowedValue, data, new bytes32[](0), bytes(""), new bytes32[](0)
+            policy, address(0xCA11), allowedValue, data, new bytes32[](0), bytes(""), bytes(""), new bytes32[](0)
         );
         bool disallowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
-            policy, address(0xCA11), disallowedValue, data, new bytes32[](0), bytes(""), new bytes32[](0)
+            policy, address(0xCA11), disallowedValue, data, new bytes32[](0), bytes(""), bytes(""), new bytes32[](0)
         );
 
         // Verify: only the value that stays within the configured threshold should pass.

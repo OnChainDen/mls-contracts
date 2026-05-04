@@ -36,6 +36,10 @@ library LibPolicyContractInteraction {
      * @param data The transaction calldata
      * @param functionProof The merkle proof for the function
      * @param constraints The parameter constraints to verify
+     * @param constraintOneOfProofs ABI-encoded `bytes32[][]` of merkle inclusion proofs for
+     *        `Address+OneOf` parameter constraints (compact, traversal-ordered). May be empty
+     *        when the constraints array contains no `Address+OneOf` constraints. See
+     *        `LibPolicyParameterConstraints` for the full layout contract.
      * @param destinationProof The merkle proof for the destination
      * @return True if the contract interaction is allowed, false otherwise
      */
@@ -46,6 +50,7 @@ library LibPolicyContractInteraction {
         bytes calldata data,
         bytes32[] calldata functionProof,
         bytes calldata constraints,
+        bytes calldata constraintOneOfProofs,
         bytes32[] calldata destinationProof
     ) internal pure returns (bool) {
         // forgefmt: disable-next-item
@@ -58,7 +63,9 @@ library LibPolicyContractInteraction {
             })
             && _isValueAllowedByPolicy(policy, value)
             && _isFunctionAllowedByPolicy(policy, data, functionProof, constraints)
-            && LibPolicyParameterConstraints.areParametersAllowedByConstraints(constraints, data);
+            && LibPolicyParameterConstraints.areParametersAllowedByConstraints(
+                constraints, constraintOneOfProofs, data
+            );
     }
 
     /**
