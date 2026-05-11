@@ -60,6 +60,12 @@ interface IOrganizationPolicy {
      *      authorizes it, and becomes non-executable if it does not. To invalidate the pending
      *      signatures for a policy, retire its `policyId` and assign a new one for the
      *      replacement policy in the new root.
+     *
+     *      The contract does not verify that `ipfsCid` matches `newPoliciesRoot`. It is the
+     *      responsibility of the signing client and the Guardian to recompute the merkle root
+     *      from the reviewed policy data and verify it equals `newPoliciesRoot` before signing
+     *      or relaying. The `ipfsCid` is a disaster-recovery anchor, not a signing-time trust
+     *      primitive.
      * @param newPoliciesRoot The new merkle root containing all policies
      * @param ipfsCid The IPFS CID where full policy data is stored for disaster recovery
      * @param authParams The authorization parameters (salt, expiration, signatures)

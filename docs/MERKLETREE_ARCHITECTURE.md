@@ -251,6 +251,19 @@ This prevents **second preimage attacks** where an attacker could craft intermed
 
 ---
 
+## Off-Chain Verification Responsibilities for `setPolicies`
+
+`OrganizationPolicyBase.setPolicies(newPoliciesRoot, ipfsCid, authParams)` commits the Organization to a `newPoliciesRoot` and to a hash of an IPFS CID. The contract does not verify that the IPFS payload represents the policies behind `newPoliciesRoot`. That check is the responsibility of the off-chain layers:
+
+- **Layer 1 (signing client)** is responsible for recomputing the policies merkle root from the reviewed policy data and verifying it equals `newPoliciesRoot` before producing the EIP-712 signature for `setPolicies`.
+- **Layer 2 (Guardian)** is responsible for independently repeating the same recomputation before relaying the call on-chain.
+
+The IPFS CID is a disaster-recovery anchor, not a signing-time trust primitive.
+
+This consistency check is intentionally absent on-chain. The contract cannot fetch IPFS content or re-derive the merkle root from it, so the two values cannot be cross-checked here. Enforcement is left to the off-chain layers above, in line with MLS Wallet's [three-layer security model](../README.md#three-layers-of-security).
+
+---
+
 ## Key Files
 
 | File | Purpose |

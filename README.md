@@ -190,6 +190,9 @@ Example policies:
 
 When creating an Account Transaction or Account Signature, users must select a Policy that authorizes the operation. This means that by default, all Account Transactions and Account Signatures are automatically rejected, and Policies act as allow-lists for which types of Account Transactions and Account Signatures are allowed.
 
+> [!IMPORTANT]
+> `setPolicies()` does not verify on-chain that the IPFS payload at `ipfsCid` matches `newPoliciesRoot`. It is the responsibility of the signing client and the Guardian to recompute the merkle root from the reviewed policy data and verify it equals `newPoliciesRoot` before signing or relaying. The IPFS CID is a disaster-recovery anchor, not a signing-time trust primitive. See [Off-Chain Verification Responsibilities for `setPolicies`](./docs/MERKLETREE_ARCHITECTURE.md#off-chain-verification-responsibilities-for-setpolicies).
+
 ### Policy Types
 There are two types of policies:
 1. **Auto-approval policies**
