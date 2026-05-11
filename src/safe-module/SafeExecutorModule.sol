@@ -26,14 +26,15 @@ interface ISafe {
 
 /**
  * @title SafeExecutorModule
- * @notice A minimal Safe module that allows a single authorized EOA (the "Safe Executor EOA")
+ * @notice A minimal Safe module that allows a single authorized address (the "Authorized Executor")
  *         to execute contract calls on behalf of a Safe multisig.
  * @dev This module enforces the following restrictions:
  *      - Only CALL operations, except delegatecall is allowed ONLY to BatchedTransaction
  *      - No ETH value transfers (value must be zero)
  *      - No calls to the Safe itself (prevents ownership/module changes)
  *
- *      The Safe Executor EOA is immutable - to rotate, deploy a new module instance
+ *      The Authorized Executor (`AUTHORIZED_EXECUTOR`) may be either an EOA or a contract.
+ *      The Authorized Executor is immutable - to rotate, deploy a new module instance
  *      and have Safe owners swap modules via multisig transaction.
  *
  *      Safe v1.4.1 emits ExecutionFromModuleSuccess/ExecutionFromModuleFailure
@@ -55,7 +56,7 @@ contract SafeExecutorModule is ISafeExecutorModule {
     /**
      * @notice Initializes the module with the Safe address, authorized executor, and BatchedTransaction
      * @param safe The Safe multisig this module will execute transactions for
-     * @param authorizedExecutor The EOA authorized to call executeOnBehalf
+     * @param authorizedExecutor Address authorized to call executeOnBehalf, an EOA or a contract
      * @param batchedTransaction The BatchedTransaction contract address (only target allowed for delegatecall)
      */
     constructor(address safe, address authorizedExecutor, address batchedTransaction) {

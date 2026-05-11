@@ -272,7 +272,7 @@ make deploy-batched-transaction ACCOUNT=my-deployer FACTORY=arachnid
 
 ### Step 8: Deploy Guardian Safe Executor Module
 
-Deploys the `SafeExecutorModule` for the Guardian Safe, allowing a designated EOA to execute transactions on behalf of the Safe.
+Deploys the `SafeExecutorModule` for the Guardian Safe, allowing a designated Authorized Executor to execute transactions on behalf of the Safe. In Den's Guardian deployment the Authorized Executor is an EOA (the "Guardian Executor EOA") and this script enforces that the supplied `EXECUTOR` matches the `guardian_executor_eoa` from `deployment.toml`. The underlying `SafeExecutorModule` contract itself accepts either an EOA or a contract as the Authorized Executor, but this script is the Den-specific EOA path. See [Guardian Protection](./GUARDIAN_PROTECTION.md#the-safeexecutormodule) for the broader signer model.
 
 ```bash
 make deploy-guardian-safe-module EXECUTOR=0xYourExecutorAddress ACCOUNT=my-deployer FACTORY=arachnid
