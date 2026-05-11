@@ -119,7 +119,7 @@ For ERC-1271 Account Signatures, the Guardian must sign a message approving the 
 
 2. The Organization contract accepts Guardian signatures from:
    - The Guardian address directly (for EOA Guardians or Safes with owner signatures)
-   - Any enabled module on the Guardian Safe (validated via `Safe.isModuleEnabled()`)
+   - **Any** enabled module on the Guardian Safe, not exclusively `SafeExecutorModule`. The check is `Safe.isModuleEnabled(recoveredSigner)`, so every module that the Safe owners enable on the Guardian Safe inherits guardian-signing authority. See [Guardian Safe Module Trust Surface](#guardian-safe-module-trust-surface) below.
 
 **Signature format for module-based Guardian signatures:**
 
@@ -134,6 +134,22 @@ When the Authorized Executor needs to be rotated:
 4. The Organization validates the new module is enabled—no Organization state changes required
 
 Files: `SafeExecutorModule.sol`, `ISafeExecutorModule.sol`
+
+---
+
+### Guardian Safe Module Trust Surface
+
+> [!WARNING]
+> **The Guardian Safe must never have any module enabled besides `SafeExecutorModule`.**
+>
+> The Organization contract accepts a guardian signature from any address that `Safe.isModuleEnabled(...)` returns `true` for on the Guardian Safe. This is by design. It is what allows the `SafeExecutorModule`'s Authorized Executor to sign as the Guardian without owner signatures, but it has an important implication:
+>
+> - **Any** module the Safe owners enable on the Guardian Safe inherits full guardian-signing authority. For example, enabling a spending-allowance module or a third-party automation module on the Guardian Safe would allow that module's authorized signer(s) to produce valid guardian signatures, exactly as `SafeExecutorModule`'s Authorized Executor does today.
+> - `SafeExecutorModule` is the only module designed and audited for this role. Its restrictions (see [The SafeExecutorModule](#the-safeexecutormodule) above) are what keep the blast radius of the Authorized Executor's hot key small. A general-purpose Safe module does not provide those guarantees.
+> - **Den's deployed Guardian Safe enforces this rule** and only enables `SafeExecutorModule`.
+> - **Organizations that self-host the Guardian** (see [Updating the Guardian (Normal Flow)](#updating-the-guardian-normal-flow) below) MUST enforce the same rule on their own Guardian Safe: treat enabling any additional module as equivalent to granting that module's signer(s) guardian-signing rights, and do not enable modules other than `SafeExecutorModule`. Any deviation expands the organization's trust surface and must be reviewed accordingly.
+
+Files: `LibOrganizationAccountSignature.sol`, `SafeExecutorModule.sol`
 
 ---
 
@@ -190,6 +206,9 @@ Files: `BatchedTransaction.sol`, `IBatchedTransaction.sol`
 ### Updating the Guardian (Normal Flow)
 
 In the event that an organization wants to self-host the Guardian or use a different 3rd party operated Guardian, the Guardian can be changed to a new address.
+
+> [!IMPORTANT]
+> If the new Guardian is a Safe, review [Guardian Safe Module Trust Surface](#guardian-safe-module-trust-surface) before switching. Any module enabled on the new Guardian Safe will inherit guardian-signing authority, and the Guardian Safe must never have any module enabled besides `SafeExecutorModule`.
 
 An Organization's Guardian can be updated through a **timelocked 3-step process** that requires both Guardian and Admin authorization.
 

@@ -33,8 +33,9 @@ import {PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.s
  *
  *      Guardian signatures can come from:
  *      - The Guardian address directly (EOA or ERC-1271 contract)
- *      - An enabled module on the Guardian Safe (e.g., SafeExecutorModule)
- *        This allows the module's AUTHORIZED_EXECUTOR to sign without Safe owner signatures.
+ *      - Any module currently enabled on the Guardian Safe (via `Safe.isModuleEnabled`) if the Guardian is a Safe.
+ *        The Guardian Safe must never enable any module besides `SafeExecutorModule`,
+ *        since any enabled module inherits full guardian-signing authority.
  *
  *      Policy existence is verified via merkle proof. Members and groups are verified via mapping lookups.
  * @author Den Technologies Inc
@@ -219,13 +220,16 @@ library LibOrganizationAccountSignature {
     }
 
     /**
-     * @dev Validates that a guardian signature is valid.
-     *      Accepts signatures from:
+     * @dev Validates a guardian signature. Accepts:
      *      - The Guardian address directly (EOA or ERC-1271 contract)
-     *      - An enabled module on the Guardian Safe (e.g., SafeExecutorModule)
+     *      - Any module currently enabled on the Guardian Safe
+     *
+     *      The Guardian Safe must never enable any module besides `SafeExecutorModule`,
+     *      since any enabled module inherits full guardian-signing authority via the
+     *      `isModuleEnabled` fallback below.
      * @param guardianSignature The signature to validate
      * @param messageHash The hash that was signed
-     * @return True if the signature is from the Guardian or an enabled module
+     * @return True if the signature is from the Guardian or an enabled module on the Guardian Safe
      */
     function _isValidGuardianSignature(bytes memory guardianSignature, bytes32 messageHash)
         internal
