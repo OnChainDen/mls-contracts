@@ -198,6 +198,23 @@ Each transaction is 28 + N bytes, where N is the length of `data`
 [to0][dataLength0][data0][to1][dataLength1][data1][to2][dataLength2][data2]...
 ```
 
+#### Batch Atomicity Is a Guardian Trust Assumption
+
+> [!IMPORTANT]
+> Batch atomicity at the `BatchedTransaction` layer is a **Guardian responsibility**, not a property enforced onchain. `BatchedTransaction` reverts the entire delegatecall if any sub-call fails, but the underlying signed operations are not bound to any particular batch.
+
+Individual signed payloads (Admin Operations, Account Transactions, Account Signatures) are signed **per operation**. They do **not** commit to a shared batch hash, batch identifier, or ordered bundle. The packed `transactions` blob passed to `BatchedTransaction.execute()` is assembled by the Guardian at submission time and is not itself signed by any user.
+
+It is therefore the Guardian's responsibility to:
+
+1. Group operations into batches offchain and submit each intended batch as a single `BatchedTransaction.execute()` call.
+2. Not resubmit a subset of an already-signed batch, or regroup those operations into a different batch, after the original batch fails or is otherwise revealed.
+
+The contracts do not stop a Guardian from doing either of those things. Preventing partial resubmission of a revealed batch is a **trust assumption placed on the Guardian**, not a guarantee enforced by these contracts.
+
+For related design rationale, see:
+- [Full-Revert Semantics (Intentional Design)](../README.md#full-revert-semantics-intentional-design) in the README and [Full-Revert Semantics (Intentional Design)](./SIGNATURES.md#full-revert-semantics-intentional-design) in `SIGNATURES.md`, which explain why nonce-burn behavior is designed so that atomic batches are even possible.
+- The [Guardian Safe Architecture](#guardian-safe-architecture) subsection above, which describes how the Guardian Safe and `SafeExecutorModule` constrain what the Authorized Executor can do on the Safe's behalf.
 
 Files: `BatchedTransaction.sol`, `IBatchedTransaction.sol`
 
