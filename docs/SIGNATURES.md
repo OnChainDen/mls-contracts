@@ -221,7 +221,7 @@ While the CEI pattern above consumes the nonce before external calls within the 
 
 **Why this is intentional:**
 
-1. **Atomic batched transactions** — The Guardian uses `BatchedTransaction` to execute multiple operations atomically. If one operation in a batch fails, the entire batch reverts, preserving nonce integrity for all operations. Partial-revert semantics (where nonces are burned even on failure) would make atomic batching impossible.
+1. **Atomic batched transactions** — The Guardian uses `BatchedTransaction` to execute multiple operations atomically. If one operation in a batch fails, the entire batch reverts, preserving nonce integrity for all operations. Partial-revert semantics (where nonces are burned even on failure) would make atomic batching impossible. See [Batch Atomicity Is a Guardian Trust Assumption](./GUARDIAN_PROTECTION.md#batch-atomicity-is-a-guardian-trust-assumption) for the trust model around partial resubmission of a revealed batch.
 
 2. **Retryability** — Reverted operations can be retried with the same signatures when conditions change (e.g., sufficient token balance is restored), avoiding the cost of re-collecting organizational signatures.
 
