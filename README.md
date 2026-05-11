@@ -247,6 +247,14 @@ Policies define which transactions they govern using the following fields:
 > [!WARNING]
 > **Group updates can make policies unusable.** Updating a group does not automatically update any policies that reference it. If a group's membership is reduced below a policy's reviewer threshold (e.g., a policy requires 3-of-5 approvals from the "Finance" group, and the group is updated to have only 2 members), the policy becomes unusable — it is impossible to collect enough reviewer approvals to approve or reject transactions under that policy. When this happens, admins must update the policy (via `setPolicies()`) to either lower the threshold or reference a different group.
 
+> [!WARNING]
+> **Updating `policiesRoot` does not invalidate signatures already collected for pending transactions.** Account Transaction and Account Signature signatures bind to `policyId`, not to `policiesRoot` or to a hash of the policy definition. The consequences for a pending transaction when `setPolicies()` is called are:
+> - **Policy unchanged in the new root**: the pending transaction stays executable.
+> - **Policy changed but still permits the transaction**: the pending transaction stays executable. Previously collected signatures are re-checked against the new policy at execution time and pass.
+> - **Policy changed such that the transaction is no longer permitted**: the pending transaction becomes non-executable. The signatures themselves remain cryptographically valid, but policy validation against the new root fails, so pending approvals can become unusable without an explicit rejection ever being submitted.
+>
+> To invalidate the pending Account Transaction signatures associated with a policy when updating `policiesRoot`, retire that `policyId` and assign a new `policyId` for the replacement policy in the new root. See [Policy-Root Updates & Pending Signatures](docs/SIGNATURES.md#policy-root-updates--pending-signatures) for details.
+
 ---
 
 #### Token Transfer Fields

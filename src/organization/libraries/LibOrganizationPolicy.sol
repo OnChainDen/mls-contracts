@@ -29,6 +29,13 @@ library LibOrganizationPolicy {
      * @dev Updates the global policies merkle root.
      *      This is the only way to set policies. All policy data is stored off-chain (IPFS).
      *      Emits PoliciesUpdated event with the IPFS CID for disaster recovery.
+     *
+     *      Pending signatures bind to `policyId`, not to `policiesRoot` or the policy definition,
+     *      so updating `policiesRoot` does not invalidate already-collected signatures. A pending
+     *      transaction stays executable if the new root's policy for that `policyId` still
+     *      authorizes it, and becomes non-executable if it does not. To invalidate the pending
+     *      signatures for a policy, retire its `policyId` and assign a new one for the
+     *      replacement policy in the new root.
      * @param newPoliciesRoot The new merkle root containing all policies
      * @param ipfsCid The IPFS CID where full policy data is stored
      */
