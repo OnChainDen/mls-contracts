@@ -26,7 +26,9 @@ library LibPolicyRateLimits {
      * @param account The source account address
      * @param destination The destination address
      * @param initiator The initiator address
-     * @param usageAmount The amount to add to usage (transfer amount or 1 for non-transfers)
+     * @param usageAmount The amount to add to usage. Caller-determined: transferred token
+     *        amount for `TokenTransfers` policies, `1` for all other `transactionType` values
+     *        (including `Any`).
      * @return withinLimit True if within limit (and usage was updated), false otherwise
      */
     function checkAndUpdateRateLimit(

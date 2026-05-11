@@ -375,7 +375,9 @@ When using rate limiting, the following parameters can be configured:
 
 - **Time Interval (Hours)**: The duration of the time window in hours (e.g., 24 for daily limits, 168 for weekly limits, 720 for monthly limits). Usage tracking resets at the start of each new time window.
 
-- **Interval Limit**: The maximum allowed usage within each time window. For token transfer policies, this is the cumulative token amount. For contract interaction policies, this is the number of times the contract can be called during the time interval.
+- **Interval Limit**: The maximum allowed usage within each time window. The unit depends on the policy's **Transaction Type**:
+  - **Token transfers**: cumulative token amount per window (amount-based).
+  - **Any**, **Contract interactions**, **Account Signature**: number of authorized transactions per window (count-based).
 
 - **Anchor Timestamp** *(optional)*: A Unix timestamp that defines when time windows are anchored. Time windows repeat every `timeIntervalHours` starting from this anchor point. This allows aligning rate limit resets to meaningful boundaries such as midnight in a specific timezone or the start of a business week. When set to `0` (the default), windows align to the Unix epoch (January 1, 1970 00:00 UTC), which naturally produces hour-aligned and day-aligned boundaries for common intervals but an arbitrary alignment for intervals like 7 days. If the current time is before the anchor timestamp, the rate limit fails closed and all transactions subject to that rate limit are rejected.
 
@@ -403,10 +405,17 @@ Rate limits can be scoped in different ways for each of these dimensions:
 
 **Usage Tracking:**
 
-- For **Token Transfer** policies: Usage is tracked as the cumulative token amount transferred within the time window.
-- For **Contract Interaction** policies: Usage is tracked as the count of transactions (each transaction counts as 1).
+Each authorized transaction accrues into the current window's bucket. The accrual unit depends on the policy's **Transaction Type**:
 
-> **Note:** Changing a policy's **Anchor Timestamp** or **Time Interval (Hours)** resets all tracked usage for that policy. This is because usage is keyed in part by these fields, so a new configuration starts with a clean usage slate. Changing the **Interval Limit** does *not* reset usage — the new limit takes effect immediately against already-tracked usage within the current window.
+- **Token transfers**: amount-based. Accrues the transferred token amount.
+- **Any**, **Contract interactions**, **Account Signature**: count-based. Accrues `1` per call.
+
+> [!WARNING]
+> **Under `Any`, the rate limit is always a call count, never an amount.** Even when the calldata is an ERC-20 `transfer` or `transferFrom`, the **Interval Limit** is interpreted as a count.
+>
+> Switching a policy's **Transaction Type** between **Token transfers** and **Any** silently reinterprets the stored **Interval Limit** (e.g. `1000` flips between "1000 tokens" and "1000 calls"). For an amount cap on token transfers, use a dedicated **Token transfers** policy.
+
+> **Note:** Changing a policy's **Anchor Timestamp** or **Time Interval (Hours)** resets all tracked usage for that policy. This is because usage is keyed in part by these fields, so a new configuration starts with a clean usage slate. Changing the **Interval Limit** does *not* reset usage. The new limit takes effect immediately against already-tracked usage within the current window.
 
 See `src/types/PolicyTypes.sol` (specifically `RateLimitType`, `RateLimitScope`, and `RateLimitConfig`) and `src/organization/libraries/policy/LibPolicyRateLimits.sol` for implementation details.
 
