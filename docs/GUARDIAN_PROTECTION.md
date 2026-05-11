@@ -78,7 +78,10 @@ Using a Safe multisig with a custom module as the Guardian provides several bene
 
 #### The SafeExecutorModule
 
-The Guardian Safe has a custom module (`SafeExecutorModule`) installed that allows a single EOA (the "Authorized Executor") to execute transactions on behalf of the Safe without having full control over the Safe itself.
+The Guardian Safe has a custom module (`SafeExecutorModule`) installed that allows a single authorized address (the "Authorized Executor") to execute transactions on behalf of the Safe without having full control over the Safe itself.
+
+> [!NOTE]
+> At the module level, the Authorized Executor may be **either an EOA or a contract**. The constructor only rejects the zero address. It does not enforce that the executor has no code. ERC-1271 signature validation uses `SignatureUtils.tryRecoverSigner`, which accepts both EOA and ERC-1271 inner signatures. In Den's Guardian deployment the Authorized Executor is an EOA (the "Guardian Executor EOA"), but the contract itself supports either signer type. See [`DEPLOYMENT.md`](./DEPLOYMENT.md) for the Den-specific deployment path.
 
 **Key restrictions enforced by SafeExecutorModule:**
 
@@ -89,7 +92,7 @@ The Guardian Safe has a custom module (`SafeExecutorModule`) installed that allo
 | **Immutable Authorized Executor** | To rotate the executor, Safe owners must deploy a new module and swap it via multisig |
 | **No ETH value transfers** | Value is hardcoded to 0, preventing ETH draining. This is an extra precaution and gas optimization, as no tokens are expected to be held by the Safe anyway |
 
-**Security benefit:** If the Authorized Executor's private key is compromised, the attacker:
+**Security benefit:** If the Authorized Executor's signing credentials are compromised (e.g., the Guardian Executor EOA's private key, or a contract Authorized Executor's signer), the attacker:
 - ✅ Can execute transactions as the Guardian (call Organization functions)
 - ✅ Can sign ERC-1271 Account Signature validations
 - ❌ Cannot rotate the Safe's owners
@@ -97,7 +100,7 @@ The Guardian Safe has a custom module (`SafeExecutorModule`) installed that allo
 - ❌ Cannot add malicious modules
 - ❌ Cannot drain ETH from the Safe (although no tokens should be held by the Safe anyway)
 
-This design allows Den to run an automated EOA in cloud infrastructure while limiting blast radius if that key is compromised.
+This design allows Den to run an automated EOA in cloud infrastructure while limiting the impact if that key is compromised.
 
 #### ERC-1271 Signature Validation
 
@@ -123,7 +126,7 @@ For ERC-1271 Account Signatures, the Guardian must sign a message approving the 
 
 **Signature format for module-based Guardian signatures:**
 
-When the Authorized Executor signs for the Guardian, the signature uses the universal [Signature Encoding Format](./SIGNATURES.md#signature-encoding-format)—specifically the ERC-1271 contract signature format with the module address as the signer and the Authorized Executor's EOA signature as the inner signature.
+When the Authorized Executor signs for the Guardian, the signature uses the universal [Signature Encoding Format](./SIGNATURES.md#signature-encoding-format), specifically the ERC-1271 contract signature format with the module address as the signer and the Authorized Executor's signature as the inner signature. In Den's deployment the inner signature is a 65-byte EOA signature, but the module accepts ERC-1271 inner signatures as well (via `SignatureUtils.tryRecoverSigner`) so a contract Authorized Executor would sign via ERC-1271 instead.
 
 **Module rotation:**
 

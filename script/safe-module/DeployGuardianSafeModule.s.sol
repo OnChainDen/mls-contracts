@@ -11,8 +11,12 @@ import {StringUtils} from "script/libraries/StringUtils.sol";
 /**
  * @title DeployGuardianSafeModule
  * @notice Deploys a SafeExecutorModule for the Guardian Safe via CREATE2
- * @dev This script deploys a minimal Safe module that allows a designated EOA (the "Guardian Executor EOA")
- *      to execute contract calls on behalf of the Guardian Safe multisig.
+ * @dev This script deploys a minimal Safe module that allows a designated Authorized Executor
+ *      (which may be an EOA or a contract) to execute contract calls on behalf of the
+ *      Guardian Safe multisig. The script validates (via `_validateExecutorAddressOrRevert`)
+ *      that the supplied executor address matches the `guardian_executor_eoa` entry in
+ *      `deployment.toml`. See `src/safe-module/SafeExecutorModule.sol` for the module's
+ *      signer model.
  *
  *      Usage:
  *        forge script script/safe-module/DeployGuardianSafeModule.s.sol:DeployGuardianSafeModule \
@@ -23,7 +27,7 @@ import {StringUtils} from "script/libraries/StringUtils.sol";
  *
  *      Where:
  *        - FACTORY_ADDRESS: The CREATE2 factory to use (Arachnid or Den Singleton Factory)
- *        - EXECUTOR_ADDRESS: The Guardian Executor EOA that will be authorized to execute transactions
+ *        - EXECUTOR_ADDRESS: The Authorized Executor address that will be authorized to execute transactions
  *
  *      SAFETY CHECKS:
  *      1. Verifies the provided CREATE2 factory is a known factory from deployment.toml
@@ -40,7 +44,7 @@ contract DeployGuardianSafeModule is BaseDeployScript {
     /**
      * @notice Main entry point - deploys a SafeExecutorModule for the Guardian Safe via CREATE2
      * @param factoryAddress Address of the CREATE2 factory to use for deployment
-     * @param executorAddress The Guardian Executor EOA that will be authorized to execute transactions
+     * @param executorAddress The Authorized Executor address (an EOA or a contract) that will be authorized to execute
      */
     function run(address factoryAddress, address executorAddress) external {
         // Common deployment initialization (factory validation, confirmations, header logging)
@@ -85,7 +89,7 @@ contract DeployGuardianSafeModule is BaseDeployScript {
      * @notice Compute and print module address without deploying
      * @dev Does not require RPC connection.
      * @param factoryAddress Address of the CREATE2 factory to use for address computation
-     * @param executorAddress The Guardian Executor EOA that will be authorized to execute transactions
+     * @param executorAddress The Authorized Executor address (an EOA or a contract) that will be authorized to execute
      * @param safeAddress The Guardian Safe address (computed by DeploySafe.s.sol)
      * @param batchedTransactionAddress The BatchedTransaction address (computed by DeployBatchedTransaction.s.sol)
      */
@@ -119,7 +123,7 @@ contract DeployGuardianSafeModule is BaseDeployScript {
 
     /// @dev Deploys the SafeExecutorModule for the Guardian Safe via CREATE2
     /// @param safeAddress The Guardian Safe address
-    /// @param executorAddress The Guardian Executor EOA address
+    /// @param executorAddress The Authorized Executor address (an EOA or a contract)
     /// @param batchedTransaction The BatchedTransaction address
     /// @return moduleAddress The deployed module address
     function _deployModule(address safeAddress, address executorAddress, address batchedTransaction)
@@ -149,7 +153,7 @@ contract DeployGuardianSafeModule is BaseDeployScript {
 
     /// @dev Constructs the init code for the module deployment
     /// @param safeAddress The Guardian Safe address
-    /// @param executorAddress The Guardian Executor EOA address
+    /// @param executorAddress The Authorized Executor address (an EOA or a contract)
     /// @param batchedTransaction The BatchedTransaction address
     /// @return initCode The init code (creation code + constructor args)
     function _getInitCode(address safeAddress, address executorAddress, address batchedTransaction)
