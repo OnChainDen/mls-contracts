@@ -185,11 +185,11 @@ By blocking `address(this)`, we ensure that even via batched transactions, the A
 Transactions are encoded in a packed format (no padding) for gas efficiency:
 
 ```
-┌─────────────────┬──────────────────┬─────────────────┐
-│  to (20 bytes)  │ dataLength (8B)  │  data (N bytes) │
-└─────────────────┴──────────────────┴─────────────────┘
-          ↑               ↑                  ↑
-    Target address   uint64 length    Calldata bytes
+┌─────────────────┬──────────────────────┬─────────────────┐
+│  to (20 bytes)  │ dataLength (8 bytes) │  data (N bytes) │
+└─────────────────┴──────────────────────┴─────────────────┘
+          ↑               ↑                      ↑
+    Target address   uint64 length        Calldata bytes
 ```
 Each transaction is 28 + N bytes, where N is the length of `data`
 
