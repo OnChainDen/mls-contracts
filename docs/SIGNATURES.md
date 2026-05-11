@@ -195,6 +195,22 @@ InitiateAccountTransaction(
 
 A signature created for Chain A (e.g., Ethereum mainnet) cannot be replayed on Chain B (e.g., Arbitrum) because the `chainId` differs, producing a different message hash.
 
+#### Policy-Root Updates & Pending Signatures
+
+Account Transaction and Account Signature EIP-712 digests bind to **`policyId`**, but **not** to `policiesRoot` or to a hash of the policy definition itself.
+
+The most important consequences for pending transactions when `policiesRoot` is updated are:
+
+| Scenario | New root keeps `policyId`? | Effect on a pending transaction |
+|----------|----------------------------|----------------------------------|
+| Policy unchanged across roots | Yes, same `Policy` struct | Pending transaction stays **executable**, and previously collected signatures remain valid. |
+| Policy changed but still permits the transaction | Yes, modified `Policy` struct, but the new definition still authorizes the transaction | Pending transaction stays **executable**. Old signatures are re-checked against the *new* policy at execution time and pass. |
+| Policy changed and no longer permits the transaction | Yes, modified `Policy` struct that would not authorize the transaction (for example, initiator or destination removed, amount above a new limit, reviewer threshold or group changed so existing approvals are insufficient) | Pending transaction is **not executable**. Signatures are still cryptographically valid, but policy validation against the new root fails. The pending approvals can become unusable this way without an explicit rejection ever being submitted. |
+
+In other words, replacing `policiesRoot` does not retire pending approvals on its own. Whether a pending transaction is still executable depends entirely on whether the new root's definition for that same `policyId` still authorizes the transaction.
+
+**Operational guidance:** If you want to invalidate the pending Account Transaction signatures associated with a policy when updating `policiesRoot`, retire that `policyId` and assign a new `policyId` for the replacement policy in the new root.
+
 #### Check-Effects-Interactions (CEI) Pattern
 
 Nonces are consumed **before** any external calls to prevent reentrancy attacks:
