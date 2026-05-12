@@ -60,7 +60,7 @@ contract MockERC1271GasConsumer is IERC1271 {
 }
 
 /// @dev Returns fewer than 32 bytes from isValidSignature via assembly.
-///      Used to verify the `result.length >= 32` check in _isValidERC1271SignatureNow.
+///      Used to verify the strict 32-byte length check in _isValidERC1271SignatureNow.
 contract MockERC1271ShortReturnSigner {
     /// @dev Returns only 31 bytes (one short of the minimum 32) via assembly
     // forgefmt: disable-next-item
@@ -74,7 +74,7 @@ contract MockERC1271ShortReturnSigner {
 }
 
 /// @dev Returns exactly 0 bytes from isValidSignature via assembly.
-///      Used to verify the `result.length >= 32` check catches empty results.
+///      Used to verify the strict 32-byte length check catches empty results.
 contract MockERC1271EmptyReturnSigner {
     /// @dev Returns exactly 0 bytes via assembly
     // forgefmt: disable-next-item
@@ -86,8 +86,8 @@ contract MockERC1271EmptyReturnSigner {
 }
 
 /// @dev Returns >32 bytes starting with the correct magic value.
-///      Used to verify that extra trailing bytes don't break validation
-///      (the library should still accept as long as the first 4 bytes decode correctly).
+///      Used to verify that oversized return blobs are rejected as non-conforming,
+///      even when the first 32 bytes encode the correct magic value.
 contract MockERC1271ExtraBytesSigner is IERC1271 {
     /// @param hash The hash that was signed (unused)
     /// @param signature The signature bytes (unused)
@@ -105,7 +105,7 @@ contract MockERC1271ExtraBytesSigner is IERC1271 {
 }
 
 /// @dev Returns >1000 bytes starting with the correct magic value.
-///      Used to verify that very large return data is handled correctly.
+///      Used to verify that very large oversized return blobs are rejected.
 contract MockERC1271LargeReturnSigner is IERC1271 {
     /// @param hash The hash that was signed (unused)
     /// @param signature The signature bytes (unused)
