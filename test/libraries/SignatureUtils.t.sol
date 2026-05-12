@@ -1369,11 +1369,11 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     }
 
     /// @dev Test case: A contract that returns magic with extra trailing bytes (result.length > 32) should be
-    ///      considered valid.
-    function test_isValidERC1271SignatureNow_extraTrailingBytes_valid() public view {
+    ///      considered invalid because the ERC-1271 spec requires exactly 32 bytes encoding a single bytes4.
+    function test_isValidERC1271SignatureNow_extraTrailingBytes_invalid() public view {
         bool result = harness.isValidERC1271SignatureNow(address(extraBytesSigner1271), TEST_HASH, hex"");
 
-        assertTrue(result, "Should be valid when result has extra bytes starting with magic");
+        assertFalse(result, "Should be invalid when result has extra bytes beyond 32");
     }
 
     /// @dev Test case: A contract that returns exactly 32 bytes but with the wrong magic value should be
@@ -1433,11 +1433,11 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     }
 
     /// @dev Test case: A contract that returns a very large result (>1000 bytes) starting with magic should be
-    ///      considered valid.
-    function test_isValidERC1271SignatureNow_largeReturnStartingWithMagic_valid() public view {
+    ///      considered invalid because the ERC-1271 spec requires exactly 32 bytes.
+    function test_isValidERC1271SignatureNow_largeReturnStartingWithMagic_invalid() public view {
         bool result = harness.isValidERC1271SignatureNow(address(largeReturnSigner1271), TEST_HASH, hex"");
 
-        assertTrue(result, "Should be valid when large result starts with magic");
+        assertFalse(result, "Should be invalid when large result is more than 32 bytes");
     }
 
     /// @dev Test case: A contract that returns 31 bytes (one short of the 32-byte minimum) should be considered
