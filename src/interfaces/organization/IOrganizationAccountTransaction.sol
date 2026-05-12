@@ -81,6 +81,12 @@ interface IOrganizationAccountTransaction {
      */
     error RateLimitExceeded(uint256 policyId);
 
+    /**
+     * @notice Thrown when a policy's rate limit type is not a recognized enum value
+     * @param policyId The policy ID with the unrecognized rate limit type
+     */
+    error UnknownRateLimitType(uint256 policyId);
+
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions
     // ═══════════════════════════════════════════════════════════════════════════
