@@ -142,8 +142,9 @@ library LibOrganizationAccountTransaction {
     /**
      * @dev Validates and updates rate limits for approved transactions.
      *      Only applies if the policy has TimeInterval rate limit.
-     *      For token transfers, tracks the transfer amount.
-     *      For other transactions, tracks count (usage = 1).
+     *      For `TokenTransfers` policies the bucket accrues the transferred token amount.
+     *      For all other `transactionType` values (including `Any`) it accrues `1` per call
+     *      even when the calldata is an ERC-20 transfer.
      *      Reverts if the limit would be exceeded.
      * @param params The packed transaction parameters
      * @param data The transaction calldata
@@ -171,12 +172,13 @@ library LibOrganizationAccountTransaction {
         // Determine the actual destination (may differ for token transfers)
         address destination = LibOrganizationPolicy.getActualDestination(params.to, data, params.value);
 
-        // Calculate usage amount: token amount for transfers, 1 for other transactions
+        // Usage unit is keyed off `transactionType`, not calldata shape, so non-`TokenTransfers`
+        // policies (notably `Any`) always accrue `1` even when the call is an ERC-20 transfer.
         uint256 usageAmount;
         if (policy.config.transactionType == TransactionType.TokenTransfers) {
             usageAmount = TokenTransferUtils.extractTransferAmount(data, params.value);
         } else {
-            usageAmount = 1; // Count-based limit for non-transfer transactions
+            usageAmount = 1;
         }
 
         // Check limit and update usage tracking

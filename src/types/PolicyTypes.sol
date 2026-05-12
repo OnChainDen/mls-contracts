@@ -202,7 +202,13 @@ struct TokenFilter {
  *      Controls how frequently transactions can occur and cumulative limits.
  * @param limitType The type of rate limit (None or TimeInterval)
  * @param timeIntervalHours Duration of the time window in hours (for TimeInterval)
- * @param timeIntervalLimit Maximum cumulative amount/count per time window
+ * @param timeIntervalLimit Maximum cumulative usage per time window. The unit depends on the
+ *        sibling `PolicyConfig.transactionType`:
+ *        - `TokenTransfers`: amount-based, accrues the transferred token amount per call.
+ *        - `Any`, `ContractInteractions`: count-based, accrues `1` per call even when the
+ *          calldata is an ERC-20 `transfer` or `transferFrom`.
+ *        Switching a policy between `TokenTransfers` and `Any` silently reinterprets this
+ *        value (e.g. `1000` flips between "1000 tokens" and "1000 calls").
  * @param anchorTimestamp Unix timestamp anchor for time window alignment. Windows repeat every
  *        `timeIntervalHours` starting from this anchor. Set to 0 for epoch-aligned windows (default behavior).
  *        If the current time is before this anchor, the rate limit fails closed (rejects all transactions).
