@@ -205,8 +205,8 @@ struct TokenFilter {
  * @param timeIntervalLimit Maximum cumulative usage per time window. The unit depends on the
  *        sibling `PolicyConfig.transactionType`:
  *        - `TokenTransfers`: amount-based, accrues the transferred token amount per call.
- *        - `Any`, `ContractInteractions`, `Signatures`: count-based, accrues `1` per call even
- *          when the calldata is an ERC-20 `transfer` or `transferFrom`.
+ *        - `Any`, `ContractInteractions`: count-based, accrues `1` per call even when the
+ *          calldata is an ERC-20 `transfer` or `transferFrom`.
  *        Switching a policy between `TokenTransfers` and `Any` silently reinterprets this
  *        value (e.g. `1000` flips between "1000 tokens" and "1000 calls").
  * @param anchorTimestamp Unix timestamp anchor for time window alignment. Windows repeat every

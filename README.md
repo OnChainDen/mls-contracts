@@ -377,7 +377,7 @@ When using rate limiting, the following parameters can be configured:
 
 - **Interval Limit**: The maximum allowed usage within each time window. The unit depends on the policy's **Transaction Type**:
   - **Token transfers**: cumulative token amount per window (amount-based).
-  - **Any**, **Contract interactions**, **Account Signature**: number of authorized transactions per window (count-based).
+  - **Any**, **Contract interactions**: number of authorized transactions per window (count-based).
 
 - **Anchor Timestamp** *(optional)*: A Unix timestamp that defines when time windows are anchored. Time windows repeat every `timeIntervalHours` starting from this anchor point. This allows aligning rate limit resets to meaningful boundaries such as midnight in a specific timezone or the start of a business week. When set to `0` (the default), windows align to the Unix epoch (January 1, 1970 00:00 UTC), which naturally produces hour-aligned and day-aligned boundaries for common intervals but an arbitrary alignment for intervals like 7 days. If the current time is before the anchor timestamp, the rate limit fails closed and all transactions subject to that rate limit are rejected.
 
@@ -408,7 +408,7 @@ Rate limits can be scoped in different ways for each of these dimensions:
 Each authorized transaction accrues into the current window's bucket. The accrual unit depends on the policy's **Transaction Type**:
 
 - **Token transfers**: amount-based. Accrues the transferred token amount.
-- **Any**, **Contract interactions**, **Account Signature**: count-based. Accrues `1` per call.
+- **Any**, **Contract interactions**: count-based. Accrues `1` per call.
 
 > [!WARNING]
 > **Under `Any`, the rate limit is always a call count, never an amount.** Even when the calldata is an ERC-20 `transfer` or `transferFrom`, the **Interval Limit** is interpreted as a count.
