@@ -53,8 +53,8 @@ contract BatchedTransaction is IBatchedTransaction {
                     revert(0x00, 0x24)
                 }
 
-                // Copy sub-transaction's calldata to memory scratch space for the call
-                let data := 0x00
+                // Copy sub-transaction's calldata starting at the free memory pointer
+                let data := mload(0x40)
                 calldatacopy(data, currentOffset, dataLength)
 
                 // Execute the call with value=0 (hardcoded for security)
