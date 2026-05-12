@@ -29,15 +29,11 @@ library LibPolicyDestination {
      * @return The actual destination address
      */
     function getActualDestination(address to, bytes calldata data, uint256 value) internal pure returns (address) {
-        // Case: The transaction is a native token transfer
-        if (data.length == 0) return to;
-
-        // Case: The transaction is a contract interaction
-        if (!TokenTransferUtils.isTransactionTokenTransfer(data, value)) return to;
-
-        // Case: The transaction is an ERC-20 token transfer
-        // Extract the recipient address from the transfer function call
-        return TokenTransferUtils.extractERC20TransferRecipient(data);
+        // For ERC-20 transfers the recipient lives in calldata, otherwise (native transfers and
+        // arbitrary contract interactions) the actual destination is the transaction `to` address.
+        return TokenTransferUtils.isTransactionERC20TokenTransfer(data, value)
+            ? TokenTransferUtils.extractERC20TransferRecipient(data)
+            : to;
     }
 
     /**
