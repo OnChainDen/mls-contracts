@@ -200,13 +200,9 @@ library LibPolicyParameterConstraints {
             return _isBytesOrStringParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue, data);
         }
 
-        // Case: The parameter is an Array or Struct type, which only support the "Any" constraint
-        // If we reach here, the constraint type is not "Any", which is invalid for these types.
-        if (pType == ParamType.Array || pType == ParamType.Struct) {
-            return false;
-        }
-
-        // Case: The parameter is an unknown type
+        // Case: The parameter is an Array or Struct (which only support the "Any" constraint and
+        // already returned above for that case) or an unknown type. All such combinations are
+        // invalid and fall through to a single denial here.
         return false;
     }
 
