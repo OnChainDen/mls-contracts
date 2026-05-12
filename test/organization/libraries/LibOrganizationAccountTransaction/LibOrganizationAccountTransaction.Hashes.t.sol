@@ -24,10 +24,10 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
 
     /// @dev Precomputed off-chain initiator hash for the golden-vector test payload.
     bytes32 internal constant GOLDEN_INITIATOR_HASH =
-        0xaff0b07e863791178158884ee127b7f0b0c710359762e0e20390537c4b2a20d0;
+        0x74fe05c58392ddfce6eba329c45e1a2b5f9c7244431b470800e2137786d56d40;
 
     /// @dev Precomputed off-chain review hash for the golden-vector test payload.
-    bytes32 internal constant GOLDEN_REVIEW_HASH = 0x44e12a114477fe2befd3baccc5589b3e89909541e1fb3fe3d2c96e57d46bf64a;
+    bytes32 internal constant GOLDEN_REVIEW_HASH = 0x251f13ab31c401155203ec71f4a48510c515dc078aebb9c088a8d9effc2c6641;
 
     /// @dev Verifies initiator hash uses `INITIATE_ACCOUNT_TRANSACTION_TYPEHASH` in struct encoding.
     function test_computeInitiatorHash_usesInitiatorTypehash() public view {
@@ -55,7 +55,6 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.INITIATE_ACCOUNT_TRANSACTION_TYPEHASH,
-                address(harness),
                 ACCOUNT,
                 DESTINATION,
                 5,
@@ -63,8 +62,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
                 salt,
                 expiration,
                 DEFAULT_POLICY_ID,
-                isApproval,
-                block.chainid
+                isApproval
             )
         );
         bytes32 expected = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
@@ -97,7 +95,6 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.INITIATE_ACCOUNT_TRANSACTION_TYPEHASH,
-                address(harness),
                 ACCOUNT,
                 DESTINATION,
                 0,
@@ -105,8 +102,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
                 salt,
                 expiration,
                 DEFAULT_POLICY_ID,
-                true,
-                block.chainid
+                true
             )
         );
         bytes32 expected = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
@@ -159,7 +155,6 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.REVIEW_ACCOUNT_TRANSACTION_TYPEHASH,
-                address(harness),
                 ACCOUNT,
                 DESTINATION,
                 7,
@@ -168,7 +163,6 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
                 expiration,
                 DEFAULT_POLICY_ID,
                 true,
-                block.chainid,
                 keccak256(initiatorSignature)
             )
         );
@@ -455,7 +449,6 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.REVIEW_ACCOUNT_TRANSACTION_TYPEHASH,
-                address(harness),
                 ACCOUNT,
                 DESTINATION,
                 3,
@@ -464,7 +457,6 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
                 expiration,
                 DEFAULT_POLICY_ID,
                 true,
-                block.chainid,
                 keccak256(bytes(""))
             )
         );

@@ -321,12 +321,10 @@ library LibOrganizationAccountSignature {
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.INITIATE_SIGNATURE_VALIDATION_TYPEHASH,
-                address(this),
                 account,
                 hash,
                 policyId,
-                expirationTimestamp,
-                block.chainid
+                expirationTimestamp
             )
         );
 
@@ -354,12 +352,10 @@ library LibOrganizationAccountSignature {
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.REVIEW_SIGNATURE_VALIDATION_TYPEHASH,
-                address(this),
                 account,
                 hash,
                 policyId,
                 expirationTimestamp,
-                block.chainid,
                 keccak256(initiatorSignature)
             )
         );
@@ -383,14 +379,7 @@ library LibOrganizationAccountSignature {
         returns (bytes32)
     {
         bytes32 structHash = keccak256(
-            abi.encode(
-                LibOrganizationEIP712.RECOVERY_SIGNATURE_VALIDATION_TYPEHASH,
-                address(this),
-                account,
-                hash,
-                expirationTimestamp,
-                block.chainid
-            )
+            abi.encode(LibOrganizationEIP712.RECOVERY_SIGNATURE_VALIDATION_TYPEHASH, account, hash, expirationTimestamp)
         );
 
         return MessageHashUtils.toTypedDataHash(LibOrganizationEIP712.getDomainSeparator(), structHash);

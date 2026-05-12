@@ -18,13 +18,13 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
     bytes32 internal constant ADMIN_OPERATION_TYPEHASH = keccak256(
-        "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 expirationTimestamp,bool isApproval,uint256 chainId,address organization)"
+        "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 expirationTimestamp,bool isApproval)"
     );
 
     address internal constant GOLDEN_ORGANIZATION = address(0x1111111111111111111111111111111111111111);
     uint256 internal constant GOLDEN_CHAIN_ID = 31_337;
     bytes32 internal constant GOLDEN_ADMIN_OPERATION_HASH =
-        0x5ef4f435c251fc893b3e274d308fb1e415011e419c90b611c5c13c8a2a5d9d0c;
+        0xbb33300d55f614dc327337d27d28d604542fd138e085106c07c3b342c91c925d;
 
     /// @dev Verifies that the same input tuple produces a deterministic hash.
     function test_getAdminOperationHash_sameInput_isDeterministic() public view {
@@ -258,14 +258,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
         // Build a reference struct hash from the EIP-712 schema used by this protocol.
         bytes32 expectStructHash = keccak256(
             abi.encode(
-                ADMIN_OPERATION_TYPEHASH,
-                uint8(operationType),
-                keccak256(operationData),
-                salt,
-                expiration,
-                isApproval,
-                block.chainid,
-                address(harness)
+                ADMIN_OPERATION_TYPEHASH, uint8(operationType), keccak256(operationData), salt, expiration, isApproval
             )
         );
 

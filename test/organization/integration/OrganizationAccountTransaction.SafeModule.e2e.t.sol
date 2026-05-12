@@ -109,10 +109,10 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 internal constant INITIATE_ACCOUNT_TRANSACTION_TYPEHASH = keccak256(
-        "InitiateAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId)"
+        "InitiateAccountTransaction(address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval)"
     );
     bytes32 internal constant REVIEW_ACCOUNT_TRANSACTION_TYPEHASH = keccak256(
-        "ReviewAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId,bytes initiatorSignature)"
+        "ReviewAccountTransaction(address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,bytes initiatorSignature)"
     );
     bytes32 internal constant FUNCTION_LEAF_TYPEHASH = keccak256("selector-constraints-leaf");
     bytes32 internal constant ORGANIZATION_NAME_HASH = keccak256("MLSWalletOrganization");
@@ -810,7 +810,6 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
         bytes32 structHash = keccak256(
             abi.encode(
                 INITIATE_ACCOUNT_TRANSACTION_TYPEHASH,
-                organization,
                 account,
                 to,
                 value,
@@ -818,8 +817,7 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
                 salt,
                 expirationTimestamp,
                 policyId,
-                isApproval,
-                block.chainid
+                isApproval
             )
         );
         hash = _computeTypedDataHash(organization, structHash);
@@ -854,7 +852,6 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
         bytes32 structHash = keccak256(
             abi.encode(
                 REVIEW_ACCOUNT_TRANSACTION_TYPEHASH,
-                organization,
                 account,
                 to,
                 value,
@@ -863,7 +860,6 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
                 expirationTimestamp,
                 policyId,
                 isApproval,
-                block.chainid,
                 keccak256(initiatorSignature)
             )
         );
