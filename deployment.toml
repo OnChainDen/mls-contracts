@@ -31,17 +31,17 @@ factory_deployer = "0x3fAB184622Dc19b6109349B94811493BF2a45362"
 
 # Platform Libraries (environment-independent)
 lib_org_policy = "0xFE4f61caB003FcfA1b0B1b0F5EA008E6fC565912"
-lib_org_admin = "0x7961edC2660Bc8bDD3244c9292866D243779Da46"
+lib_org_admin = "0x6e659458CfaC0Bdef26F40e32d538Fd759d07A76"
 lib_org_members = "0xbfa7680e8b5cbFD2d8eeA7af0C08576644BD4211"
 lib_org_groups = "0xF36AfaAf94a8e2538Bdc9D26130Ff76EaC53d30C"
-lib_org_init = "0xaf983D8820E05e437661E7831EC409028472Af9A"
+lib_org_init = "0xE15d9D12c26782F52217C296725E895962edc4e5"
 lib_org_account_sig = "0x5B77E5cc623ec175c90A1aa6a1Dfdb7DCd96ec15"
 lib_org_tx_recovery = "0x67841B5FDc0F516BB88b045E0378915C657367E0"
 lib_org_guardian_recovery = "0xd4fCc311320f5Cca4C850B534386EF2DC8a795c3"
 
 # Platform Implementation Contracts (environment-independent)
 whitelist_impl = "0x321C6E4eD2166C78A83368195F0C581E29658524"
-org_impl = "0xfdDfC9606A9d2bc1743755dDf6f7FeD4C40A9ce5"
+org_impl = "0x7bab9CEd7060E1e75bea73720b0C8e06797ddD6D"
 account_impl = "0x3FEB2a8c6a260BDE5bF444146b0f89D045423c2b"
 
 # Safe 1.4.1 Infrastructure (environment-independent)
@@ -62,7 +62,7 @@ batched_transaction = "0x382c50cf0703aBf0Babc5C26D0578499DAD3e9ec"
 guardian_safe = "0x1560df8edEfe1Cc95f3f715eDD3166247d33962f"
 admin_safe = "0x04Fc790fC3b558a6E3ef1D654479E7966657fEB6"
 org_factory = "0x0847Bf6E55d371107494C7f7b523278b700df010"
-whitelist_proxy = "0x49189E5e208AcfEb097E33ee2E3472a98FF3B7Ec"
+whitelist_proxy = "0x71DFa31b4934a7E4842d7215f0515BC42444CE9e"
 guardian_safe_executor_module = "0xF924C5bAD2B6aA833856a71Cc6d13ED9814D6856"
 
 # Environment: prod (2-of-3 Safe with production executors)
@@ -70,7 +70,7 @@ guardian_safe_executor_module = "0xF924C5bAD2B6aA833856a71Cc6d13ED9814D6856"
 guardian_safe = "0xf6CBe8B1c4e8A8c953b054A01133cFA1eAF46D2C"
 admin_safe = "0xAdb9eC4081c1045f03c72118CBE7D01E4Ba81A53"
 org_factory = "0x56E3fC71AF60889b6C15E9e9ef8fB4F89dA919C4"
-whitelist_proxy = "0x5ABBA6F16f1cC4dBa69C1d96C65d0F9A49A085A0"
+whitelist_proxy = "0x11f8f493D8C89b652A19d0782FD5206b0cBD2d40"
 guardian_safe_executor_module = "0xa311d0F9336A28c4F031D3A58Ca1f90e587eAAB5"
 
 # ------------------------------------------------------------------------------
@@ -86,17 +86,17 @@ factory_deployer = "0xFdA43C00bA0589bb10Bc3b75c3D8E1046e73E328"
 
 # Platform Libraries (environment-independent)
 lib_org_policy = "0xDE284cEF1fe623BfaEB8D2d56426D851Bd10c3b7"
-lib_org_admin = "0x13C40d6AAF889cC05266c5E135a2c16Ee23f0918"
+lib_org_admin = "0x1513feA1bcbC3d76178ee205c8230751fa1f1F98"
 lib_org_members = "0x5426212d6658508d1D7444b1e4b96c3799C2f2B4"
 lib_org_groups = "0x2267a51C5261ae4038fF63F9Bb6bB2d3C96762fA"
-lib_org_init = "0xbDc8fad655aB851B06Bb9c46950326cC3De550b7"
+lib_org_init = "0xdb2626e6Ac4e73BA74bbf2f8584afCE60BC829C7"
 lib_org_account_sig = "0x555a8d2CDb048eC895277ba1d9D4610C53599F29"
 lib_org_tx_recovery = "0x025104ad622a6D98173Afd8715F684B74190a089"
 lib_org_guardian_recovery = "0xF107daC014f2ec8f1bae3D11485bf93c56b269fc"
 
 # Platform Implementation Contracts (environment-independent)
 whitelist_impl = "0x25987608D9736EE808b51C914819c1Ab2E780161"
-org_impl = "0xA3E692845dF31d101039a9C620cd8e73388dc9AD"
+org_impl = "0x0269B3b7B47B78a3640eB5B446f13d4BC5DB1682"
 account_impl = "0x11d2d3e7338aF8624A8A774Dc9c00CB67dC9e867"
 
 # Safe 1.4.1 Infrastructure (environment-independent)
@@ -117,7 +117,7 @@ batched_transaction = "0x57b86e0116b31F0aeA9be049d5DE688802bCaf65"
 guardian_safe = "0xECd3d5A1acF4580B8f3232E48be01Afb5B44e69e"
 admin_safe = "0xA2f9C62c90436ED5eb5c403Efdb524800aC17Ac8"
 org_factory = "0x6f9bbAde4800E00E621bB815b5340884377Acb13"
-whitelist_proxy = "0x051efA1556517aA165afb596b05346f3d480E6d8"
+whitelist_proxy = "0x1f3Ba4E580cB03BDa5c424B14B6109eAFecbBA21"
 guardian_safe_executor_module = "0xCBC235287d5E8aF648887aC768b06bff6e335808"
 
 # Environment: prod (2-of-3 Safe with production executors)
@@ -126,7 +126,7 @@ guardian_safe_executor_module = "0xCBC235287d5E8aF648887aC768b06bff6e335808"
 guardian_safe = "0x77832ef23F415aff48e642A9Ac53B185396f792D"
 admin_safe = "0xc66bf264ACa668726f8B39B32cf12116e90d141A"
 org_factory = "0x7EDba8b7d84f00f86522D745f704775E9D3d62B2"
-whitelist_proxy = "0x05BB0eE7AaC11cfBD850460B1638916b5D7192E4"
+whitelist_proxy = "0x0E5f23184e2dE3Ff982E52b4F5546cd3EeBf48f6"
 guardian_safe_executor_module = "0xf1E3e56Aec8E2E188718792f53e70DC3aD825096"
 
 # ------------------------------------------------------------------------------
@@ -143,17 +143,17 @@ factory_deployer = "0xbc8c3bF2119c250C80d4ae6192e3F4083D9Eb81f"
 
 # Platform Libraries (environment-independent)
 lib_org_policy = "0xEf46F5CEA188f18f94E0375f3B750f9a40f2c556"
-lib_org_admin = "0x00f14931D4c486430E928875989677763ce36369"
+lib_org_admin = "0xc2abaF3E29FB7d50945C6AC66193Fd912576eFed"
 lib_org_members = "0x4c9cb7668F8c9C0a80cB3C4460556fa228e64f8E"
 lib_org_groups = "0x219d7AF016d8E577B05EDc9902133faBf509a7d0"
-lib_org_init = "0xF51A47e74417e4489Ecb8649a877Af80Be16ae93"
+lib_org_init = "0xb75FF69B19DBa5bE246B31b4fe5D614829e9Fd51"
 lib_org_account_sig = "0xed02076F3436336Ae87cDab044f9Ad6647e5180c"
 lib_org_tx_recovery = "0x8e1F2bf86d279EEf00b3467b4354b00Db87E7649"
 lib_org_guardian_recovery = "0x0258fc489Ea07Ba9D7F17D2346256522D9f81712"
 
 # Platform Implementation Contracts (environment-independent)
 whitelist_impl = "0xE4023E8128130c7eABD5d8bD9e056956Cd910cc4"
-org_impl = "0xd0b23DCA6b15517AB5E5a2F5d900189b333598b0"
+org_impl = "0xab9C8C166Da7DEe53E229eCc3088388EB8FaeFB1"
 account_impl = "0xe3c01B686bF45cf291745cFC454e0960055b6CCa"
 
 # Safe 1.4.1 Infrastructure (environment-independent)
@@ -174,7 +174,7 @@ batched_transaction = "0x51eD58Bf052c809D34422cFb8C01ee1a825306B3"
 guardian_safe = "0x506CBc53B24588786dCafB25bdb3a05b2E03263D"
 admin_safe = "0x3171D948e85f26f82dAfbDC75ADEBa16c5b37224"
 org_factory = "0x9542287ba0ab44F672fFfb43eAB72efEF40Dd649"
-whitelist_proxy = "0x3631BB10a1E12278440D20F7cFc22Dd7AeF1B3A3"
+whitelist_proxy = "0x2f5D1f2B2D81F98d2306D72e5E21b9b21b1ab789"
 guardian_safe_executor_module = "0x296E43631eD6105184e28a1D872ED6660e11A663"
 
 # Environment: prod (2-of-3 Safe with production executors)
@@ -183,7 +183,7 @@ guardian_safe_executor_module = "0x296E43631eD6105184e28a1D872ED6660e11A663"
 guardian_safe = "0xd54Be182474e638Fde5A3651A3674F5af0feA33A"
 admin_safe = "0x8573034526e21A11B806d89Ad6DCD658d3110c31"
 org_factory = "0xd2B735b5387B8C0ae9c3D7e182A7E2DA9015e04a"
-whitelist_proxy = "0x24A8d9d515C5735C09CDCE09b61A0cF5FE5554b7"
+whitelist_proxy = "0xbd56D3cDa3d86d632817Bce2020256723168d470"
 guardian_safe_executor_module = "0x8E23B8E5F12529E9B542Ba4C7e326Ac86A032AF4"
 
 # ==============================================================================

@@ -473,40 +473,6 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         assertFalse(harness.getUsedNonce(nonce), "account-transaction nonce should remain unused");
     }
 
-    /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` rejects `OperationType.AccountTransactionRejection`.
-    function test_rejectAdminOperation_accountTransactionRejectionType_revertsAndDoesNotBurnNonce() public {
-        bytes memory operationData =
-            abi.encode(address(0xAB3), address(0xAB4), uint256(2), keccak256("reject"), uint256(10));
-        uint256 salt = 2031;
-
-        // Setup: configure one-admin auth signed over the account-transaction rejection domain that admin reject must
-        // reject.
-        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
-        AdminAuthParams memory auth = _buildAdminAuthParamsForEoa({
-            operationType: OperationType.AccountTransactionRejection,
-            operationData: operationData,
-            isApproval: false,
-            salt: salt,
-            expirationTimestamp: block.timestamp + 1 hours,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
-
-        // Call: attempt to reject an account-transaction rejection nonce through the admin-reject entry point.
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOrganizationAdmin.InvalidAdminOperationType.selector, OperationType.AccountTransactionRejection
-            )
-        );
-        vm.prank(GUARDIAN);
-        harness.rejectAdminOperation(OperationType.AccountTransactionRejection, operationData, auth);
-
-        uint256 nonce = harness.computeNonce({
-            operationType: OperationType.AccountTransactionRejection, operationData: operationData, salt: salt
-        });
-        // Verify: the unsupported account-transaction rejection domain leaves its nonce unused.
-        assertFalse(harness.getUsedNonce(nonce), "account-transaction rejection nonce should remain unused");
-    }
-
     /// @dev Verifies that rejection works for supported admin operation types when properly signed.
     function test_rejectAdminOperation_supportedAdminOperationTypes_workWhenProperlySigned() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.

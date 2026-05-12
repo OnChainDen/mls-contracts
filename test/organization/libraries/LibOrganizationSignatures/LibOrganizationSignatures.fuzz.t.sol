@@ -34,7 +34,7 @@ contract LibOrganizationSignaturesFuzzTest is Test {
         uint256 salt
     ) public {
         // Setup: derive one fresh nonce from a fuzzed valid operation tuple.
-        uint256 operationTypeCount = uint256(OperationType.AccountTransactionRejection) + 1;
+        uint256 operationTypeCount = uint256(OperationType.AccountTransaction) + 1;
         OperationType operationType = OperationType(bound(uint256(rawOperationType), 0, operationTypeCount - 1));
         uint256 nonce = harness.computeNonceViaLibrary(operationType, operationData, salt);
         assertFalse(harness.isNonceUsedViaLibrary(nonce), "fresh nonce should start unused");
@@ -58,7 +58,7 @@ contract LibOrganizationSignaturesFuzzTest is Test {
         uint256 salt
     ) public {
         // Setup: derive one fresh nonce from a fuzzed valid operation tuple.
-        uint256 operationTypeCount = uint256(OperationType.AccountTransactionRejection) + 1;
+        uint256 operationTypeCount = uint256(OperationType.AccountTransaction) + 1;
         OperationType operationType = OperationType(bound(uint256(rawOperationType), 0, operationTypeCount - 1));
         uint256 nonce = harness.computeNonceViaLibrary(operationType, operationData, salt);
 
