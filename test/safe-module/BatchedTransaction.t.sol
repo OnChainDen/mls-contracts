@@ -11,6 +11,8 @@ import {BatchedTransaction} from "../../src/safe-module/BatchedTransaction.sol";
  * @dev MockBTTarget — target contract tracking calls, values, and caller identity.
  */
 contract MockBTTarget {
+    error CustomFailure(uint256 code, string detail);
+
     uint256 public value;
     address public lastCaller;
     uint256 public callCount;
@@ -35,6 +37,14 @@ contract MockBTTarget {
 
     function revertingFunction() external pure {
         revert("MockBTTarget: intentional revert");
+    }
+
+    function revertWithCustomError(uint256 code, string calldata detail) external pure {
+        revert CustomFailure(code, detail);
+    }
+
+    function revertWithNoData() external pure {
+        revert();
     }
 
     function getValuePlusOne() external view returns (uint256) {
@@ -376,6 +386,69 @@ contract BatchedTransactionTest is Test {
 
         // Verify: batch reverts.
         assertFalse(success, "Reverting sub-transaction should cause batch revert");
+    }
+
+    /// @dev Verifies a sub-call's Error(string) revert reason is bubbled up in the top-level revert data.
+    function test_executeBubblesUpStringRevertReason() public {
+        // Setup: single sub-tx that reverts with a known string error.
+        bytes memory data = abi.encodeWithSelector(MockBTTarget.revertingFunction.selector);
+        bytes memory encoded = _encodeTx(address(target1), data);
+
+        // Call: execute batch via delegatecall.
+        (bool success, bytes memory returnData) = _executeBatchViaDelegatecall(encoded);
+
+        // Verify: the top-level revert data matches the sub-call's Error(string) payload exactly.
+        assertFalse(success, "Reverting sub-call should fail the batch");
+        bytes memory expected = abi.encodeWithSignature("Error(string)", "MockBTTarget: intentional revert");
+        assertEq(returnData, expected, "Top-level revert data should mirror the sub-call's Error(string) payload");
+    }
+
+    /// @dev Verifies a sub-call's custom-error selector and arguments are bubbled up unchanged.
+    function test_executeBubblesUpCustomErrorSelectorAndArgs() public {
+        // Setup: sub-tx that reverts with CustomFailure(code, detail).
+        uint256 code = 0xC0FFEE;
+        string memory detail = "boom";
+        bytes memory data = abi.encodeWithSelector(MockBTTarget.revertWithCustomError.selector, code, detail);
+        bytes memory encoded = _encodeTx(address(target1), data);
+
+        // Call: execute batch via delegatecall.
+        (bool success, bytes memory returnData) = _executeBatchViaDelegatecall(encoded);
+
+        // Verify: top-level revert data equals the full ABI-encoded CustomFailure error.
+        assertFalse(success, "Custom-error revert should fail the batch");
+        bytes memory expected = abi.encodeWithSelector(MockBTTarget.CustomFailure.selector, code, detail);
+        assertEq(returnData, expected, "Top-level revert data should bubble up the custom error selector and args");
+    }
+
+    /// @dev Verifies a sub-call reverting with no data results in empty top-level revert data (not a fabricated
+    /// payload).
+    function test_executeBubblesUpEmptyRevertWhenSubCallHasNoData() public {
+        // Setup: sub-tx that reverts without any revert data.
+        bytes memory data = abi.encodeWithSelector(MockBTTarget.revertWithNoData.selector);
+        bytes memory encoded = _encodeTx(address(target1), data);
+
+        // Call: execute batch via delegatecall.
+        (bool success, bytes memory returnData) = _executeBatchViaDelegatecall(encoded);
+
+        // Verify: batch failed and the top-level revert data is empty (matches sub-call returndata size of 0).
+        assertFalse(success, "No-data revert should still fail the batch");
+        assertEq(returnData.length, 0, "Top-level revert data should be empty when sub-call had none");
+    }
+
+    /// @dev Verifies revert data is bubbled up when the failing sub-call is preceded by successful sub-calls.
+    function test_executeBubblesUpRevertReasonFromLaterSubCall() public {
+        // Setup: first tx succeeds, second tx reverts with a known string reason.
+        bytes[] memory txs = new bytes[](2);
+        txs[0] = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 7));
+        txs[1] = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.revertingFunction.selector));
+
+        // Call: execute batch via delegatecall.
+        (bool success, bytes memory returnData) = _executeBatchViaDelegatecall(_encodeBatch(txs));
+
+        // Verify: revert data still matches the failing sub-call's payload even after an earlier successful call.
+        assertFalse(success, "Later reverting sub-call should fail the batch");
+        bytes memory expected = abi.encodeWithSignature("Error(string)", "MockBTTarget: intentional revert");
+        assertEq(returnData, expected, "Top-level revert data should preserve the later sub-call's revert reason");
     }
 
     /// @dev Verifies first sub-call success + second sub-call revert => first side effects rolled back.
