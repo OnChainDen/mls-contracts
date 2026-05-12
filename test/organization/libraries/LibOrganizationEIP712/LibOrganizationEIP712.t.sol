@@ -36,7 +36,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     function test_adminOperationTypehash_matchesDocumentedTypeString() public pure {
         // Setup: keep the documented type string explicit in the test body.
         bytes32 expected = keccak256(
-            "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 expirationTimestamp,bool isApproval,uint256 chainId,address organization)"
+            "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 expirationTimestamp,bool isApproval)"
         );
 
         // Call: read the library constant.
@@ -51,7 +51,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     function test_initiateAccountTransactionTypehash_matchesDocumentedTypeString() public pure {
         // Setup: keep the documented type string explicit in the test body.
         bytes32 expected = keccak256(
-            "InitiateAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId)"
+            "InitiateAccountTransaction(address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval)"
         );
 
         // Call: read the library constant.
@@ -66,7 +66,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     function test_reviewAccountTransactionTypehash_matchesDocumentedTypeString() public pure {
         // Setup: keep the documented type string explicit in the test body.
         bytes32 expected = keccak256(
-            "ReviewAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId,bytes initiatorSignature)"
+            "ReviewAccountTransaction(address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,bytes initiatorSignature)"
         );
 
         // Call: read the library constant.
@@ -81,7 +81,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     function test_initiateSignatureValidationTypehash_matchesDocumentedTypeString() public pure {
         // Setup: keep the documented type string explicit in the test body.
         bytes32 expected = keccak256(
-            "InitiateSignatureValidation(address organization,address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp,uint256 chainId)"
+            "InitiateSignatureValidation(address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp)"
         );
 
         // Call: read the library constant.
@@ -96,7 +96,7 @@ contract LibOrganizationEIP712Test is LibOrganizationEIP712TestBase {
     function test_reviewSignatureValidationTypehash_matchesDocumentedTypeString() public pure {
         // Setup: keep the documented type string explicit in the test body.
         bytes32 expected = keccak256(
-            "ReviewSignatureValidation(address organization,address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp,uint256 chainId,bytes initiatorSignature)"
+            "ReviewSignatureValidation(address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp,bytes initiatorSignature)"
         );
 
         // Call: read the library constant.

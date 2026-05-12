@@ -20,38 +20,36 @@ library LibOrganizationEIP712 {
     /// @dev Type hash for admin operation signatures (used for admin authorization)
     bytes32 internal constant ADMIN_OPERATION_TYPEHASH = keccak256(
         // solhint-disable-next-line max-line-length
-        "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 expirationTimestamp,bool isApproval,uint256 chainId,address organization)"
+        "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 expirationTimestamp,bool isApproval)"
     );
 
     /// @dev Type hash for initiator signatures on account transactions
     bytes32 internal constant INITIATE_ACCOUNT_TRANSACTION_TYPEHASH = keccak256(
         // solhint-disable-next-line max-line-length
-        "InitiateAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId)"
+        "InitiateAccountTransaction(address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval)"
     );
 
     /// @dev Type hash for reviewer signatures on account transactions
     bytes32 internal constant REVIEW_ACCOUNT_TRANSACTION_TYPEHASH = keccak256(
         // solhint-disable-next-line max-line-length
-        "ReviewAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId,bytes initiatorSignature)"
+        "ReviewAccountTransaction(address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,bytes initiatorSignature)"
     );
 
     /// @dev Type hash for initiator signatures on ERC-1271 signature validation requests
     bytes32 internal constant INITIATE_SIGNATURE_VALIDATION_TYPEHASH = keccak256(
         // solhint-disable-next-line max-line-length
-        "InitiateSignatureValidation(address organization,address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp,uint256 chainId)"
+        "InitiateSignatureValidation(address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp)"
     );
 
     /// @dev Type hash for reviewer signatures on ERC-1271 signature validation requests
     bytes32 internal constant REVIEW_SIGNATURE_VALIDATION_TYPEHASH = keccak256(
         // solhint-disable-next-line max-line-length
-        "ReviewSignatureValidation(address organization,address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp,uint256 chainId,bytes initiatorSignature)"
+        "ReviewSignatureValidation(address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp,bytes initiatorSignature)"
     );
 
     /// @dev Type hash for recovery signatures on ERC-1271 signature validation requests
-    bytes32 internal constant RECOVERY_SIGNATURE_VALIDATION_TYPEHASH = keccak256(
-        // solhint-disable-next-line max-line-length
-        "RecoverySignatureValidation(address organization,address account,bytes32 hash,uint256 expirationTimestamp,uint256 chainId)"
-    );
+    bytes32 internal constant RECOVERY_SIGNATURE_VALIDATION_TYPEHASH =
+        keccak256("RecoverySignatureValidation(address account,bytes32 hash,uint256 expirationTimestamp)");
 
     /**
      * @dev Computes the EIP-712 domain separator for this organization.

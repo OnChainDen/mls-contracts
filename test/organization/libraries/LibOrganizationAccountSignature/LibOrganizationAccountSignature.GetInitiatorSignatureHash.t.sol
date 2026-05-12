@@ -124,24 +124,20 @@ contract LibOrganizationAccountSignatureGetInitiatorSignatureHashTest is LibOrga
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.INITIATE_SIGNATURE_VALIDATION_TYPEHASH,
-                address(harness),
                 ACCOUNT,
                 MESSAGE_HASH,
                 DEFAULT_POLICY_ID,
-                expiration,
-                block.chainid
+                expiration
             )
         );
 
         bytes32 wrongStructHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.REVIEW_SIGNATURE_VALIDATION_TYPEHASH,
-                address(harness),
                 ACCOUNT,
                 MESSAGE_HASH,
                 DEFAULT_POLICY_ID,
-                expiration,
-                block.chainid
+                expiration
             )
         );
 
@@ -165,12 +161,10 @@ contract LibOrganizationAccountSignatureGetInitiatorSignatureHashTest is LibOrga
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.INITIATE_SIGNATURE_VALIDATION_TYPEHASH,
-                address(harness),
                 ACCOUNT,
                 MESSAGE_HASH,
                 DEFAULT_POLICY_ID,
-                expiration,
-                block.chainid
+                expiration
             )
         );
         bytes32 domainSeparator = _computeDomainSeparator(address(harness), block.chainid);
@@ -208,12 +202,10 @@ contract LibOrganizationAccountSignatureGetInitiatorSignatureHashTest is LibOrga
             keccak256(
                 abi.encode(
                     LibOrganizationEIP712.INITIATE_SIGNATURE_VALIDATION_TYPEHASH,
-                    address(harness),
                     GOLDEN_ACCOUNT,
                     GOLDEN_MESSAGE_HASH,
                     GOLDEN_POLICY_ID,
-                    GOLDEN_EXPIRATION,
-                    block.chainid
+                    GOLDEN_EXPIRATION
                 )
             )
         );

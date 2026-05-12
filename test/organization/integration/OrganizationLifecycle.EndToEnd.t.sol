@@ -108,7 +108,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 internal constant INITIATE_ACCOUNT_TRANSACTION_TYPEHASH = keccak256(
-        "InitiateAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId)"
+        "InitiateAccountTransaction(address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval)"
     );
     bytes32 internal constant ORGANIZATION_NAME_HASH = keccak256("MLSWalletOrganization");
     bytes32 internal constant ORGANIZATION_VERSION_HASH = keccak256("1");
@@ -1454,7 +1454,6 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         bytes32 structHash = keccak256(
             abi.encode(
                 INITIATE_ACCOUNT_TRANSACTION_TYPEHASH,
-                organization,
                 account,
                 to,
                 value,
@@ -1462,8 +1461,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
                 salt,
                 expirationTimestamp,
                 policyId,
-                isApproval,
-                block.chainid
+                isApproval
             )
         );
         hash = _computeTypedDataHash(organization, structHash);

@@ -191,12 +191,10 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.REVIEW_SIGNATURE_VALIDATION_TYPEHASH,
-                address(harness),
                 ACCOUNT,
                 MESSAGE_HASH,
                 DEFAULT_POLICY_ID,
                 expiration,
-                block.chainid,
                 keccak256(initiatorSignature)
             )
         );
@@ -204,12 +202,10 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
         bytes32 wrongStructHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.REVIEW_SIGNATURE_VALIDATION_TYPEHASH,
-                address(harness),
                 ACCOUNT,
                 MESSAGE_HASH,
                 DEFAULT_POLICY_ID,
                 expiration,
-                block.chainid,
                 keccak256(bytes("different"))
             )
         );
@@ -268,12 +264,10 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.REVIEW_SIGNATURE_VALIDATION_TYPEHASH,
-                address(harness),
                 ACCOUNT,
                 MESSAGE_HASH,
                 DEFAULT_POLICY_ID,
                 expiration,
-                block.chainid,
                 keccak256(bytes(""))
             )
         );
@@ -324,24 +318,20 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
         bytes32 reviewStructHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.REVIEW_SIGNATURE_VALIDATION_TYPEHASH,
-                address(harness),
                 ACCOUNT,
                 MESSAGE_HASH,
                 DEFAULT_POLICY_ID,
                 expiration,
-                block.chainid,
                 keccak256(initiatorSignature)
             )
         );
         bytes32 initiatorStructHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.INITIATE_SIGNATURE_VALIDATION_TYPEHASH,
-                address(harness),
                 ACCOUNT,
                 MESSAGE_HASH,
                 DEFAULT_POLICY_ID,
-                expiration,
-                block.chainid
+                expiration
             )
         );
 
@@ -371,12 +361,10 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.REVIEW_SIGNATURE_VALIDATION_TYPEHASH,
-                address(harness),
                 ACCOUNT,
                 MESSAGE_HASH,
                 DEFAULT_POLICY_ID,
                 expiration,
-                block.chainid,
                 keccak256(initiatorSignature)
             )
         );
@@ -433,12 +421,10 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
             keccak256(
                 abi.encode(
                     LibOrganizationEIP712.REVIEW_SIGNATURE_VALIDATION_TYPEHASH,
-                    address(harness),
                     GOLDEN_ACCOUNT,
                     GOLDEN_MESSAGE_HASH,
                     GOLDEN_POLICY_ID,
                     GOLDEN_EXPIRATION,
-                    block.chainid,
                     keccak256(initiatorSignature)
                 )
             )

@@ -240,9 +240,7 @@ library LibOrganizationAdmin {
                 keccak256(operationData),
                 salt,
                 expirationTimestamp,
-                isApproval,
-                block.chainid,
-                address(this)
+                isApproval
             )
         );
 

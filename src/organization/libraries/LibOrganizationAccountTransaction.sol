@@ -377,7 +377,6 @@ library LibOrganizationAccountTransaction {
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.INITIATE_ACCOUNT_TRANSACTION_TYPEHASH,
-                address(this),
                 params.account,
                 params.to,
                 params.value,
@@ -385,8 +384,7 @@ library LibOrganizationAccountTransaction {
                 params.salt,
                 params.expirationTimestamp,
                 params.policyId,
-                isApproval,
-                block.chainid
+                isApproval
             )
         );
 
@@ -412,7 +410,6 @@ library LibOrganizationAccountTransaction {
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.REVIEW_ACCOUNT_TRANSACTION_TYPEHASH,
-                address(this),
                 params.account,
                 params.to,
                 params.value,
@@ -421,7 +418,6 @@ library LibOrganizationAccountTransaction {
                 params.expirationTimestamp,
                 params.policyId,
                 isApproval,
-                block.chainid,
                 keccak256(initiatorSignature)
             )
         );
