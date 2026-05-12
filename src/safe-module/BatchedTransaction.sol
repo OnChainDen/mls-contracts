@@ -15,6 +15,7 @@ import {IBatchedTransaction} from "interfaces/IBatchedTransaction.sol";
  *      - address(this) validation (blocks calls to the Safe when delegatecalled from a
  *        Safe, so that sub-transactions can't call the Safe to modify owners/modules)
  *      - Atomic execution (reverts entire batch on any failure)
+ *      - Bubbles up the failed sub-call's revert data so callers can diagnose failures
  *
  *      Transaction Format (packed, repeating):
  *      [to (20 bytes)][dataLength (8 bytes)][data (N bytes)]...
@@ -61,9 +62,11 @@ contract BatchedTransaction is IBatchedTransaction {
                 // call(gas, to, value, inOffset, inSize, outOffset, outSize)
                 let success := call(gas(), to, 0, data, dataLength, 0x00, 0x00)
 
-                // Revert if sub-transaction failed (consistent with Safe's MultiSendCallOnly)
+                // Revert and bubble up the failed sub-call's returndata
                 if iszero(success) {
-                    revert(0x00, 0x00)
+                    let returnDataPtr := mload(0x40)
+                    returndatacopy(returnDataPtr, 0x00, returndatasize())
+                    revert(returnDataPtr, returndatasize())
                 }
 
                 // Advance to the next transaction

@@ -54,7 +54,7 @@ safe_create_call = "0x9c6714bFE7627B11EC49f170B77A47eB7ADa75E6"
 safe_simulate_tx_accessor = "0x61cFd44B07e163Edc53E2de8030F77c8920653d4"
 
 # BatchedTransaction (environment-independent)
-batched_transaction = "0xF9B8cF5Aa54A531B9ee6b80fb32A9B467f3C7a30"
+batched_transaction = "0x01761d4aE66ee1Fbfa34801E27bD625123b6347f"
 
 # Environment: nonprod (1-of-1 Safe with test executors)
 # Addresses that depend on the nonprod admin Safe
@@ -63,7 +63,7 @@ guardian_safe = "0x1560df8edEfe1Cc95f3f715eDD3166247d33962f"
 admin_safe = "0x04Fc790fC3b558a6E3ef1D654479E7966657fEB6"
 org_factory = "0x0847Bf6E55d371107494C7f7b523278b700df010"
 whitelist_proxy = "0x4aB202fA649c6FA5202167Fb2199a2DE3cd45783"
-guardian_safe_executor_module = "0xE1Ed507c567645FBd5a64cc11a0b906b33ADe9D0"
+guardian_safe_executor_module = "0xb13BE81032D3bF1d0CE424339F982f0474e94e49"
 
 # Environment: prod (2-of-3 Safe with production executors)
 [factory.arachnid.env.prod]
@@ -71,7 +71,7 @@ guardian_safe = "0xf6CBe8B1c4e8A8c953b054A01133cFA1eAF46D2C"
 admin_safe = "0xAdb9eC4081c1045f03c72118CBE7D01E4Ba81A53"
 org_factory = "0x56E3fC71AF60889b6C15E9e9ef8fB4F89dA919C4"
 whitelist_proxy = "0x261064c32Eb4D6E94677659899FC0f94bAE3b3B3"
-guardian_safe_executor_module = "0x960D8f12CfeA7a450516bfB39d0d0e741083a1A0"
+guardian_safe_executor_module = "0xDD71d28FC6070a29083C1609CE33b0392eC72a86"
 
 # ------------------------------------------------------------------------------
 # Den Singleton Factory (Non-Production)
@@ -109,7 +109,7 @@ safe_create_call = "0x9dC003C1Be0A8D5C1f9d44a2D93b0322e0830ebb"
 safe_simulate_tx_accessor = "0x19ca97112b74eef769fC14Ab94d2D2ACc5338621"
 
 # BatchedTransaction (environment-independent)
-batched_transaction = "0xf4aD4C4f984D66561E4fab42E45778175c0405f8"
+batched_transaction = "0xE53564b7032a24Ded185337efA67b2013Fafb1E6"
 
 # Environment: nonprod (1-of-1 Safe with test executors)
 # Addresses that depend on the nonprod admin Safe
@@ -118,7 +118,7 @@ guardian_safe = "0xECd3d5A1acF4580B8f3232E48be01Afb5B44e69e"
 admin_safe = "0xA2f9C62c90436ED5eb5c403Efdb524800aC17Ac8"
 org_factory = "0x6f9bbAde4800E00E621bB815b5340884377Acb13"
 whitelist_proxy = "0xC7B2095fc68bc2998a7bfd4cA487b3E9D4B90994"
-guardian_safe_executor_module = "0x6d9685C08527b7C5a2aE08bD27572AaCFC885a59"
+guardian_safe_executor_module = "0x94c207011FCC7B6b79a3Bd3AAEF4D37E2A7387C9"
 
 # Environment: prod (2-of-3 Safe with production executors)
 # guardian_safe_executor_module NOT_COMPUTED until production executor EOA is set
@@ -127,7 +127,7 @@ guardian_safe = "0x77832ef23F415aff48e642A9Ac53B185396f792D"
 admin_safe = "0xc66bf264ACa668726f8B39B32cf12116e90d141A"
 org_factory = "0x7EDba8b7d84f00f86522D745f704775E9D3d62B2"
 whitelist_proxy = "0xD9C28ef91CcB4e7dCa8CCf0e9764A1D3574459b2"
-guardian_safe_executor_module = "0xB8C472989B5645832643bb98062047351807d469"
+guardian_safe_executor_module = "0xd49a684F81b34712e4cdb60ACbb05b0E1A740AcC"
 
 # ------------------------------------------------------------------------------
 # Den Singleton Factory (Production)
@@ -166,7 +166,7 @@ safe_create_call = "0x92f2988D8dC70061B6cdE56a12532A7bDE1796Ac"
 safe_simulate_tx_accessor = "0x1A3B8832C1DD0451ac178E54f67D6743Dec98fC7"
 
 # BatchedTransaction (environment-independent)
-batched_transaction = "0xB383be6212c8D4563d64E175108657D4E54641C7"
+batched_transaction = "0x2b4841bE6404F71E3C674797fbD1c7a8ABccf35e"
 
 # Environment: nonprod (1-of-1 Safe with test executors)
 # Addresses that depend on the nonprod admin Safe
@@ -175,7 +175,7 @@ guardian_safe = "0x506CBc53B24588786dCafB25bdb3a05b2E03263D"
 admin_safe = "0x3171D948e85f26f82dAfbDC75ADEBa16c5b37224"
 org_factory = "0x9542287ba0ab44F672fFfb43eAB72efEF40Dd649"
 whitelist_proxy = "0x4AB5cC5098e53C09bb236422353C08E67794b0d4"
-guardian_safe_executor_module = "0x8EFd9933675A9b1AD18E53A26bd42b53F8C97A2e"
+guardian_safe_executor_module = "0x7F99d90299AE7cD597485b615be7f1a6dA509659"
 
 # Environment: prod (2-of-3 Safe with production executors)
 # guardian_safe_executor_module NOT_COMPUTED until production executor EOA is set
@@ -184,7 +184,7 @@ guardian_safe = "0xd54Be182474e638Fde5A3651A3674F5af0feA33A"
 admin_safe = "0x8573034526e21A11B806d89Ad6DCD658d3110c31"
 org_factory = "0xd2B735b5387B8C0ae9c3D7e182A7E2DA9015e04a"
 whitelist_proxy = "0x100b186DC821854cD7EE56F236207ccbaDe2B096"
-guardian_safe_executor_module = "0x8760Bf1FD3D7169ee05a2a05B39c0DaDD3Eff9a2"
+guardian_safe_executor_module = "0x2D128BDDcE852158B3BE2eAfF583164391F28378"
 
 # ==============================================================================
 # SAFE MULTISIG CONFIGURATIONS
