@@ -166,7 +166,7 @@ library LibOrganizationAccountTransaction {
 
         // Case: Unknown rate-limit enum value fails closed.
         if (rateLimitType != RateLimitType.TimeInterval) {
-            revert IOrganizationAccountTransaction.RateLimitExceeded(params.policyId);
+            revert IOrganizationAccountTransaction.UnknownRateLimitType(params.policyId);
         }
 
         // Determine the actual destination (may differ for token transfers)

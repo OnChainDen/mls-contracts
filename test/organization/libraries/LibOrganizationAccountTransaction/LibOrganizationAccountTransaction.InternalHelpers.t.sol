@@ -113,6 +113,65 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
         assertEq(policyStateHarness.getPolicyUsage(usageKey, window), value, "native transfer usage should equal value");
     }
 
+    /// @dev Verifies an unrecognized rate-limit type fails closed rather than reverting with `RateLimitExceeded`.
+    function test_validateAndUpdateRateLimit_unknownRateLimitType_failsClosed() public {
+        // Setup: build a valid time-interval rate-limit payload, then patch the encoded
+        // `limitType` word to an out-of-range enum value. Solidity's own range check on calldata
+        // enum reads will fire before the library's explicit guard, but the outcome is the same
+        // fail-closed behavior the dedicated `UnknownRateLimitType` error exists to express.
+        Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
+        policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        policy.config.rateLimit.timeIntervalHours = 1;
+        policy.config.rateLimit.timeIntervalLimit = 1000;
+        policy.config.rateLimit.destinationScope = RateLimitScope.PerEntity;
+        policy.config.rateLimit.sourceScope = RateLimitScope.PerEntity;
+        policy.config.rateLimit.initiatorScope = RateLimitScope.PerEntity;
+
+        bytes memory data = abi.encodeWithSelector(bytes4(0x53535353), uint256(13));
+        bytes memory callData = abi.encodeCall(
+            harness.validateAndUpdateRateLimitOrRevertViaLibrary,
+            (ACCOUNT, DESTINATION, 0, 19, block.timestamp + 1 days, DEFAULT_POLICY_ID, data, initiator1, policy)
+        );
+        _setRateLimitTypeInRateLimitCalldata(callData, 2);
+
+        // Call: dispatch the patched calldata via low-level call so the bad enum byte reaches the library.
+        (bool success, bytes memory returnData) = address(harness).call(callData);
+
+        // Verify: the call fails closed and never resolves to the misleading `RateLimitExceeded` error.
+        assertFalse(success, "unknown rate-limit type must fail closed");
+        // Reading the first 4 bytes of a revert payload to compare selectors is intentional here.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        bytes4 returnSelector = returnData.length >= 4 ? bytes4(returnData) : bytes4(0);
+        assertTrue(
+            returnSelector != IOrganizationAccountTransaction.RateLimitExceeded.selector,
+            "unknown rate-limit type must not surface as RateLimitExceeded"
+        );
+    }
+
+    /// @dev Verifies the dedicated `UnknownRateLimitType` error has a stable selector distinct from
+    /// `RateLimitExceeded`.
+    function test_unknownRateLimitTypeErrorSelector_isDistinctFromRateLimitExceeded() public pure {
+        // Setup: nothing to set up, this is a pure selector comparison.
+        // Call: read both error selectors off the interface.
+        bytes4 unknownSelector = IOrganizationAccountTransaction.UnknownRateLimitType.selector;
+        bytes4 exceededSelector = IOrganizationAccountTransaction.RateLimitExceeded.selector;
+        // Verify: the two errors have distinct ABI selectors so callers can tell them apart.
+        assertTrue(unknownSelector != exceededSelector, "UnknownRateLimitType must not collide with RateLimitExceeded");
+        assertEq(
+            unknownSelector, bytes4(keccak256("UnknownRateLimitType(uint256)")), "selector must encode policyId arg"
+        );
+    }
+
+    // Patches the `rateLimit.limitType` word inside the encoded calldata for
+    // `validateAndUpdateRateLimitOrRevertViaLibrary` so a test can inject an out-of-range enum value
+    // without tripping Solidity's compile-time enum range check on the in-memory `Policy`.
+    function _setRateLimitTypeInRateLimitCalldata(bytes memory callData, uint256 rawValue) internal pure {
+        // 4 bytes selector + 8 head slots before the inlined `Policy`
+        // (account, to, value, salt, expirationTimestamp, policyId, data offset, initiator)
+        // + 17 slots into the inlined `Policy` to reach `config.rateLimit.limitType`.
+        _setWord(callData, 4 + 25 * 32, rawValue);
+    }
+
     /// @dev Verifies rate-limit exceedance reverts `RateLimitExceeded`.
     function test_validateAndUpdateRateLimit_exceeded_revertsRateLimitExceeded() public {
         // Setup: low interval limit and oversized token transfer amount.
