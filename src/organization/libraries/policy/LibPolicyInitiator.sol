@@ -42,15 +42,8 @@ library LibPolicyInitiator {
 
         // Case: The policy matches transactions made by any individual from a specific group
         if (initiatorType == ApproverType.Group) {
-            uint256 initiatorGroupId = policy.config.initiator.initiatorGroupId;
-
-            // Verify the group exists
-            if (!LibOrganizationGroups.isGroup(initiatorGroupId)) {
-                return false;
-            }
-
-            // Verify the initiator is a member of the group
-            return LibOrganizationGroups.isGroupMember(initiatorGroupId, initiatorAddress);
+            // isGroupMember returns false if the group does not exist, so no separate isGroup check is needed
+            return LibOrganizationGroups.isGroupMember(policy.config.initiator.initiatorGroupId, initiatorAddress);
         }
 
         // Case: The policy does not match this transaction
