@@ -36,14 +36,8 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
     /// @dev Rejection auth bound to `OperationType.AccountTransaction`.
     AdminAuthParams internal accountTransactionRejectAuth;
 
-    /// @dev Rejection auth bound to `OperationType.AccountTransactionRejection`.
-    AdminAuthParams internal accountTransactionRejectionRejectAuth;
-
     /// @dev Precomputed nonce for the `AccountTransaction` reject-domain isolation check.
     uint256 internal accountTransactionRejectNonce;
-
-    /// @dev Precomputed nonce for the `AccountTransactionRejection` reject-domain isolation check.
-    uint256 internal accountTransactionRejectionRejectNonce;
 
     /**
      * @dev Deploys the library-focused harness for this suite.
@@ -92,21 +86,6 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
         });
         accountTransactionRejectNonce =
             rejectHarness.computeNonce(OperationType.AccountTransaction, rejectOperationData, 5101);
-
-        bytes32 accountTransactionRejectionRejectHash = rejectHarness.getAdminOperationHash({
-            operationType: OperationType.AccountTransactionRejection,
-            operationData: rejectOperationData,
-            salt: 5102,
-            expirationTimestamp: expiration,
-            isApproval: false
-        });
-        accountTransactionRejectionRejectAuth = AdminAuthParams({
-            salt: 5102,
-            expirationTimestamp: expiration,
-            signatures: _buildSortedEoaSignatures(accountTransactionRejectionRejectHash, buildUint256Array(ADMIN_PK_1))
-        });
-        accountTransactionRejectionRejectNonce =
-            rejectHarness.computeNonce(OperationType.AccountTransactionRejection, rejectOperationData, 5102);
     }
 
     /**
@@ -200,11 +179,11 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
     }
 
     /**
-     * @dev Verifies invariant: `rejectAdminOperation` cannot consume nonces in account-transaction operation domains.
+     * @dev Verifies invariant: `rejectAdminOperation` cannot consume nonces in the account-transaction operation
+     * domain.
      */
     function invariant_NMINV_5_rejectAdminOperationCannotConsumeAccountTransactionDomainNonces() public {
-        // Call: attempt rejection in both account-transaction domains and expect the new explicit domain-isolation
-        // revert.
+        // Call: attempt rejection in the account-transaction domain and expect the explicit domain-isolation revert.
         vm.expectRevert(
             abi.encodeWithSelector(
                 IOrganizationAdmin.InvalidAdminOperationType.selector, OperationType.AccountTransaction
@@ -215,24 +194,10 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
             OperationType.AccountTransaction, rejectOperationData, accountTransactionRejectAuth
         );
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOrganizationAdmin.InvalidAdminOperationType.selector, OperationType.AccountTransactionRejection
-            )
-        );
-        vm.prank(GUARDIAN);
-        rejectHarness.rejectAdminOperation(
-            OperationType.AccountTransactionRejection, rejectOperationData, accountTransactionRejectionRejectAuth
-        );
-
-        // Verify: both rejected domains leave their nonce spaces untouched.
+        // Verify: the rejected domain leaves its nonce space untouched.
         assertFalse(
             rejectHarness.getUsedNonce(accountTransactionRejectNonce),
             "reject should not consume account-transaction nonce"
-        );
-        assertFalse(
-            rejectHarness.getUsedNonce(accountTransactionRejectionRejectNonce),
-            "reject should not consume account-transaction-rejection nonce"
         );
     }
 }

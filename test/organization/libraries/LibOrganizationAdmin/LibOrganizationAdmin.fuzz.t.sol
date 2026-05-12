@@ -336,9 +336,9 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
     ) public view {
         // Setup: bound enum inputs to valid operation types and skip the identical-tuple control case.
         OperationType operationTypeA =
-            OperationType(bound(uint256(rawOperationTypeA), 0, uint256(OperationType.AccountTransactionRejection)));
+            OperationType(bound(uint256(rawOperationTypeA), 0, uint256(OperationType.AccountTransaction)));
         OperationType operationTypeB =
-            OperationType(bound(uint256(rawOperationTypeB), 0, uint256(OperationType.AccountTransactionRejection)));
+            OperationType(bound(uint256(rawOperationTypeB), 0, uint256(OperationType.AccountTransaction)));
         vm.assume(
             operationTypeA != operationTypeB || keccak256(operationDataA) != keccak256(operationDataB) || saltA != saltB
         );

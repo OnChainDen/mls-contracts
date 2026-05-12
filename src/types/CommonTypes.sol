@@ -39,8 +39,7 @@ enum OperationType {
     FinalizeInitializeTransactionRecovery,
     CancelInitializeTransactionRecovery,
     // Account transaction operations
-    AccountTransaction,
-    AccountTransactionRejection
+    AccountTransaction
 }
 
 /**

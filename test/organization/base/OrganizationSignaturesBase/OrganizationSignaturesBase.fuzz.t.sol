@@ -62,7 +62,7 @@ contract OrganizationSignaturesBaseFuzzTest is Test {
     ) public {
         // Setup: derive one fresh nonce from the fuzzed tuple and confirm it starts unused.
         OperationType operationType =
-            OperationType(bound(uint256(rawOperationType), 0, uint256(OperationType.AccountTransactionRejection)));
+            OperationType(bound(uint256(rawOperationType), 0, uint256(OperationType.AccountTransaction)));
         uint256 nonce = harness.computeNonce(operationType, operationData, salt);
         assertFalse(harness.isNonceUsed(nonce), "fresh nonce should start unused");
 
@@ -87,7 +87,7 @@ contract OrganizationSignaturesBaseFuzzTest is Test {
     ) public {
         // Setup: derive one fresh nonce from the rollback harness and confirm it starts unused.
         OperationType operationType =
-            OperationType(bound(uint256(rawOperationType), 0, uint256(OperationType.AccountTransactionRejection)));
+            OperationType(bound(uint256(rawOperationType), 0, uint256(OperationType.AccountTransaction)));
         uint256 nonce = rollbackHarness.computeNonce(operationType, operationData, salt);
         assertFalse(rollbackHarness.isNonceUsed(nonce), "fresh nonce should start unused");
 

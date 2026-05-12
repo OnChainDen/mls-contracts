@@ -44,10 +44,7 @@ abstract contract OrganizationAdminBase is OrganizationModifiers, IOrganizationA
         bytes calldata operationData,
         AdminAuthParams calldata authParams
     ) external override onlyGuardian {
-        if (
-            operationType == OperationType.AccountTransaction
-                || operationType == OperationType.AccountTransactionRejection
-        ) {
+        if (operationType == OperationType.AccountTransaction) {
             revert IOrganizationAdmin.InvalidAdminOperationType(operationType);
         }
 
