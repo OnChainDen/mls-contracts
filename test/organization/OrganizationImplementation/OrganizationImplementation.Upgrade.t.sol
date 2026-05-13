@@ -12,7 +12,6 @@ import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol"
 import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
-import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
 import {
     ImplementationWhitelistHarness,
     ImplementationWhitelistV2Harness
@@ -1225,22 +1224,18 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         IUUPSUpgradeableEntrypoints(address(implementationV1)).upgradeToAndCall(address(implementationV2), bytes(""));
     }
 
-    /// @dev Verifies direct implementation-contract calls to `upgradeToAndCallWithAuthorization` revert because the
-    /// guardian is unset in implementation storage.
-    function test_upgradeToAndCallWithAuthorizationOnImplementation_revertsUnauthorizedGuardian() public {
-        // Setup: call the implementation contract directly with zeroed auth while using its own guardian storage.
+    /// @dev Verifies direct implementation-contract calls to `upgradeToAndCallWithAuthorization` revert via the
+    /// `onlyProxy` execution-context check before any state-dependent guardian validation can run.
+    function test_upgradeToAndCallWithAuthorizationOnImplementation_revertsOnlyProxy() public {
+        // Setup: call the implementation contract directly (no proxy/delegatecall context) with zeroed auth.
         AdminAuthParams memory auth;
-        address implementationGuardian = implementationV1.guardian();
 
-        // Call: invoke the guardian-gated wrapper directly on the implementation and expect the guardian check.
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOrganizationGuardian.UnauthorizedGuardian.selector, address(this), implementationGuardian
-            )
-        );
+        // Call: invoke the guardian-gated wrapper directly on the implementation and expect the proxy-context check.
+        vm.expectRevert(UUPSUpgradeable.UUPSUnauthorizedCallContext.selector);
         implementationV1.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
 
-        // Verify: direct implementation calls cannot reach upgrade auth validation without satisfying guardian access.
+        // Verify: direct implementation calls fail structurally on the execution-context check rather than relying on
+        // implementation storage staying uninitialized.
     }
 
     /// @dev Verifies direct implementation-contract calls to `initialize` revert `InvalidInitialization` via the

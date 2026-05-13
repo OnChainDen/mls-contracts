@@ -77,7 +77,7 @@ contract OrganizationImplementation is
         address newImplementation,
         bytes calldata data,
         AdminAuthParams calldata authParams
-    ) external override onlyGuardian {
+    ) external override onlyProxy onlyGuardian {
         // Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation, keccak256(data));
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({

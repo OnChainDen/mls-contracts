@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {MockERC1271ValidSigner} from "test/helpers/MockERC1271Signers.sol";
 import {
@@ -695,10 +697,11 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
      * `upgradeToAndCallWithAuthorization`.
      */
     function testFuzz_rejectThenUpgradeReplaySameNonceAlwaysReverts(uint256 saltRaw) public {
-        // Setup: deploy a fresh organization harness and bind both approval and rejection auth to the same upgrade
-        // tuple.
+        // Setup: deploy a fresh organization harness behind an ERC1967 proxy so the upgrade entry point passes its
+        // proxy-context guard, and bind both approval and rejection auth to the same upgrade tuple.
         uint256 salt = bound(saltRaw, 1, type(uint256).max);
-        OrganizationImplementationHarness org = new OrganizationImplementationHarness();
+        OrganizationImplementationHarness orgImpl = new OrganizationImplementationHarness();
+        OrganizationImplementationHarness org = _wrapHarnessInProxy(orgImpl);
         OrganizationImplementationV2Harness target = new OrganizationImplementationV2Harness();
         org.setGuardian(GUARDIAN);
         org.setMemberStatus(admin1, true);
@@ -749,9 +752,11 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
      * @dev Verifies unauthorized callers cannot burn nonces on either rejection or upgrade entry points.
      */
     function testFuzz_unauthorizedCallerAttemptsNeverBurnNonce(uint256 saltRaw, bool useUpgradePath) public {
-        // Setup: deploy a fresh organization harness and build valid auth for the selected nonce-consuming path.
+        // Setup: deploy a fresh organization harness behind an ERC1967 proxy so both nonce-consuming entry points
+        // execute in a valid proxy context, then build valid auth for the selected path.
         uint256 salt = bound(saltRaw, 1, type(uint256).max);
-        OrganizationImplementationHarness org = new OrganizationImplementationHarness();
+        OrganizationImplementationHarness orgImpl = new OrganizationImplementationHarness();
+        OrganizationImplementationHarness org = _wrapHarnessInProxy(orgImpl);
         OrganizationImplementationV2Harness target = new OrganizationImplementationV2Harness();
         org.setGuardian(GUARDIAN);
         org.setMemberStatus(admin1, true);
@@ -879,5 +884,15 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
 
         mirrorHarness.setAdminCount(admins.length);
         mirrorHarness.setVotingThreshold(threshold);
+    }
+
+    /// @dev Wraps an `OrganizationImplementationHarness` in an ERC1967 proxy so upgrade-context guards pass during
+    /// tests that exercise `upgradeToAndCallWithAuthorization`.
+    function _wrapHarnessInProxy(OrganizationImplementationHarness impl)
+        internal
+        returns (OrganizationImplementationHarness)
+    {
+        ERC1967Proxy proxy = new ERC1967Proxy(address(impl), bytes(""));
+        return OrganizationImplementationHarness(payable(address(proxy)));
     }
 }
