@@ -2,9 +2,6 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
-
-import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {OrganizationModifiers} from "organization/common/OrganizationModifiers.sol";
 import {LibOrganizationAccountFactory} from "organization/libraries/LibOrganizationAccountFactory.sol";
@@ -74,16 +71,18 @@ abstract contract OrganizationAccountFactoryBase is OrganizationModifiers, IOrga
     /**
      * @dev Returns the current implementation address for all Account BeaconProxies.
      *      Required by IBeacon interface (inherited via IOrganization in the final contract).
+     *
+     *      Invariant: by the time this Organization exists on-chain, the stored
+     *      implementation is guaranteed to be a non-zero address with runtime code.
+     *      `OrganizationFactory.deployOrganization` deploys the OrganizationProxy and
+     *      runs `initialize` atomically, and initialization sets the account
+     *      implementation via `LibOrganizationAccountFactory.setAccountImplementation`,
+     *      which rejects the zero address and any address without runtime code.
+     *      Subsequent updates go through the same library function, preserving the
+     *      invariant.
      * @return The current account implementation address
      */
     function implementation() public view virtual returns (address) {
-        address impl = LibOrganizationAccountFactoryStorage.layout().accountImplementation;
-        if (impl == address(0)) {
-            revert IOrganization.AccountImplementationNotSet();
-        }
-        if (impl.code.length == 0) {
-            revert ERC1967Utils.ERC1967InvalidImplementation(impl);
-        }
-        return impl;
+        return LibOrganizationAccountFactoryStorage.layout().accountImplementation;
     }
 }

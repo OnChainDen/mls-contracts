@@ -47,11 +47,6 @@ interface IOrganization is
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Thrown when the account implementation has not been set
-     */
-    error AccountImplementationNotSet();
-
-    /**
      * @notice Emitted when someone tries to call upgradeToAndCall directly without going through
      *         the authorized upgrade flow (upgradeToAndCallWithAuthorization)
      * @dev This protects against attackers bypassing admin signature validation by calling
