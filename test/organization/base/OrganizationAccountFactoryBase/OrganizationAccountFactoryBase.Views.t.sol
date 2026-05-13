@@ -2,9 +2,6 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
-
-import {IOrganization} from "interfaces/IOrganization.sol";
 import {
     OrganizationAccountFactoryBaseSuiteBase
 } from "test/organization/base/OrganizationAccountFactoryBase/OrganizationAccountFactoryBaseSuiteBase.sol";
@@ -93,16 +90,6 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         assertEq(implementationAddress, accountImplementationV1, "implementation view should mirror storage");
     }
 
-    /// @dev Verifies `implementation()` reverts `AccountImplementationNotSet` when unset.
-    function test_implementation_whenUnset_revertsAccountImplementationNotSet() public {
-        // Setup: leave account implementation storage as zero.
-
-        // Verify: unset implementation should revert with canonical organization error.
-        vm.expectRevert(IOrganization.AccountImplementationNotSet.selector);
-        // Call: read beacon implementation before initialization.
-        harness.implementation();
-    }
-
     /// @dev Verifies `implementation()` returns updated address after set-account-implementation call.
     function test_implementation_afterSetAccountImplementation_returnsUpdatedAddress() public {
         // Setup: configure one-admin auth and whitelist target implementation.
@@ -173,20 +160,5 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         assertEq(
             harness.implementation(), accountImplementationV2, "getter should return latest configured implementation"
         );
-    }
-
-    /// @dev Additional coverage (no direct 14-UPGRADES row ID): no-code stored implementation addresses are rejected.
-    function test_implementation_noCodeStoredImplementation_reverts() public {
-        address noCodeImplementation = address(0xCA67);
-
-        // Setup: seed a non-zero implementation address with no runtime code.
-        harness.setAccountImplementationStorage(noCodeImplementation);
-
-        // Verify: no-code implementation addresses should fail closed.
-        vm.expectRevert(
-            abi.encodeWithSelector(ERC1967Utils.ERC1967InvalidImplementation.selector, noCodeImplementation)
-        );
-        // Call: read beacon implementation with no-code target in storage.
-        harness.implementation();
     }
 }

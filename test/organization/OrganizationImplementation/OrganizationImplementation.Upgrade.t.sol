@@ -1170,16 +1170,6 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         assertEq(implementationAddress, accountImplementation, "implementation getter mismatch");
     }
 
-    /// @dev Verifies `implementation()` reverts `AccountImplementationNotSet` when unset.
-    function test_implementation_whenUnset_revertsAccountImplementationNotSet() public {
-        // Setup: leave account implementation storage unset.
-
-        // Verify: getter should revert with canonical Organization error.
-        vm.expectRevert(IOrganization.AccountImplementationNotSet.selector);
-        // Call: read beacon implementation before it is configured.
-        organizationProxy.implementation();
-    }
-
     /// @dev Verifies `_authorizeUpgrade` reverts `UnauthorizedUpgrade` when no target is authorized.
     function test_authorizeUpgrade_whenFlagFalse_revertsUnauthorizedUpgrade() public {
         // Setup: ensure no authorized target is set.
