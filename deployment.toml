@@ -41,7 +41,7 @@ lib_org_guardian_recovery = "0xd4fCc311320f5Cca4C850B534386EF2DC8a795c3"
 
 # Platform Implementation Contracts (environment-independent)
 whitelist_impl = "0x8C8363AE17311f3F5bbA17743395B073AaBc1E27"
-org_impl = "0x9fcf61Fea8948370bE6168469d0c4343d62d30C2"
+org_impl = "0xa1f4E1a3Eb4e5093A08Cebe08b9eC8Fd2A002D74"
 account_impl = "0x3FEB2a8c6a260BDE5bF444146b0f89D045423c2b"
 
 # Safe 1.4.1 Infrastructure (environment-independent)
@@ -62,7 +62,7 @@ batched_transaction = "0x01761d4aE66ee1Fbfa34801E27bD625123b6347f"
 guardian_safe = "0x1560df8edEfe1Cc95f3f715eDD3166247d33962f"
 admin_safe = "0x04Fc790fC3b558a6E3ef1D654479E7966657fEB6"
 org_factory = "0x0847Bf6E55d371107494C7f7b523278b700df010"
-whitelist_proxy = "0x9dD62Efda7D149Bf8723716A7c3E87c9FcA441C6"
+whitelist_proxy = "0x65Be1887e16d647f9847e83c6104299B06FF825c"
 guardian_safe_executor_module = "0xb13BE81032D3bF1d0CE424339F982f0474e94e49"
 
 # Environment: prod (2-of-3 Safe with production executors)
@@ -70,7 +70,7 @@ guardian_safe_executor_module = "0xb13BE81032D3bF1d0CE424339F982f0474e94e49"
 guardian_safe = "0xf6CBe8B1c4e8A8c953b054A01133cFA1eAF46D2C"
 admin_safe = "0xAdb9eC4081c1045f03c72118CBE7D01E4Ba81A53"
 org_factory = "0x56E3fC71AF60889b6C15E9e9ef8fB4F89dA919C4"
-whitelist_proxy = "0xFe6F4DE9B657DA168d05c3239A58a1179040174f"
+whitelist_proxy = "0xed9D7B16F50F57d1a09183369C7a7A50418f1a2e"
 guardian_safe_executor_module = "0xDD71d28FC6070a29083C1609CE33b0392eC72a86"
 
 # ------------------------------------------------------------------------------
@@ -96,7 +96,7 @@ lib_org_guardian_recovery = "0xF107daC014f2ec8f1bae3D11485bf93c56b269fc"
 
 # Platform Implementation Contracts (environment-independent)
 whitelist_impl = "0xebC4234b58283843CB962c9EeD08175C4d2B1056"
-org_impl = "0xf53A7002946134d2e243C2F81E7CdF4294c12d2b"
+org_impl = "0x379375091500037067d47D2Ab3F93f7F73EA1204"
 account_impl = "0x11d2d3e7338aF8624A8A774Dc9c00CB67dC9e867"
 
 # Safe 1.4.1 Infrastructure (environment-independent)
@@ -117,7 +117,7 @@ batched_transaction = "0xE53564b7032a24Ded185337efA67b2013Fafb1E6"
 guardian_safe = "0xECd3d5A1acF4580B8f3232E48be01Afb5B44e69e"
 admin_safe = "0xA2f9C62c90436ED5eb5c403Efdb524800aC17Ac8"
 org_factory = "0x6f9bbAde4800E00E621bB815b5340884377Acb13"
-whitelist_proxy = "0xA77Ea046367b8aBCCdBCE2D2b0D1e63fA9A7719D"
+whitelist_proxy = "0xC6539f1D072bb0370F8AA82f6aa12D3618716Aa9"
 guardian_safe_executor_module = "0x94c207011FCC7B6b79a3Bd3AAEF4D37E2A7387C9"
 
 # Environment: prod (2-of-3 Safe with production executors)
@@ -126,7 +126,7 @@ guardian_safe_executor_module = "0x94c207011FCC7B6b79a3Bd3AAEF4D37E2A7387C9"
 guardian_safe = "0x77832ef23F415aff48e642A9Ac53B185396f792D"
 admin_safe = "0xc66bf264ACa668726f8B39B32cf12116e90d141A"
 org_factory = "0x7EDba8b7d84f00f86522D745f704775E9D3d62B2"
-whitelist_proxy = "0x45291C79EC8042aAFbfCf1aA4aB1398241e0Ec27"
+whitelist_proxy = "0x76E6e95F3731c54dB6a8C6048Fd5A317d7Fea997"
 guardian_safe_executor_module = "0xd49a684F81b34712e4cdb60ACbb05b0E1A740AcC"
 
 # ------------------------------------------------------------------------------
@@ -153,7 +153,7 @@ lib_org_guardian_recovery = "0x0258fc489Ea07Ba9D7F17D2346256522D9f81712"
 
 # Platform Implementation Contracts (environment-independent)
 whitelist_impl = "0xf43A96AA023Db287ED707e1f38ab727B49fcdbF6"
-org_impl = "0x6cec9df70193cc0146e7B0274AFf6F4Fafb790eF"
+org_impl = "0xe2007ef701c702EE364CE48A90e756E1496aE511"
 account_impl = "0xe3c01B686bF45cf291745cFC454e0960055b6CCa"
 
 # Safe 1.4.1 Infrastructure (environment-independent)
@@ -174,7 +174,7 @@ batched_transaction = "0x2b4841bE6404F71E3C674797fbD1c7a8ABccf35e"
 guardian_safe = "0x506CBc53B24588786dCafB25bdb3a05b2E03263D"
 admin_safe = "0x3171D948e85f26f82dAfbDC75ADEBa16c5b37224"
 org_factory = "0x9542287ba0ab44F672fFfb43eAB72efEF40Dd649"
-whitelist_proxy = "0x533B9c9d38AF808c408f245B5d7a066e333d8294"
+whitelist_proxy = "0xC9f3C6C9E967caC7a6B41a1d941fdB352d9f6d91"
 guardian_safe_executor_module = "0x7F99d90299AE7cD597485b615be7f1a6dA509659"
 
 # Environment: prod (2-of-3 Safe with production executors)
@@ -183,7 +183,7 @@ guardian_safe_executor_module = "0x7F99d90299AE7cD597485b615be7f1a6dA509659"
 guardian_safe = "0xd54Be182474e638Fde5A3651A3674F5af0feA33A"
 admin_safe = "0x8573034526e21A11B806d89Ad6DCD658d3110c31"
 org_factory = "0xd2B735b5387B8C0ae9c3D7e182A7E2DA9015e04a"
-whitelist_proxy = "0x0d20eEECa079A909051a0979aD50F23FD04F9cAE"
+whitelist_proxy = "0xb931C1c8FAf736e0Fb1D790D9154DC4FF89a11b0"
 guardian_safe_executor_module = "0x2D128BDDcE852158B3BE2eAfF583164391F28378"
 
 # ==============================================================================
