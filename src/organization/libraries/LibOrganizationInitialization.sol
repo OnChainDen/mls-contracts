@@ -11,7 +11,6 @@ import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGua
 import {LibOrganizationGuardianRecovery} from "organization/libraries/LibOrganizationGuardianRecovery.sol";
 import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
 import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
-import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
 import {
     LibOrganizationDeployerAddressStorage
 } from "organization/libraries/storage/LibOrganizationDeployerAddressStorage.sol";
@@ -27,17 +26,13 @@ import {InitializationParams} from "types/CommonTypes.sol";
 library LibOrganizationInitialization {
     /**
      * @dev Initializes the organization contract with mapping-based members, admins, and groups.
-     *      Deployer authorization is enforced by the external wrapper function.
+     *      Deployer authorization and re-initialization protection are enforced by the external
+     *      wrapper, which applies the deployer modifier and OpenZeppelin's `initializer` modifier.
      *      Members are set first, then admins (which validates all admins are members),
      *      then groups, then remaining configuration.
      * @param params The initialization parameters struct
      */
     function initialize(InitializationParams calldata params) public {
-        // Check if already initialized (adminCount > 0 is the sentinel)
-        if (isInitialized()) {
-            revert IOrganizationInitialization.AlreadyInitialized();
-        }
-
         // Validate that at least one member is provided
         if (params.members.length == 0) {
             revert IOrganizationInitialization.NoMembersProvided();
@@ -120,15 +115,5 @@ library LibOrganizationInitialization {
      */
     function getDeployerAddress() public view returns (address) {
         return LibOrganizationDeployerAddressStorage.layout().deployerAddress;
-    }
-
-    /**
-     * @dev Checks if the organization has been initialized.
-     *      Uses adminCount > 0 as the initialization sentinel since every
-     *      organization must have at least one admin.
-     * @return True if initialized, false otherwise
-     */
-    function isInitialized() public view returns (bool) {
-        return LibOrganizationAdminStorage.layout().adminCount > 0;
     }
 }

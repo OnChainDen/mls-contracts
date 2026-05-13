@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {OrganizationFactory} from "organization/OrganizationFactory.sol";
 import {OrganizationImplementation} from "organization/OrganizationImplementation.sol";
@@ -209,11 +211,15 @@ contract OrganizationImplementationHarness is OrganizationImplementation {
 
 /**
  * @dev Library harness for direct `LibOrganizationInitialization` coverage.
+ *      Inherits `Initializable` so the `initializer` modifier on `initializeViaLibrary` mirrors
+ *      the production wrapper in `OrganizationInitializationBase` and provides the same
+ *      re-initialization protection that production code relies on.
  */
-contract LibOrganizationInitializationHarness is OrganizationPolicyStateHarness {
-    /// @dev Executes `LibOrganizationInitialization.initialize` using harness storage.
+contract LibOrganizationInitializationHarness is Initializable, OrganizationPolicyStateHarness {
+    /// @dev Executes `LibOrganizationInitialization.initialize` using harness storage,
+    ///      guarded by the OpenZeppelin `initializer` modifier that production callers apply.
     /// @param params Initialization payload forwarded into the library call.
-    function initializeViaLibrary(InitializationParams calldata params) external {
+    function initializeViaLibrary(InitializationParams calldata params) external initializer {
         LibOrganizationInitialization.initialize(params);
     }
 
@@ -228,10 +234,11 @@ contract LibOrganizationInitializationHarness is OrganizationPolicyStateHarness 
         return LibOrganizationInitialization.getDeployerAddress();
     }
 
-    /// @dev Returns initialized status via `LibOrganizationInitialization.isInitialized`.
-    /// @return True when initialization sentinel indicates initialized state.
+    /// @dev Returns initialized status read from the OpenZeppelin `Initializable` storage that
+    ///      now serves as the single source of truth for organization initialization.
+    /// @return True when the `initializer` modifier has been run for this harness.
     function isInitializedViaLibrary() external view returns (bool) {
-        return LibOrganizationInitialization.isInitialized();
+        return _getInitializedVersion() != 0;
     }
 
     /// @dev Sets deployer storage directly for library-guard test setup.

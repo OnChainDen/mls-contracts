@@ -55,7 +55,7 @@ contract ImplementationWhitelistImplementation is
 
     /// @inheritdoc IImplementationWhitelist
     function isInitialized() external view override returns (bool) {
-        return owner() != address(0);
+        return _getInitializedVersion() != 0;
     }
 
     /// @inheritdoc IImplementationWhitelist
