@@ -218,6 +218,21 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         assertTrue(whitelistProxy.isInitialized(), "isInitialized should remain true after ownership transfer");
     }
 
+    /// @dev Verifies `isInitialized()` remains true after the owner renounces ownership, since the
+    ///      result must reflect whether initialization has occurred and not the current owner address.
+    function test_isInitialized_remainsTrueAfterRenounceOwnership() public {
+        // Setup: proxy is initialized from suite setup with `OWNER` as the current owner.
+        assertTrue(whitelistProxy.isInitialized(), "proxy should report initialized before renounce");
+
+        // Call: owner renounces ownership, leaving the contract without an owner.
+        vm.prank(OWNER);
+        whitelistProxy.renounceOwnership();
+
+        // Verify: owner is cleared but isInitialized still reports true because initialization happened.
+        assertEq(whitelistProxy.owner(), address(0), "owner should be zero after renounce");
+        assertTrue(whitelistProxy.isInitialized(), "isInitialized should remain true after renounce");
+    }
+
     /// @dev Verifies initialization state is monotonic (false -> true only once; no return to false). [DESIRED]
     function test_initializationState_isPermanent() public {
         // Setup: deploy and initialize proxy.

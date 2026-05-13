@@ -28,6 +28,6 @@ abstract contract OrganizationInitializationBase is Initializable, OrganizationM
 
     /// @inheritdoc IOrganizationInitialization
     function isInitialized() external view override returns (bool) {
-        return LibOrganizationInitialization.isInitialized();
+        return _getInitializedVersion() != 0;
     }
 }

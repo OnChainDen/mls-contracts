@@ -50,11 +50,6 @@ interface IOrganizationInitialization {
     error UnauthorizedDeployer();
 
     /**
-     * @notice Error thrown when the organization is already initialized
-     */
-    error AlreadyInitialized();
-
-    /**
      * @notice Error thrown when no members are provided during initialization
      */
     error NoMembersProvided();

@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
@@ -480,7 +482,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
         // Verify: View helpers, rollback guarantees, event behavior, and reinitialization guards match expected
         // semantics.
         assertEq(harness.getDeployerAddressViaLibrary(), AUTHORIZED_DEPLOYER, "stored deployer mismatch");
-        assertFalse(harness.isInitializedViaLibrary(), "adminCount=0 should report uninitialized");
+        assertFalse(harness.isInitializedViaLibrary(), "uninitialized harness should report uninitialized");
 
         InitializationParams memory invalidGuardian = _defaultInitializationParams();
         invalidGuardian.guardian = address(0);
@@ -506,7 +508,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
             "successful init should persist the admin-operation timelock"
         );
 
-        vm.expectRevert(IOrganizationInitialization.AlreadyInitialized.selector);
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         harness.initializeViaLibrary(valid);
         assertEq(
             harness.getAdminOperationTimelockStorage(),
