@@ -46,6 +46,18 @@ interface IOrganizationPolicy {
      */
     error UnauthorizedApprovalSigner(address signer);
 
+    /**
+     * @notice Thrown when a token-transfer policy combines `anyToken` with an amount threshold
+     *         or a time-interval rate limit
+     * @dev These combinations are nonsensical because both an amount threshold and the
+     *      time-interval rate-limit bucket compare raw token amounts. When `anyToken` is
+     *      true the policy applies across tokens with different decimals and economic
+     *      values, so any single raw-amount cap mixes apples and oranges. Policies that
+     *      hit this case are rejected at transaction-validation time so they cannot
+     *      silently authorize transfers under a misleading cap.
+     */
+    error AnyTokenIncompatibleWithAmountOrRateLimit();
+
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions
     // ═══════════════════════════════════════════════════════════════════════════

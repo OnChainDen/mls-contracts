@@ -303,6 +303,8 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         // exceeded.
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
+        policy.config.token.anyToken = false;
+        policy.config.token.tokenAddress = TOKEN;
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 1;
         policy.config.rateLimit.timeIntervalLimit = 100;
@@ -327,6 +329,8 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         // Setup: configure a valid fixture for token transfer rate limit usage tracks transfer amount.
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
+        policy.config.token.anyToken = false;
+        policy.config.token.tokenAddress = TOKEN;
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 1;
         policy.config.rateLimit.timeIntervalLimit = 1000;
@@ -397,6 +401,8 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         // Setup: configure a valid fixture for rate limit key uses erc20 recipient as destination.
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
+        policy.config.token.anyToken = false;
+        policy.config.token.tokenAddress = TOKEN;
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 1;
         policy.config.rateLimit.timeIntervalLimit = 1000;
@@ -425,6 +431,8 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         // Setup: register a token-transfer policy with a 1000-unit rate limit and consume 600 units.
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
+        policy.config.token.anyToken = false;
+        policy.config.token.tokenAddress = TOKEN;
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 1;
         policy.config.rateLimit.timeIntervalLimit = 1000;
@@ -1454,6 +1462,8 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         // Setup: anchor is in the future relative to block.timestamp.
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
+        policy.config.token.anyToken = false;
+        policy.config.token.tokenAddress = TOKEN;
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 1;
         policy.config.rateLimit.timeIntervalLimit = 1000;
@@ -1478,6 +1488,8 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
+        policy.config.token.anyToken = false;
+        policy.config.token.tokenAddress = TOKEN;
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 1;
         policy.config.rateLimit.timeIntervalLimit = 1000;
@@ -1503,6 +1515,8 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
+        policy.config.token.anyToken = false;
+        policy.config.token.tokenAddress = TOKEN;
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 1;
         policy.config.rateLimit.timeIntervalLimit = 100;

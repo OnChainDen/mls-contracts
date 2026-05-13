@@ -184,10 +184,19 @@ struct InitiatorConfig {
 
 /**
  * @notice Token transfer constraints - defines token and amount restrictions
- * @dev Used to limit which tokens can be transferred and maximum amounts
- * @param anyToken If true, any token is allowed (ignores tokenAddress)
+ * @dev Used to limit which tokens can be transferred and maximum amounts.
+ *
+ *      For `TokenTransfers` policies, `anyToken = true` cannot be combined with
+ *      `hasAmountThreshold = true` or with a time-interval rate limit. Both controls
+ *      compare raw token amounts, and a single cap is meaningless across tokens with
+ *      different decimals or economic value. Transactions evaluated against such a
+ *      policy revert.
+ * @param anyToken If true, any token is allowed (ignores tokenAddress). For
+ *        `TokenTransfers` policies this must not be combined with an amount threshold
+ *        or a time-interval rate limit.
  * @param tokenAddress Specific token address (only used if !anyToken)
- * @param hasAmountThreshold If true, enforce the amount limit
+ * @param hasAmountThreshold If true, enforce the amount limit. For `TokenTransfers`
+ *        policies this must not be set together with `anyToken = true`.
  * @param amountThreshold Maximum allowed amount per transaction or time period (inclusive)
  */
 struct TokenFilter {
@@ -200,7 +209,13 @@ struct TokenFilter {
 /**
  * @dev Rate limit configuration - defines rate limiting rules.
  *      Controls how frequently transactions can occur and cumulative limits.
- * @param limitType The type of rate limit (None or TimeInterval)
+ *
+ *      For `TokenTransfers` policies, a `TimeInterval` rate limit cannot be combined
+ *      with `TokenFilter.anyToken = true`. The bucket accrues raw token amounts in
+ *      that case, so the cumulative cap is meaningless across tokens with different
+ *      decimals or economic value. Transactions evaluated against such a policy revert.
+ * @param limitType The type of rate limit (None or TimeInterval). For `TokenTransfers`
+ *        policies, `TimeInterval` must not be combined with `TokenFilter.anyToken = true`.
  * @param timeIntervalHours Duration of the time window in hours (for TimeInterval)
  * @param timeIntervalLimit Maximum cumulative usage per time window. The unit depends on the
  *        sibling `PolicyConfig.transactionType`:
