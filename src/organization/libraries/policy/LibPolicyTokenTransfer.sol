@@ -2,9 +2,10 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
 import {TokenTransferUtils} from "libraries/TokenTransferUtils.sol";
 import {LibPolicyDestination} from "organization/libraries/policy/LibPolicyDestination.sol";
-import {Policy} from "types/PolicyTypes.sol";
+import {Policy, RateLimitType} from "types/PolicyTypes.sol";
 
 /**
  * @title Lib Policy Token Transfer
@@ -25,6 +26,11 @@ library LibPolicyTokenTransfer {
      *      When `policy.config.token.anyToken` is true, the `to` address (callee contract)
      *      is not validated. Only the encoded recipient and amount parameters are checked.
      *      See `_isTokenAllowedByPolicy` for details.
+     *
+     *      Reverts with `AnyTokenIncompatibleWithAmountOrRateLimit` when the policy pairs
+     *      `anyToken = true` with either a per-transaction amount threshold or a
+     *      time-interval rate limit. Both controls compare raw token amounts and become
+     *      meaningless when the policy spans tokens with different decimals.
      * @param policy The policy to check against
      * @param to The transaction destination address (token contract for ERC20)
      * @param value The transaction value in wei
@@ -39,8 +45,18 @@ library LibPolicyTokenTransfer {
         bytes calldata data,
         bytes32[] calldata destinationProof
     ) internal pure returns (bool) {
+        // Reject policies that pair an unbounded token filter with a raw-amount cap.
+        // The cap is meaningless when tokens have different decimals or economic value.
+        if (
+            policy.config.token.anyToken
+                && (policy.config.token.hasAmountThreshold
+                    || policy.config.rateLimit.limitType == RateLimitType.TimeInterval)
+        ) {
+            revert IOrganizationPolicy.AnyTokenIncompatibleWithAmountOrRateLimit();
+        }
+
         // forgefmt: disable-next-item
-        return _isTokenAllowedByPolicy(policy, to, data) 
+        return _isTokenAllowedByPolicy(policy, to, data)
             && _isTokenAmountAllowedByPolicy(policy, data, value)
             && LibPolicyDestination.isDestinationAllowedByPolicy({
                 policy: policy,

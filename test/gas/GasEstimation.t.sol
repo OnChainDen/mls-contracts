@@ -598,6 +598,8 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
         (OrganizationImplementationHarness org, address account) = _deploySimpleOrg(500_013);
         Policy memory policy = _buildAutoApprovePolicy();
         policy.config.transactionType = TransactionType.TokenTransfers;
+        policy.config.token.anyToken = false;
+        policy.config.token.tokenAddress = address(mockToken);
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 24;
         policy.config.rateLimit.timeIntervalLimit = type(uint128).max;
@@ -1071,6 +1073,12 @@ contract GasEstimationTest is InitializationSuiteBase, SignatureTestHelpers {
             policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
             policy.config.rateLimit.timeIntervalHours = 24;
             policy.config.rateLimit.timeIntervalLimit = type(uint128).max;
+            // Token-transfer policies cannot pair `anyToken` with a rate limit, so pin to the
+            // mock token used by the gas suite to keep this fixture representative.
+            if (txType == TransactionType.TokenTransfers) {
+                policy.config.token.anyToken = false;
+                policy.config.token.tokenAddress = address(mockToken);
+            }
         }
         proofs = _setPoliciesAndBuildProofs(org, POLICY_ID, policy, saltSeed + 100);
     }

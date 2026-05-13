@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
 import {
     LibOrganizationPolicySuiteBase
 } from "test/organization/libraries/LibOrganizationPolicy/LibOrganizationPolicySuiteBase.sol";
@@ -11,6 +12,8 @@ import {
     ParamType,
     ParameterConstraint,
     Policy,
+    RateLimitScope,
+    RateLimitType,
     TransactionType,
     ValidationProofs
 } from "types/PolicyTypes.sol";
@@ -628,6 +631,201 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             harness.isSourceAccountAllowedByPolicyViaLibrary(specificPolicy, SOURCE_ACCOUNT, _emptyProof()),
             "empty proof should fail when root is not a single-leaf self root"
         );
+    }
+
+    /// @dev Verifies that a `TokenTransfers + anyToken + hasAmountThreshold` policy reverts when evaluated.
+    function test_isTransactionAllowed_anyTokenWithAmountThreshold_reverts() public {
+        // Setup: build a token-transfer policy that pairs `anyToken` with a raw-amount threshold.
+        // This combination compares amounts across tokens with different decimals, so it cannot
+        // express a meaningful cap and must be rejected at evaluation time.
+        Policy memory policy = _buildTokenTransferPolicy();
+        policy.config.token.anyToken = true;
+        policy.config.token.hasAmountThreshold = true;
+        policy.config.token.amountThreshold = 100;
+
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3100, policy);
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: _emptyProof(),
+            functionProof: _emptyProof(),
+            constraints: "",
+            constraintOneOfProofs: bytes("")
+        });
+
+        // Call: invoke `isTransactionAllowedByPolicyViaLibrary` against the malformed policy.
+        // Verify: the call reverts with `AnyTokenIncompatibleWithAmountOrRateLimit`.
+        vm.expectRevert(IOrganizationPolicy.AnyTokenIncompatibleWithAmountOrRateLimit.selector);
+        harness.isTransactionAllowedByPolicyViaLibrary(
+            3100, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 1), initiator1, proofs
+        );
+    }
+
+    /// @dev Verifies that a `TokenTransfers + anyToken + TimeInterval` rate limit policy reverts when evaluated.
+    function test_isTransactionAllowed_anyTokenWithTimeIntervalRateLimit_reverts() public {
+        // Setup: build a token-transfer policy that pairs `anyToken` with a time-interval rate
+        // limit. The rate-limit bucket accrues raw token amounts for token-transfer policies,
+        // so the cumulative cap is meaningless across tokens with different decimals.
+        Policy memory policy = _buildTokenTransferPolicy();
+        policy.config.token.anyToken = true;
+        policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        policy.config.rateLimit.timeIntervalHours = 24;
+        policy.config.rateLimit.timeIntervalLimit = 1000;
+
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3101, policy);
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: _emptyProof(),
+            functionProof: _emptyProof(),
+            constraints: "",
+            constraintOneOfProofs: bytes("")
+        });
+
+        // Call: invoke `isTransactionAllowedByPolicyViaLibrary` against the malformed policy.
+        // Verify: the call reverts with `AnyTokenIncompatibleWithAmountOrRateLimit` regardless
+        // of the rate-limit scopes or window configuration.
+        vm.expectRevert(IOrganizationPolicy.AnyTokenIncompatibleWithAmountOrRateLimit.selector);
+        harness.isTransactionAllowedByPolicyViaLibrary(
+            3101, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 1), initiator1, proofs
+        );
+    }
+
+    /// @dev Verifies that combining all three of `anyToken`, amount threshold, and rate limit reverts.
+    function test_isTransactionAllowed_anyTokenWithAmountAndRateLimit_reverts() public {
+        // Setup: build a token-transfer policy with `anyToken`, a raw-amount threshold, and a
+        // time-interval rate limit set together. Either footgun alone reverts, and both
+        // present together should still surface the same single error.
+        Policy memory policy = _buildTokenTransferPolicy();
+        policy.config.token.anyToken = true;
+        policy.config.token.hasAmountThreshold = true;
+        policy.config.token.amountThreshold = 50;
+        policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        policy.config.rateLimit.timeIntervalHours = 1;
+        policy.config.rateLimit.timeIntervalLimit = 100;
+
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3102, policy);
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: _emptyProof(),
+            functionProof: _emptyProof(),
+            constraints: "",
+            constraintOneOfProofs: bytes("")
+        });
+
+        // Call: invoke `isTransactionAllowedByPolicyViaLibrary` against the malformed policy.
+        // Verify: the policy still reverts with `AnyTokenIncompatibleWithAmountOrRateLimit`
+        // when both incompatibilities are present at once.
+        vm.expectRevert(IOrganizationPolicy.AnyTokenIncompatibleWithAmountOrRateLimit.selector);
+        harness.isTransactionAllowedByPolicyViaLibrary(
+            3102, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 1), initiator1, proofs
+        );
+    }
+
+    /// @dev Verifies that `anyToken` alone (no amount threshold, no rate limit) is still allowed.
+    function test_isTransactionAllowed_anyTokenWithoutAmountOrRateLimit_allowed() public {
+        // Setup: build a token-transfer policy with `anyToken` but no amount cap and no rate
+        // limit. This is the documented "match any token, do not cap the amount" use case and
+        // must remain functional after the footgun guard is added.
+        Policy memory policy = _buildTokenTransferPolicy();
+        policy.config.token.anyToken = true;
+        policy.config.token.hasAmountThreshold = false;
+        policy.config.rateLimit.limitType = RateLimitType.None;
+
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3103, policy);
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: _emptyProof(),
+            functionProof: _emptyProof(),
+            constraints: "",
+            constraintOneOfProofs: bytes("")
+        });
+
+        // Call: execute `isTransactionAllowedByPolicyViaLibrary` for a normal ERC-20 transfer.
+        bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3103, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 1), initiator1, proofs
+        );
+        // Verify: `anyToken` without any raw-amount-based controls still authorizes the transfer.
+        assertTrue(allowed, "anyToken without amount/rate limit should still pass");
+    }
+
+    /// @dev Verifies that a specific-token policy with amount threshold and rate limit is still allowed.
+    function test_isTransactionAllowed_specificTokenWithAmountAndRateLimit_allowed() public {
+        // Setup: build a token-transfer policy pinned to a single token with both a raw-amount
+        // threshold and a time-interval rate limit. The guard only targets `anyToken`, so this
+        // single-token configuration must keep working.
+        Policy memory policy = _buildTokenTransferPolicy();
+        policy.config.token.anyToken = false;
+        policy.config.token.tokenAddress = TOKEN_CONTRACT;
+        policy.config.token.hasAmountThreshold = true;
+        policy.config.token.amountThreshold = 100;
+        policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        policy.config.rateLimit.timeIntervalHours = 24;
+        policy.config.rateLimit.timeIntervalLimit = 500;
+        policy.config.rateLimit.sourceScope = RateLimitScope.AcrossAll;
+        policy.config.rateLimit.destinationScope = RateLimitScope.AcrossAll;
+        policy.config.rateLimit.initiatorScope = RateLimitScope.AcrossAll;
+
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3104, policy);
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: _emptyProof(),
+            functionProof: _emptyProof(),
+            constraints: "",
+            constraintOneOfProofs: bytes("")
+        });
+
+        // Call: execute `isTransactionAllowedByPolicyViaLibrary` for an at-threshold transfer.
+        bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3104, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 50), initiator1, proofs
+        );
+        // Verify: a single-token policy with raw-amount caps remains allowed because each cap
+        // is calibrated against one token's decimals.
+        assertTrue(allowed, "specific-token policy with amount and rate limit should still pass");
+    }
+
+    /// @dev Verifies that an `Any` transactionType policy with `anyToken` and a rate limit is not blocked.
+    function test_isTransactionAllowed_anyTransactionTypeWithAnyTokenAndRateLimit_allowed() public {
+        // Setup: build an `Any`-type policy with both `anyToken` and a time-interval rate limit.
+        // For `Any` policies the rate-limit bucket accrues `1` per call (count-based), not raw
+        // token amounts, so the cross-decimal footgun does not apply and the policy is valid.
+        Policy memory policy = _buildBasePolicy();
+        policy.config.transactionType = TransactionType.Any;
+        policy.config.token.anyToken = true;
+        policy.config.token.hasAmountThreshold = true;
+        policy.config.token.amountThreshold = 1;
+        policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        policy.config.rateLimit.timeIntervalHours = 24;
+        policy.config.rateLimit.timeIntervalLimit = 10;
+
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3105, policy);
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: _emptyProof(),
+            functionProof: _emptyProof(),
+            constraints: "",
+            constraintOneOfProofs: bytes("")
+        });
+
+        // Call: execute `isTransactionAllowedByPolicyViaLibrary` for an ERC-20 transfer that
+        // would exceed the meaningless `amountThreshold` if it were enforced for `Any`
+        // policies, which it is not.
+        bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3105, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeErc20Transfer(RECIPIENT, 999), initiator1, proofs
+        );
+        // Verify: the guard only fires for `TokenTransfers` policies, so `Any` policies with
+        // the same fields set remain authorized.
+        assertTrue(allowed, "Any-type policy should not be blocked by the anyToken guard");
     }
 
     /**

@@ -284,6 +284,9 @@ Policies define which transactions they govern using the following fields:
 > **Implications for `Token Transfer Recipient` (destination validation):**
 > For transactions classified as ERC-20 token transfers, the policy engine treats the **encoded recipient parameter** (the first argument of `transfer(address,uint256)`) as the "destination" — not the `to` address (the contract being called). This means destination allowlists validate who receives the transfer, not which contract is called.
 
+> [!IMPORTANT]
+> **`Any token` cannot be combined with a `Token Amount Threshold` or a time-interval rate limit.** Both controls compare raw token amounts, and a single cap is meaningless across tokens with different decimals or economic value (for example, `1e18` raw units of an 18-decimal token vs. a 6-decimal token represent very different real values). Token-transfer policies that pair `Any token` with either an amount threshold or a time-interval rate limit revert at transaction-validation time with `AnyTokenIncompatibleWithAmountOrRateLimit`. To cap a token amount, use a token-transfer policy pinned to a specific token. To rate-limit across many tokens, use separate per-token policies or an `Any`-type policy (which rate-limits by call count, not amount).
+
 ---
 
 #### Contract Interaction Fields

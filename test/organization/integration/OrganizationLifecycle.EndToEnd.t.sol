@@ -803,6 +803,14 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
             _buildPolicyUsageScenario(organizationSalt, accountSalt, amountRaw, useTokenTransfer);
         policy.config.transactionType = scenario.transactionType;
 
+        // Token-transfer policies cannot mix `anyToken` with a rate limit. Pin the policy to
+        // the scenario's token contract so the rate-limit accounting is keyed to a single
+        // token's decimals.
+        if (scenario.transactionType == TransactionType.TokenTransfers) {
+            policy.config.token.anyToken = false;
+            policy.config.token.tokenAddress = scenario.to;
+        }
+
         ValidationProofs memory proofs = _setPoliciesAndBuildProofs(organization, POLICY_ID, policy, 16_301);
         ValidationProofs memory executionProofs = _buildEmptyProofs(policy);
         uint256 expiration = block.timestamp + 1 days;
