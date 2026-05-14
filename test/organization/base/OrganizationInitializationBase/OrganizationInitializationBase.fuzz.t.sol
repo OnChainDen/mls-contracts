@@ -26,9 +26,11 @@ contract OrganizationInitializationBaseFuzzTest is InitializationSuiteBase {
         vm.assume(otherCaller != directDeployer);
         InitializationParams memory params = _defaultInitializationParams();
 
-        vm.prank(directDeployer);
-        IOrganizationInitialization organization =
-            IOrganizationInitialization(address(new OrganizationProxy(address(implementation), address(whitelist))));
+        vm.startPrank(directDeployer);
+        OrganizationProxy proxyContract = new OrganizationProxy(address(whitelist));
+        proxyContract.setInitialImplementation(address(implementation));
+        vm.stopPrank();
+        IOrganizationInitialization organization = IOrganizationInitialization(address(proxyContract));
         assertFalse(organization.isInitialized(), "proxy should start uninitialized");
 
         // Call: try unauthorized initialization first, then initialize successfully once, then retry initialization.

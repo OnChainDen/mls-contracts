@@ -21,8 +21,11 @@ contract OrganizationInitializationBaseTest is InitializationSuiteBase {
     /// proxy.
     function test_uninitializedProxy_nonDeployerRevertsUnauthorizedDeployer() public {
         // Setup: Deploy an uninitialized proxy and prepare valid initialization params.
-        vm.prank(AUTHORIZED_DEPLOYER);
-        address proxy = address(new OrganizationProxy(address(implementation), address(whitelist)));
+        vm.startPrank(AUTHORIZED_DEPLOYER);
+        OrganizationProxy proxyContract = new OrganizationProxy(address(whitelist));
+        proxyContract.setInitialImplementation(address(implementation));
+        vm.stopPrank();
+        address proxy = address(proxyContract);
         InitializationParams memory params = _defaultInitializationParams();
 
         // Call: Attempt initialization from a non-deployer and expect `UnauthorizedDeployer`.
@@ -40,8 +43,11 @@ contract OrganizationInitializationBaseTest is InitializationSuiteBase {
     /// storage, transitions initialized state, and emits one initialization event.
     function test_validInitialize_setsStateAndEmitsOneInitializedEvent() public {
         // Setup: Deploy a proxy, prepare valid params, assert pre-init views, and begin log recording.
-        vm.prank(AUTHORIZED_DEPLOYER);
-        address proxy = address(new OrganizationProxy(address(implementation), address(whitelist)));
+        vm.startPrank(AUTHORIZED_DEPLOYER);
+        OrganizationProxy proxyContract = new OrganizationProxy(address(whitelist));
+        proxyContract.setInitialImplementation(address(implementation));
+        vm.stopPrank();
+        address proxy = address(proxyContract);
 
         InitializationParams memory params = _defaultInitializationParams();
         IOrganization organization = IOrganization(proxy);
@@ -81,8 +87,11 @@ contract OrganizationInitializationBaseTest is InitializationSuiteBase {
         // proxy initialization.
         assertEq(implementation.getDeployerAddress(), address(0), "implementation deployer slot should be zero");
 
-        vm.prank(AUTHORIZED_DEPLOYER);
-        address proxy = address(new OrganizationProxy(address(implementation), address(whitelist)));
+        vm.startPrank(AUTHORIZED_DEPLOYER);
+        OrganizationProxy proxyContract = new OrganizationProxy(address(whitelist));
+        proxyContract.setInitialImplementation(address(implementation));
+        vm.stopPrank();
+        address proxy = address(proxyContract);
         IOrganization organization = IOrganization(proxy);
 
         vm.expectRevert(IOrganizationInitialization.NoMembersProvided.selector);

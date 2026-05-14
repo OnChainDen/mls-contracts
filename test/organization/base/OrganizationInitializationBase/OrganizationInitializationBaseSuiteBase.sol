@@ -107,7 +107,16 @@ abstract contract InitializationSuiteBase is Test, ArrayBuilders {
     /// @param salt CREATE2 salt used for deterministic address derivation.
     /// @return Computed organization proxy address.
     function _computeOrganizationAddress(bytes32 salt) internal view returns (address) {
-        return factory.computeOrganizationAddress(salt, address(implementation), address(whitelist));
+        return factory.computeOrganizationAddress(salt, address(whitelist));
+    }
+
+    /// @dev Deploys an organization proxy directly (without the factory) and binds the shared
+    ///      fixture implementation. Mirrors the factory's deploy + bind sequence for tests
+    ///      that exercise non-factory deployment paths.
+    /// @return proxy The newly deployed and implementation-bound `OrganizationProxy`.
+    function _deployProxyAndBindImpl() internal returns (OrganizationProxy proxy) {
+        proxy = new OrganizationProxy(address(whitelist));
+        proxy.setInitialImplementation(address(implementation));
     }
 
     /// @dev Counts how many recorded logs use the provided topic as topic0.
@@ -243,8 +252,9 @@ abstract contract InitializationSuiteBase is Test, ArrayBuilders {
             proxyAddress.codehash != address(implementation).codehash, "proxy code must differ from implementation"
         );
 
-        // Deploy a reference proxy and compare runtime code hash.
-        address referenceProxy = address(new OrganizationProxy(address(implementation), address(whitelist)));
+        // Deploy a reference proxy and compare runtime code hash. The implementation binding
+        // happens post construction so it does not affect the proxy's runtime code.
+        address referenceProxy = address(_deployProxyAndBindImpl());
         assertEq(proxyAddress.codehash, referenceProxy.codehash, "proxy runtime code hash mismatch");
     }
 }

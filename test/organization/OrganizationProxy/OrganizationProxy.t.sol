@@ -2,60 +2,65 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IERC1967} from "@openzeppelin/contracts/interfaces/IERC1967.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
 import {OrganizationProxy} from "organization/OrganizationProxy.sol";
 import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
 import {
+    OrganizationImplementationHarness
+} from "test/organization/OrganizationFactory/OrganizationFactoryHarnesses.sol";
+import {
     InitializationSuiteBase
 } from "test/organization/base/OrganizationInitializationBase/OrganizationInitializationBaseSuiteBase.sol";
-import {InitializationParams} from "types/CommonTypes.sol";
+import {ContractType, InitializationParams} from "types/CommonTypes.sol";
 
 /**
- * @dev Proxy constructor/delegation tests for initialization paths.
+ * @dev Proxy constructor, `setInitialImplementation`, and delegation tests.
+ *
+ *      The proxy no longer takes an implementation address in its constructor. The
+ *      implementation is bound post deployment via `setInitialImplementation`. Tests
+ *      cover:
+ *        - constructor behavior (whitelist argument only)
+ *        - `setInitialImplementation` gating, one shot semantics, and validation
+ *        - delegation after the deploy + bind sequence
  */
 contract OrganizationProxyTest is InitializationSuiteBase {
-    /// @dev Verifies `OrganizationProxy.constructor` stores deployer, whitelist, and implementation values in their
-    /// expected storage slots.
-    function test_constructor_setsDeployerWhitelistAndImplementationSlots() public {
-        // Setup: Select a direct deployer account for deploying the proxy outside the factory flow.
+    /// @dev Verifies `OrganizationProxy.constructor` stores deployer and whitelist values, and that the
+    ///      implementation slot remains empty until `setInitialImplementation` is called.
+    function test_constructor_setsDeployerAndWhitelistAndLeavesImplEmpty() public {
+        // Setup: Select a direct deployer for deploying the proxy outside the factory flow.
         address directDeployer = address(0xFA01);
 
-        // Call: Deploy the proxy and read deployer, whitelist, and implementation storage slots.
+        // Call: Deploy the proxy and read whitelist and implementation storage slots.
         vm.prank(directDeployer);
-        address proxy = address(new OrganizationProxy(address(implementation), address(whitelist)));
+        OrganizationProxy proxy = new OrganizationProxy(address(whitelist));
+        address proxyAddr = address(proxy);
 
-        // Verify: Constructor state writes match the deployer and constructor arguments.
-        IOrganization organization = IOrganization(proxy);
-        assertEq(organization.getDeployerAddress(), directDeployer, "deployer slot should store constructor msg.sender");
-
-        bytes32 whitelistWord = vm.load(proxy, LibOrganizationUpgradeStorage.STORAGE_LOCATION);
+        // Verify: whitelist slot is populated, implementation slot stays empty pre bind.
+        bytes32 whitelistWord = vm.load(proxyAddr, LibOrganizationUpgradeStorage.STORAGE_LOCATION);
         assertEq(address(uint160(uint256(whitelistWord))), address(whitelist), "whitelist slot mismatch");
 
-        bytes32 implementationWord = vm.load(proxy, ERC1967_IMPLEMENTATION_SLOT);
+        bytes32 implementationWord = vm.load(proxyAddr, ERC1967_IMPLEMENTATION_SLOT);
         assertEq(
             address(uint160(uint256(implementationWord))),
-            address(implementation),
-            "ERC1967 implementation slot mismatch"
+            address(0),
+            "ERC1967 implementation slot should be empty pre-bind"
         );
-    }
 
-    /// @dev Verifies `OrganizationProxy.constructor` reverts when the implementation address is not a contract.
-    function test_constructor_nonContractImplementation_reverts() public {
-        // Setup: Prepare a non-contract implementation address for constructor input.
-        address nonContractImplementation = address(0xF401);
-
-        // Call: Deploy the proxy with an EOA implementation and expect `ERC1967InvalidImplementation`.
-        vm.expectRevert(
-            abi.encodeWithSelector(ERC1967Utils.ERC1967InvalidImplementation.selector, nonContractImplementation)
+        // After binding, the delegated read works and reports the recorded deployer.
+        vm.prank(directDeployer);
+        proxy.setInitialImplementation(address(implementation));
+        assertEq(
+            IOrganization(proxyAddr).getDeployerAddress(),
+            directDeployer,
+            "deployer slot should store constructor msg.sender"
         );
-        new OrganizationProxy(nonContractImplementation, address(whitelist));
-
-        // Verify: Constructor safety checks reject non-contract implementations.
     }
 
     /// @dev Verifies `OrganizationProxy.constructor` reverts with `ZeroAddress` when whitelist is zero.
@@ -65,9 +70,7 @@ contract OrganizationProxyTest is InitializationSuiteBase {
 
         // Call: Deploy the proxy with a zero whitelist and expect `ZeroAddress`.
         vm.expectRevert(IOrganizationFactory.ZeroAddress.selector);
-        new OrganizationProxy(address(implementation), zeroWhitelist);
-
-        // Verify: Constructor guard enforces non-zero whitelist configuration.
+        new OrganizationProxy(zeroWhitelist);
     }
 
     /// @dev Verifies `OrganizationProxy.constructor` rejects non-contract whitelist addresses as a safety requirement.
@@ -77,23 +80,94 @@ contract OrganizationProxyTest is InitializationSuiteBase {
 
         // Call: Deploy the proxy with the EOA whitelist and expect `AddressEmptyCode`.
         vm.expectRevert(abi.encodeWithSelector(Address.AddressEmptyCode.selector, nonContractWhitelist));
-        new OrganizationProxy(address(implementation), nonContractWhitelist);
+        new OrganizationProxy(nonContractWhitelist);
+    }
 
-        // Verify: Revert behavior enforces that whitelist lookups must route through a contract.
+    /// @dev Verifies `setInitialImplementation` reverts when called by a non-deployer.
+    function test_setInitialImplementation_unauthorizedCaller_reverts() public {
+        // Setup: Deploy proxy with this contract as deployer. Impersonate a non-deployer for the call.
+        OrganizationProxy proxy = new OrganizationProxy(address(whitelist));
+        address otherCaller = address(0xF502);
+
+        // Call: A non-deployer attempting to bind reverts with `UnauthorizedDeployer`.
+        vm.expectRevert(IOrganizationInitialization.UnauthorizedDeployer.selector);
+        vm.prank(otherCaller);
+        proxy.setInitialImplementation(address(implementation));
+    }
+
+    /// @dev Verifies `setInitialImplementation` is one shot and cannot rebind after a successful call.
+    function test_setInitialImplementation_isOneShot() public {
+        // Setup: Deploy and bind once.
+        OrganizationProxy proxy = new OrganizationProxy(address(whitelist));
+        proxy.setInitialImplementation(address(implementation));
+
+        // Call: A second bind attempt reverts with `ImplementationAlreadySet`.
+        vm.expectRevert(IOrganizationInitialization.ImplementationAlreadySet.selector);
+        proxy.setInitialImplementation(address(implementation));
+    }
+
+    /// @dev Verifies `setInitialImplementation` reverts with `ZeroAddress` for a zero implementation.
+    function test_setInitialImplementation_zeroImplementation_reverts() public {
+        OrganizationProxy proxy = new OrganizationProxy(address(whitelist));
+        vm.expectRevert(IOrganizationFactory.ZeroAddress.selector);
+        proxy.setInitialImplementation(address(0));
+    }
+
+    /// @dev Verifies `setInitialImplementation` reverts when the implementation is not whitelisted.
+    function test_setInitialImplementation_nonWhitelistedImplementation_reverts() public {
+        // Setup: Deploy proxy, then prepare a fresh implementation that is not on the whitelist.
+        OrganizationProxy proxy = new OrganizationProxy(address(whitelist));
+        OrganizationImplementationHarness unapproved = new OrganizationImplementationHarness();
+
+        // Call: Binding a non-whitelisted implementation reverts with `ImplementationNotWhitelisted`.
+        vm.expectRevert(
+            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(unapproved))
+        );
+        proxy.setInitialImplementation(address(unapproved));
+    }
+
+    /// @dev Verifies `setInitialImplementation` reverts with `ERC1967InvalidImplementation` when the implementation
+    ///      passes the whitelist but has no code.
+    function test_setInitialImplementation_eoaImplementation_revertsInvalidImplementation() public {
+        // Setup: Whitelist an EOA address and deploy a proxy that uses this whitelist.
+        address eoaImplementation = address(0xE091);
+        whitelist.setImplementationWhitelisted(ContractType.Organization, eoaImplementation, true);
+        OrganizationProxy proxy = new OrganizationProxy(address(whitelist));
+
+        // Call: Binding an EOA implementation reverts via the ERC-1967 code-presence check.
+        vm.expectRevert(abi.encodeWithSelector(ERC1967Utils.ERC1967InvalidImplementation.selector, eoaImplementation));
+        proxy.setInitialImplementation(eoaImplementation);
+    }
+
+    /// @dev Verifies `setInitialImplementation` emits the standard ERC-1967 `Upgraded(implementation)` event.
+    function test_setInitialImplementation_success_emitsUpgradedEvent() public {
+        OrganizationProxy proxy = new OrganizationProxy(address(whitelist));
+
+        vm.expectEmit(true, true, true, true, address(proxy));
+        emit IERC1967.Upgraded(address(implementation));
+        proxy.setInitialImplementation(address(implementation));
+
+        bytes32 implementationWord = vm.load(address(proxy), ERC1967_IMPLEMENTATION_SLOT);
+        assertEq(
+            address(uint160(uint256(implementationWord))),
+            address(implementation),
+            "implementation slot should hold bound impl"
+        );
     }
 
     /// @dev Verifies direct proxy deployment allows only the direct deployer to call `initialize`.
     function test_directDeployment_onlyDirectDeployerCanInitialize() public {
-        // Setup: Deploy a proxy directly and prepare initialize calls from the deployer and a different caller.
+        // Setup: Deploy a proxy directly, bind the implementation, prepare init params.
         address directDeployer = address(0xF501);
         address otherCaller = address(0xF502);
         InitializationParams memory params = _defaultInitializationParams();
 
-        vm.prank(directDeployer);
-        IOrganization organization =
-            IOrganization(address(new OrganizationProxy(address(implementation), address(whitelist))));
+        vm.startPrank(directDeployer);
+        OrganizationProxy proxy = new OrganizationProxy(address(whitelist));
+        proxy.setInitialImplementation(address(implementation));
+        vm.stopPrank();
+        IOrganization organization = IOrganization(address(proxy));
 
-        // Verify: The proxy is not initialized yet
         assertFalse(organization.isInitialized(), "proxy should start uninitialized");
 
         // Call: First attempt initialization from a non-deployer, then initialize from the direct deployer.
@@ -104,7 +178,7 @@ contract OrganizationProxyTest is InitializationSuiteBase {
         vm.prank(directDeployer);
         organization.initialize(params);
 
-        // Verify: Only the direct deployer can initialize and the proxy becomes initialized after that call.
+        // Verify: Only the direct deployer can initialize.
         assertTrue(organization.isInitialized(), "direct deployer should be able to initialize once");
     }
 
@@ -115,9 +189,11 @@ contract OrganizationProxyTest is InitializationSuiteBase {
         address deployer = address(0xF601);
         InitializationParams memory params = _defaultInitializationParams();
 
-        vm.prank(deployer);
-        IOrganization organization =
-            IOrganization(address(new OrganizationProxy(address(implementation), address(whitelist))));
+        vm.startPrank(deployer);
+        OrganizationProxy proxy = new OrganizationProxy(address(whitelist));
+        proxy.setInitialImplementation(address(implementation));
+        vm.stopPrank();
+        IOrganization organization = IOrganization(address(proxy));
 
         // Call: Read delegated initialization views, then initialize through the proxy.
         assertEq(
@@ -146,13 +222,17 @@ contract OrganizationProxyTest is InitializationSuiteBase {
         paramsB.guardian = address(0xBB01);
         paramsB.members = buildArray(MEMBER_3, ADMIN_1, ADMIN_2, MEMBER_1);
 
-        vm.prank(deployerA);
-        IOrganization proxyA =
-            IOrganization(address(new OrganizationProxy(address(implementation), address(whitelist))));
+        vm.startPrank(deployerA);
+        OrganizationProxy proxyAContract = new OrganizationProxy(address(whitelist));
+        proxyAContract.setInitialImplementation(address(implementation));
+        vm.stopPrank();
+        IOrganization proxyA = IOrganization(address(proxyAContract));
 
-        vm.prank(deployerB);
-        IOrganization proxyB =
-            IOrganization(address(new OrganizationProxy(address(implementation), address(whitelist))));
+        vm.startPrank(deployerB);
+        OrganizationProxy proxyBContract = new OrganizationProxy(address(whitelist));
+        proxyBContract.setInitialImplementation(address(implementation));
+        vm.stopPrank();
+        IOrganization proxyB = IOrganization(address(proxyBContract));
 
         // Call: Initialize both proxies independently using their respective deployers and params.
         vm.prank(deployerA);
@@ -183,23 +263,27 @@ contract OrganizationProxyTest is InitializationSuiteBase {
 
     /// @dev Verifies proxy initialization does not overwrite deployer or whitelist constructor storage slots.
     function test_initialize_doesNotOverwriteDeployerOrWhitelistSlots() public {
-        // Setup: Deploy a proxy directly and snapshot deployer/whitelist storage words before initialization.
+        // Setup: Deploy a proxy directly, bind the implementation, snapshot deployer/whitelist storage words
+        //        before initialization.
         address deployer = address(0xF801);
         InitializationParams memory params = _defaultInitializationParams();
 
-        vm.prank(deployer);
-        address proxy = address(new OrganizationProxy(address(implementation), address(whitelist)));
-        IOrganization organization = IOrganization(proxy);
+        vm.startPrank(deployer);
+        OrganizationProxy proxy = new OrganizationProxy(address(whitelist));
+        proxy.setInitialImplementation(address(implementation));
+        vm.stopPrank();
+        address proxyAddr = address(proxy);
+        IOrganization organization = IOrganization(proxyAddr);
 
-        bytes32 deployerBefore = vm.load(proxy, 0x56adc8ceae2dbb943ac8b82714e40a1aac36fca8b6dbb11dfc9941c4d04f2400);
-        bytes32 whitelistBefore = vm.load(proxy, LibOrganizationUpgradeStorage.STORAGE_LOCATION);
+        bytes32 deployerBefore = vm.load(proxyAddr, 0x56adc8ceae2dbb943ac8b82714e40a1aac36fca8b6dbb11dfc9941c4d04f2400);
+        bytes32 whitelistBefore = vm.load(proxyAddr, LibOrganizationUpgradeStorage.STORAGE_LOCATION);
 
         // Call: Initialize the proxy and reload deployer/whitelist storage words.
         vm.prank(deployer);
         organization.initialize(params);
 
-        bytes32 deployerAfter = vm.load(proxy, 0x56adc8ceae2dbb943ac8b82714e40a1aac36fca8b6dbb11dfc9941c4d04f2400);
-        bytes32 whitelistAfter = vm.load(proxy, LibOrganizationUpgradeStorage.STORAGE_LOCATION);
+        bytes32 deployerAfter = vm.load(proxyAddr, 0x56adc8ceae2dbb943ac8b82714e40a1aac36fca8b6dbb11dfc9941c4d04f2400);
+        bytes32 whitelistAfter = vm.load(proxyAddr, LibOrganizationUpgradeStorage.STORAGE_LOCATION);
 
         // Verify: Deployer and whitelist storage slots are unchanged by initialization.
         assertEq(deployerBefore, deployerAfter, "initialize should not mutate deployer slot");

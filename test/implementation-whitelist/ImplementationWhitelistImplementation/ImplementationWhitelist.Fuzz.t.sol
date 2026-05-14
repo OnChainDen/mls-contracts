@@ -237,38 +237,31 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
         );
     }
 
-    // forgefmt: disable-next-item
-    /// @dev Verifies fuzz `(salt, implementation, whitelist)` tuples produce deterministic and
-    // sensitivity-preserving outputs from `computeOrganizationAddress` via a locally deployed factory.
+    /// @dev Verifies fuzz `(salt, whitelist)` tuples produce deterministic and sensitivity-preserving
+    ///      outputs from `computeOrganizationAddress`. The address is independent of the
+    ///      implementation version because the implementation is bound post deployment.
     function test_fuzz_computeOrganizationAddress_deterministicAndSensitivityPreserving(
         bytes32 saltA,
         bytes32 saltB,
-        address implA,
-        address implB,
         address whitelistA,
         address whitelistB
     ) public {
-        // Setup: deploy a minimal factory for address computation (view-only, no deployment needed).
+        // Setup: deploy a minimal factory for address computation (view only, no deployment needed).
         OrganizationFactoryForFuzz localFactory = new OrganizationFactoryForFuzz();
 
-        // Verify: deterministic — same inputs produce same output.
-        address computedA1 = localFactory.computeAddress(saltA, implA, whitelistA);
-        address computedA2 = localFactory.computeAddress(saltA, implA, whitelistA);
+        // Verify: deterministic. Same inputs produce same output.
+        address computedA1 = localFactory.computeAddress(saltA, whitelistA);
+        address computedA2 = localFactory.computeAddress(saltA, whitelistA);
         assertEq(computedA1, computedA2, "same inputs must produce same output");
 
-        // Verify: sensitivity — different salt changes output.
+        // Verify: sensitivity. Different salt changes output.
         vm.assume(saltA != saltB);
-        address differentSalt = localFactory.computeAddress(saltB, implA, whitelistA);
+        address differentSalt = localFactory.computeAddress(saltB, whitelistA);
         assertTrue(computedA1 != differentSalt, "different salt should change computed address");
 
-        // Verify: sensitivity — different implementation changes output.
-        vm.assume(implA != implB);
-        address differentImpl = localFactory.computeAddress(saltA, implB, whitelistA);
-        assertTrue(computedA1 != differentImpl, "different implementation should change computed address");
-
-        // Verify: sensitivity — different whitelist changes output.
+        // Verify: sensitivity. Different whitelist changes output.
         vm.assume(whitelistA != whitelistB);
-        address differentWhitelist = localFactory.computeAddress(saltA, implA, whitelistB);
+        address differentWhitelist = localFactory.computeAddress(saltA, whitelistB);
         assertTrue(computedA1 != differentWhitelist, "different whitelist should change computed address");
     }
 
@@ -296,18 +289,12 @@ contract OrganizationFactoryForFuzz {
     /**
      * @dev Computes a deterministic CREATE2 address for a hypothetical OrganizationProxy deployment.
      * @param salt CREATE2 salt.
-     * @param implementationAddress Organization implementation address encoded into proxy bytecode.
      * @param whitelistAddress Whitelist address encoded into proxy bytecode.
      * @return computed Deterministic CREATE2 address.
      */
-    function computeAddress(bytes32 salt, address implementationAddress, address whitelistAddress)
-        external
-        view
-        returns (address computed)
-    {
+    function computeAddress(bytes32 salt, address whitelistAddress) external view returns (address computed) {
         // Mirrors OrganizationFactory._getOrganizationProxyBytecode + computeOrganizationAddress logic.
-        bytes memory bytecode =
-            abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implementationAddress, whitelistAddress));
+        bytes memory bytecode = abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(whitelistAddress));
         bytes32 initCodeHash = keccak256(bytecode);
         computed =
             address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, initCodeHash)))));
