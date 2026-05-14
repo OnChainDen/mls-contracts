@@ -11,6 +11,9 @@ import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
 import {OrganizationProxy} from "organization/OrganizationProxy.sol";
+import {
+    LibOrganizationDeployerAddressStorage
+} from "organization/libraries/storage/LibOrganizationDeployerAddressStorage.sol";
 import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
 import {
     OrganizationImplementationHarness
@@ -31,18 +34,24 @@ import {ContractType, InitializationParams} from "types/CommonTypes.sol";
  *        - delegation after the deploy + bind sequence
  */
 contract OrganizationProxyTest is InitializationSuiteBase {
-    /// @dev Verifies `OrganizationProxy.constructor` stores deployer and whitelist values, and that the
-    ///      implementation slot remains empty until `setInitialImplementation` is called.
+    /// @dev Verifies `OrganizationProxy.constructor` writes the deployer and whitelist storage slots,
+    ///      leaves the ERC-1967 implementation slot empty until `setInitialImplementation` is called,
+    ///      and that the bind writes the implementation slot and remains observable through delegation.
     function test_constructor_setsDeployerAndWhitelistAndLeavesImplEmpty() public {
         // Setup: Select a direct deployer for deploying the proxy outside the factory flow.
         address directDeployer = address(0xFA01);
 
-        // Call: Deploy the proxy and read whitelist and implementation storage slots.
+        // Call: Deploy the proxy.
         vm.prank(directDeployer);
         OrganizationProxy proxy = new OrganizationProxy(address(whitelist));
         address proxyAddr = address(proxy);
 
-        // Verify: whitelist slot is populated, implementation slot stays empty pre bind.
+        // Verify: read deployer, whitelist, and implementation slots directly from proxy storage post-construction.
+        bytes32 deployerWord = vm.load(proxyAddr, LibOrganizationDeployerAddressStorage.STORAGE_LOCATION);
+        assertEq(
+            address(uint160(uint256(deployerWord))), directDeployer, "deployer slot should store constructor msg.sender"
+        );
+
         bytes32 whitelistWord = vm.load(proxyAddr, LibOrganizationUpgradeStorage.STORAGE_LOCATION);
         assertEq(address(uint160(uint256(whitelistWord))), address(whitelist), "whitelist slot mismatch");
 
@@ -53,13 +62,23 @@ contract OrganizationProxyTest is InitializationSuiteBase {
             "ERC1967 implementation slot should be empty pre-bind"
         );
 
-        // After binding, the delegated read works and reports the recorded deployer.
+        // Call: Bind the implementation.
         vm.prank(directDeployer);
         proxy.setInitialImplementation(address(implementation));
+
+        // Verify: implementation slot now holds the bound implementation address.
+        bytes32 implementationWordAfterBind = vm.load(proxyAddr, ERC1967_IMPLEMENTATION_SLOT);
+        assertEq(
+            address(uint160(uint256(implementationWordAfterBind))),
+            address(implementation),
+            "implementation slot should hold bound impl after setInitialImplementation"
+        );
+
+        // Verify: delegation to the bound implementation works and reports the recorded deployer.
         assertEq(
             IOrganization(proxyAddr).getDeployerAddress(),
             directDeployer,
-            "deployer slot should store constructor msg.sender"
+            "deployer slot should store constructor msg.sender (via delegated read)"
         );
     }
 
@@ -275,14 +294,14 @@ contract OrganizationProxyTest is InitializationSuiteBase {
         address proxyAddr = address(proxy);
         IOrganization organization = IOrganization(proxyAddr);
 
-        bytes32 deployerBefore = vm.load(proxyAddr, 0x56adc8ceae2dbb943ac8b82714e40a1aac36fca8b6dbb11dfc9941c4d04f2400);
+        bytes32 deployerBefore = vm.load(proxyAddr, LibOrganizationDeployerAddressStorage.STORAGE_LOCATION);
         bytes32 whitelistBefore = vm.load(proxyAddr, LibOrganizationUpgradeStorage.STORAGE_LOCATION);
 
         // Call: Initialize the proxy and reload deployer/whitelist storage words.
         vm.prank(deployer);
         organization.initialize(params);
 
-        bytes32 deployerAfter = vm.load(proxyAddr, 0x56adc8ceae2dbb943ac8b82714e40a1aac36fca8b6dbb11dfc9941c4d04f2400);
+        bytes32 deployerAfter = vm.load(proxyAddr, LibOrganizationDeployerAddressStorage.STORAGE_LOCATION);
         bytes32 whitelistAfter = vm.load(proxyAddr, LibOrganizationUpgradeStorage.STORAGE_LOCATION);
 
         // Verify: Deployer and whitelist storage slots are unchanged by initialization.
