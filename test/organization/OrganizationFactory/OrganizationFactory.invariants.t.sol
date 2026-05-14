@@ -78,7 +78,6 @@ contract OrganizationFactoryInvariantsTest is Test {
     /// @dev Verifies successful factory deployments always match CREATE2 precompute.
     function invariant_factoryDeployments_alwaysMatchComputedAddress() public view {
         OrganizationFactoryHarness factory = OrganizationFactoryHarness(handler.factoryAddress());
-        address implementation = handler.implementationAddress();
         address whitelist = handler.whitelistAddress();
 
         uint256 length = handler.deploymentRecordsLength();
@@ -88,7 +87,7 @@ contract OrganizationFactoryInvariantsTest is Test {
                 continue;
             }
 
-            address computed = factory.computeOrganizationAddress(record.salt, implementation, whitelist);
+            address computed = factory.computeOrganizationAddress(record.salt, whitelist);
             assertEq(computed, record.organization, "factory deployment must match computed address");
         }
     }

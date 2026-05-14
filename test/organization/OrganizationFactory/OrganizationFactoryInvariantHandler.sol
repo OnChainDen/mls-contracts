@@ -97,7 +97,9 @@ contract OrganizationFactoryInvariantHandler {
             return;
         }
 
-        address proxy = address(new OrganizationProxy(address(IMPLEMENTATION), address(WHITELIST)));
+        OrganizationProxy proxyContract = new OrganizationProxy(address(WHITELIST));
+        proxyContract.setInitialImplementation(address(IMPLEMENTATION));
+        address proxy = address(proxyContract);
         InitializationParams memory params = _buildValidParams(seed);
 
         // Successful direct-init deployments are tracked with `viaFactory = false`.
@@ -118,7 +120,7 @@ contract OrganizationFactoryInvariantHandler {
         // Force initialization failure by violating guardian validation.
         params.guardian = address(0);
 
-        address computed = FACTORY.computeOrganizationAddress(salt, address(IMPLEMENTATION), address(WHITELIST));
+        address computed = FACTORY.computeOrganizationAddress(salt, address(WHITELIST));
         // Skip already-deployed tuples; this path only validates failure rollback on empty targets.
         if (computed.code.length != 0) {
             return;
@@ -144,7 +146,9 @@ contract OrganizationFactoryInvariantHandler {
             return;
         }
 
-        address proxy = address(new OrganizationProxy(address(IMPLEMENTATION), address(WHITELIST)));
+        OrganizationProxy proxyContract = new OrganizationProxy(address(WHITELIST));
+        proxyContract.setInitialImplementation(address(IMPLEMENTATION));
+        address proxy = address(proxyContract);
         InitializationParams memory params = _buildValidParams(seed);
         params.guardian = address(0);
 

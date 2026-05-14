@@ -50,6 +50,11 @@ interface IOrganizationInitialization {
     error UnauthorizedDeployer();
 
     /**
+     * @notice Error thrown when the proxy's implementation slot has already been bound
+     */
+    error ImplementationAlreadySet();
+
+    /**
      * @notice Error thrown when no members are provided during initialization
      */
     error NoMembersProvided();

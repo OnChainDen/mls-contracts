@@ -405,8 +405,8 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
     function test_accessControlMatrix_rejectsUnauthorizedCallersAcrossProtectedEntrypoints() public {
         // Setup: deploy one fresh proxy that has not been initialized yet to exercise `onlyDeployer`, then deploy one
         // initialized organization and stage pending guardian and recovery updates for the other modifier branches.
-        OrganizationProxy uninitializedProxy =
-            new OrganizationProxy(address(lifecycleImplementation), address(whitelist));
+        OrganizationProxy uninitializedProxy = new OrganizationProxy(address(whitelist));
+        uninitializedProxy.setInitialImplementation(address(lifecycleImplementation));
         InitializationParams memory params = _buildInitializationParams(address(versionedAccountImplementationV1));
 
         vm.expectRevert(IOrganizationInitialization.UnauthorizedDeployer.selector);
@@ -968,8 +968,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
     /// @param accountSalt CREATE2 salt used for account deployment.
     function testFuzz_factoryAndAccountPrecomputesMatchRuntime(bytes32 organizationSalt, bytes32 accountSalt) public {
         // Setup: precompute both deployment addresses before executing the real factory and account-factory paths.
-        address expectedOrganization =
-            factory.computeOrganizationAddress(organizationSalt, address(lifecycleImplementation), address(whitelist));
+        address expectedOrganization = factory.computeOrganizationAddress(organizationSalt, address(whitelist));
         OrganizationImplementationHarness organization = _deployOrganizationHarness(organizationSalt);
         address expectedAccount = organization.computeAccountAddress(accountSalt);
 

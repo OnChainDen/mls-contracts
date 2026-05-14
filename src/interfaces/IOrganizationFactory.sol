@@ -34,9 +34,10 @@ interface IOrganizationFactory {
     /**
      * @notice Deploys and initializes a new OrganizationProxy at a deterministic address
      * @dev Uses CREATE2 to ensure the same address across different chains.
-     *      Deployment and initialization are atomic - if initialization fails, the entire transaction reverts.
+     *      Deployment, setting the implementation address, and initialization are atomic - if initialization fails, the
+     * entire transaction reverts.
      * @param salt The salt for CREATE2 deployment
-     * @param implementationAddress The address of the OrganizationImplementation contract
+     * @param implementationAddress The OrganizationImplementation address to bind to the new proxy
      * @param whitelistAddress The address of the implementation whitelist contract
      * @param initParams The initialization parameters for the organization
      * @return organizationAddress The address of the deployed organization proxy
@@ -51,14 +52,10 @@ interface IOrganizationFactory {
     /**
      * @notice Computes the address where an organization proxy would be deployed
      * @param salt The salt for CREATE2 deployment
-     * @param implementationAddress The address of the OrganizationImplementation contract
      * @param whitelistAddress The address of the implementation whitelist contract
      * @return The computed address
      */
-    function computeOrganizationAddress(bytes32 salt, address implementationAddress, address whitelistAddress)
-        external
-        view
-        returns (address);
+    function computeOrganizationAddress(bytes32 salt, address whitelistAddress) external view returns (address);
 
     /**
      * @notice The address authorized to deploy organization proxies

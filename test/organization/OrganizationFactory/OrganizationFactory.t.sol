@@ -4,6 +4,7 @@ pragma solidity 0.8.33;
 
 import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgradeable.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {Errors} from "@openzeppelin/contracts/utils/Errors.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -226,13 +227,12 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` rejects `implementationAddress == address(0)`.
     function test_deployOrganization_zeroImplementation_reverts() public {
-        // Setup: Prepare deployment inputs with a zero implementation while keeping whitelist checks enabled.
+        // Setup: Prepare deployment inputs with a zero implementation.
         bytes32 salt = bytes32(uint256(2004));
         InitializationParams memory params = _defaultInitializationParams();
 
-        whitelist.setImplementationWhitelisted(ContractType.Organization, address(0), true);
-
-        // Call: attempt deployment with zero implementation and expect the explicit zero-address guard.
+        // Call: attempt deployment with zero implementation and expect `ZeroAddress` (bubbled up from
+        // `OrganizationProxy.setInitialImplementation`'s zero-address guard).
         vm.expectRevert(IOrganizationFactory.ZeroAddress.selector);
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(salt, address(0), address(whitelist), params);
@@ -263,9 +263,9 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         bytes32 salt = bytes32(uint256(2006));
         InitializationParams memory params = _defaultInitializationParams();
 
-        // Call: Attempt deployment with zero whitelist and expect a bare EVM revert (Solidity extcodesize check
-        // fails when calling a function on address(0) which has no code).
-        vm.expectRevert(bytes(""));
+        // Call: Attempt deployment with zero whitelist and expect `ZeroAddress` (bubbled up from the
+        // OrganizationProxy constructor's whitelist guard during CREATE2 deployment).
+        vm.expectRevert(IOrganizationFactory.ZeroAddress.selector);
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(salt, address(implementation), address(0), params);
 
@@ -280,34 +280,31 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         InitializationParams memory params = _defaultInitializationParams();
         address eoaWhitelist = address(0xEE01);
 
-        // Call: Attempt deployment against the EOA whitelist and expect a bare EVM revert (Solidity extcodesize
-        // check fails when calling a function on an EOA which has no code).
-        vm.expectRevert(bytes(""));
+        // Call: Attempt deployment against the EOA whitelist and expect `AddressEmptyCode` (bubbled up from
+        // the OrganizationProxy constructor's whitelist code-presence guard during CREATE2 deployment).
+        vm.expectRevert(abi.encodeWithSelector(Address.AddressEmptyCode.selector, eoaWhitelist));
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(salt, address(implementation), eoaWhitelist, params);
 
         // Verify: The revert captures the requirement that whitelist must be a valid contract endpoint.
     }
 
-    /// @dev Verifies a reverting whitelist blocks deployment before proxy code or deployment events can persist.
-    function test_deployOrganization_whitelistRevert_leavesNoCodeOrEvent() public {
+    /// @dev Verifies a reverting whitelist rolls back the proxy deployment so no code persists.
+    function test_deployOrganization_whitelistRevert_leavesNoCode() public {
         // Setup: configure a reverting whitelist payload and precompute the address that would otherwise be deployed.
         bytes32 salt = bytes32(uint256(20_071));
         InitializationParams memory params = _defaultInitializationParams();
-        address expected = factory.computeOrganizationAddress(salt, address(implementation), address(whitelist));
+        address expected = factory.computeOrganizationAddress(salt, address(whitelist));
         bytes memory revertData = bytes("WHITELIST_REVERT");
         whitelist.setForceRevert(true, revertData);
-        vm.recordLogs();
 
-        // Call: attempt deployment and expect whitelist validation to fail before any proxy deployment side effects.
+        // Call: attempt deployment and expect the whitelist validation inside `setInitialImplementation` to revert.
         vm.expectRevert(revertData);
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(salt, address(implementation), address(whitelist), params);
 
-        // Verify: the reverted deployment leaves no runtime code and no `OrganizationDeployed` event behind.
-        Vm.Log[] memory logs = vm.getRecordedLogs();
+        // Verify: the reverted deployment leaves no runtime code at the precomputed CREATE2 address.
         assertEq(expected.code.length, 0, "whitelist revert should leave no deployed proxy code");
-        assertEq(_countTopic(logs, ORG_DEPLOYED_TOPIC), 0, "whitelist revert should not emit OrganizationDeployed");
     }
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` reverts on a second deployment of the same CREATE2
@@ -329,9 +326,11 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         // Verify: CREATE2 collision protection is enforced by the expected failed deployment revert.
     }
 
-    /// @dev Verifies `OrganizationFactory.deployOrganization` derives different addresses for the same salt when
-    /// implementation changes.
-    function test_deployOrganization_sameSaltDifferentImplementation_producesDifferentAddresses() public {
+    /// @dev Verifies the CREATE2 address is independent of the implementation version. Deploying with
+    ///      the same salt and whitelist resolves to the same address regardless of implementation, so
+    ///      the second deployment collides with the first and reverts. This is what makes cross-chain
+    ///      address stability work even when each chain has a different head implementation.
+    function test_deployOrganization_sameSaltDifferentImplementation_collidesAndReverts() public {
         // Setup: Prepare a second valid organization implementation and whitelist it.
         bytes32 salt = bytes32(uint256(2009));
         InitializationParams memory params = _defaultInitializationParams();
@@ -339,17 +338,49 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         OrganizationImplementationHarness implementationV2 = new OrganizationImplementationHarness();
         whitelist.setImplementationWhitelisted(ContractType.Organization, address(implementationV2), true);
 
+        // First deploy succeeds.
         vm.prank(AUTHORIZED_DEPLOYER);
         address deployedA = factory.deployOrganization(salt, address(implementation), address(whitelist), params);
-
-        // Call: Deploy twice with the same salt and whitelist but different implementations.
-        vm.prank(AUTHORIZED_DEPLOYER);
-        address deployedB = factory.deployOrganization(salt, address(implementationV2), address(whitelist), params);
-
-        // Verify: Both deployments succeed and resolve to distinct CREATE2 addresses.
-        assertTrue(deployedA != deployedB, "different implementation should produce different CREATE2 address");
         assertGt(deployedA.code.length, 0, "first deployment should have code");
-        assertGt(deployedB.code.length, 0, "second deployment should have code");
+
+        // Verify: precomputed address does not depend on implementation. It matches the first deploy.
+        address recomputed = factory.computeOrganizationAddress(salt, address(whitelist));
+        assertEq(recomputed, deployedA, "computed address must be implementation agnostic");
+
+        // Call: Second deploy with the same salt and whitelist but a different implementation
+        // reverts due to CREATE2 collision.
+        vm.expectRevert(Errors.FailedDeployment.selector);
+        vm.prank(AUTHORIZED_DEPLOYER);
+        factory.deployOrganization(salt, address(implementationV2), address(whitelist), params);
+    }
+
+    /// @dev Verifies the proxy address is stable across an implementation rotation. Rotates the whitelist head
+    ///      implementation and confirms a deployment under the new head lands at the same address the old head
+    ///      would have used. This models the cross-chain scenario where each chain has rotated to a different
+    ///      implementation but the factory and whitelist addresses match.
+    function test_deployOrganization_addressStableAcrossImplementationRotation() public {
+        // Setup: snapshot the impl-agnostic computed address before rotation.
+        bytes32 salt = bytes32(uint256(2031));
+        InitializationParams memory params = _defaultInitializationParams();
+        address computedBeforeRotation = factory.computeOrganizationAddress(salt, address(whitelist));
+
+        // Rotate the whitelist: unwhitelist the original implementation and whitelist a new one.
+        OrganizationImplementationHarness rotatedImplementation = new OrganizationImplementationHarness();
+        whitelist.setImplementationWhitelisted(ContractType.Organization, address(implementation), false);
+        whitelist.setImplementationWhitelisted(ContractType.Organization, address(rotatedImplementation), true);
+
+        // The computed address must be unchanged by the rotation.
+        address computedAfterRotation = factory.computeOrganizationAddress(salt, address(whitelist));
+        assertEq(
+            computedAfterRotation,
+            computedBeforeRotation,
+            "computed address must be stable across implementation rotation"
+        );
+
+        // Deploying with the rotated implementation lands at exactly that address.
+        vm.prank(AUTHORIZED_DEPLOYER);
+        address deployed = factory.deployOrganization(salt, address(rotatedImplementation), address(whitelist), params);
+        assertEq(deployed, computedBeforeRotation, "deployment must equal pre-rotation precompute");
     }
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` derives different addresses for the same salt when
@@ -393,9 +424,9 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         bytes32 saltB = bytes32(uint256(2012));
         bytes32 saltC = bytes32(uint256(2013));
 
-        address computedA = factory.computeOrganizationAddress(saltA, address(implementation), address(whitelist));
-        address computedB = factory.computeOrganizationAddress(saltB, address(implementation), address(whitelist));
-        address computedC = factory.computeOrganizationAddress(saltC, address(implementation), address(whitelist));
+        address computedA = factory.computeOrganizationAddress(saltA, address(whitelist));
+        address computedB = factory.computeOrganizationAddress(saltB, address(whitelist));
+        address computedC = factory.computeOrganizationAddress(saltC, address(whitelist));
 
         // Call: Attempt deployment for each invalid variant and expect the row-specific revert.
         vm.expectRevert(IOrganizationInitialization.NoMembersProvided.selector);
@@ -469,7 +500,7 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         IncompatibleOrganizationImplementation badImplementation = new IncompatibleOrganizationImplementation();
         whitelist.setImplementationWhitelisted(ContractType.Organization, address(badImplementation), true);
 
-        address expected = factory.computeOrganizationAddress(salt, address(badImplementation), address(whitelist));
+        address expected = factory.computeOrganizationAddress(salt, address(whitelist));
 
         // Call: Attempt deployment with the incompatible implementation and expect a bare EVM revert
         // (delegatecall to an implementation without `initialize` function or fallback).
@@ -579,24 +610,21 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
 
         // Call: Compute the organization address from two different callers with identical inputs.
         vm.prank(AUTHORIZED_DEPLOYER);
-        address computedA = factory.computeOrganizationAddress(salt, address(implementation), address(whitelist));
+        address computedA = factory.computeOrganizationAddress(salt, address(whitelist));
 
         vm.prank(UNAUTHORIZED_CALLER);
-        address computedB = factory.computeOrganizationAddress(salt, address(implementation), address(whitelist));
+        address computedB = factory.computeOrganizationAddress(salt, address(whitelist));
 
         // Verify: Identical inputs produce the same deterministic CREATE2 address.
         assertEq(computedA, computedB, "same inputs should return deterministic address");
     }
 
-    /// @dev Verifies `OrganizationFactory.computeOrganizationAddress` changes when salt, implementation, whitelist, or
-    /// factory address changes.
-    function test_computeOrganizationAddress_changesAcrossTupleDimensions() public {
-        // Setup: Build alternate salt, implementation, whitelist, and factory inputs for tuple dimension checks.
+    /// @dev Verifies `OrganizationFactory.computeOrganizationAddress` is independent of the implementation
+    ///      version and only changes with salt, whitelist, or factory address.
+    function test_computeOrganizationAddress_implIndependentChangesAcrossOtherDimensions() public {
+        // Setup: Build alternate salt, whitelist, and factory inputs for tuple dimension checks.
         bytes32 saltA = bytes32(uint256(3002));
         bytes32 saltB = bytes32(uint256(3003));
-
-        OrganizationImplementationHarness implementationV2 = new OrganizationImplementationHarness();
-        whitelist.setImplementationWhitelisted(ContractType.Organization, address(implementationV2), true);
 
         InitializationWhitelistMock whitelistV2 = new InitializationWhitelistMock();
         whitelistV2.setImplementationWhitelisted(ContractType.Organization, address(implementation), true);
@@ -604,17 +632,13 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         OrganizationFactoryHarness factoryV2 = new OrganizationFactoryHarness(AUTHORIZED_DEPLOYER);
 
         // Call: Compute addresses across the base tuple and each modified tuple dimension.
-        address base = factory.computeOrganizationAddress(saltA, address(implementation), address(whitelist));
-        address differentSalt = factory.computeOrganizationAddress(saltB, address(implementation), address(whitelist));
-        address differentImpl = factory.computeOrganizationAddress(saltA, address(implementationV2), address(whitelist));
-        address differentWhitelist =
-            factory.computeOrganizationAddress(saltA, address(implementation), address(whitelistV2));
-        address differentFactory =
-            factoryV2.computeOrganizationAddress(saltA, address(implementation), address(whitelist));
+        address base = factory.computeOrganizationAddress(saltA, address(whitelist));
+        address differentSalt = factory.computeOrganizationAddress(saltB, address(whitelist));
+        address differentWhitelist = factory.computeOrganizationAddress(saltA, address(whitelistV2));
+        address differentFactory = factoryV2.computeOrganizationAddress(saltA, address(whitelist));
 
-        // Verify: Each tuple variation produces a distinct computed address.
+        // Verify: salt, whitelist, and factory all change the address. Implementation is no longer in the formula.
         assertTrue(base != differentSalt, "different salt should produce different computed address");
-        assertTrue(base != differentImpl, "different implementation should produce different computed address");
         assertTrue(base != differentWhitelist, "different whitelist should produce different computed address");
         assertTrue(base != differentFactory, "different factory address should produce different computed address");
     }
@@ -626,19 +650,19 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         bytes32 salt = bytes32(uint256(3004));
         InitializationParams memory params = _defaultInitializationParams();
 
-        bytes memory bytecode = factory.getOrganizationProxyBytecode(address(implementation), address(whitelist));
+        bytes memory bytecode = factory.getOrganizationProxyBytecode(address(whitelist));
         bytes32 initCodeHash = keccak256(bytecode);
 
         address manual =
             address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(factory), salt, initCodeHash)))));
 
-        address computedBefore = factory.computeOrganizationAddress(salt, address(implementation), address(whitelist));
+        address computedBefore = factory.computeOrganizationAddress(salt, address(whitelist));
 
         // Call: Deploy once and recompute the address after deployment.
         vm.prank(AUTHORIZED_DEPLOYER);
         address deployed = factory.deployOrganization(salt, address(implementation), address(whitelist), params);
 
-        address computedAfter = factory.computeOrganizationAddress(salt, address(implementation), address(whitelist));
+        address computedAfter = factory.computeOrganizationAddress(salt, address(whitelist));
 
         // Verify: Manual formula, precompute, deployed address, and post-deploy compute value are all equal.
         assertEq(computedBefore, manual, "compute should match manual CREATE2 formula");
@@ -646,32 +670,28 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         assertEq(computedAfter, computedBefore, "compute should remain unchanged after deployment");
     }
 
-    /// @dev Verifies `OrganizationFactory.getOrganizationProxyBytecode` returns deterministic constructor-encoded
-    /// bytecode and stable init-code hashes.
+    /// @dev Verifies `OrganizationFactory.getOrganizationProxyBytecode` returns deterministic whitelist-only
+    ///      bytecode without an implementation in the constructor args.
     function test_getOrganizationProxyBytecode_matchesExpectedEncodingAndHashBehavior() public {
-        // Setup: Prepare baseline and variant implementation/whitelist addresses for bytecode comparisons.
-        address implA = address(implementation);
-        address implB = address(new OrganizationImplementationHarness());
+        // Setup: Prepare baseline and variant whitelist addresses for bytecode comparisons.
         address whitelistA = address(whitelist);
         address whitelistB = address(new InitializationWhitelistMock());
 
         // Call: Build bytecode across baseline and variant inputs and compute associated hashes.
-        bytes memory bytecodeA1 = factory.getOrganizationProxyBytecode(implA, whitelistA);
-        bytes memory bytecodeA2 = factory.getOrganizationProxyBytecode(implA, whitelistA);
-        bytes memory bytecodeB = factory.getOrganizationProxyBytecode(implB, whitelistA);
-        bytes memory bytecodeC = factory.getOrganizationProxyBytecode(implA, whitelistB);
+        bytes memory bytecodeA1 = factory.getOrganizationProxyBytecode(whitelistA);
+        bytes memory bytecodeA2 = factory.getOrganizationProxyBytecode(whitelistA);
+        bytes memory bytecodeC = factory.getOrganizationProxyBytecode(whitelistB);
 
-        bytes memory expected = abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implA, whitelistA));
+        bytes memory expected = abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(whitelistA));
 
         bytes32 salt = bytes32(uint256(1));
         bytes32 initCodeHash = keccak256(bytecodeA1);
         address manualAddr = Create2.computeAddress(salt, initCodeHash, address(factory));
-        address factoryAddr = factory.computeOrganizationAddress(salt, implA, whitelistA);
+        address factoryAddr = factory.computeOrganizationAddress(salt, whitelistA);
 
-        // Verify: Bytecode encoding, determinism, input sensitivity, and hash stability all match expected behavior.
+        // Verify: Bytecode encoding, determinism, whitelist sensitivity, and hash stability match expectations.
         assertEq(bytecodeA1, expected, "proxy bytecode should match expected constructor encoding");
         assertEq(bytecodeA1, bytecodeA2, "bytecode should be deterministic for same inputs");
-        assertTrue(keccak256(bytecodeA1) != keccak256(bytecodeB), "bytecode hash should differ by implementation");
         assertTrue(keccak256(bytecodeA1) != keccak256(bytecodeC), "bytecode hash should differ by whitelist");
         assertEq(
             manualAddr,

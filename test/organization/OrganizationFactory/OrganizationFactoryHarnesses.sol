@@ -186,15 +186,10 @@ contract OrganizationFactoryHarness is OrganizationFactory {
     constructor(address deployerAddress) OrganizationFactory(deployerAddress) {}
 
     /// @dev Exposes internal proxy-bytecode construction for deterministic CREATE2 hash assertions.
-    /// @param implementationAddress Implementation address encoded into proxy creation bytecode.
     /// @param whitelistAddress Whitelist address encoded into proxy creation bytecode.
     /// @return Proxy creation bytecode assembled by `_getOrganizationProxyBytecode`.
-    function getOrganizationProxyBytecode(address implementationAddress, address whitelistAddress)
-        external
-        pure
-        returns (bytes memory)
-    {
-        return _getOrganizationProxyBytecode(implementationAddress, whitelistAddress);
+    function getOrganizationProxyBytecode(address whitelistAddress) external pure returns (bytes memory) {
+        return _getOrganizationProxyBytecode(whitelistAddress);
     }
 }
 
