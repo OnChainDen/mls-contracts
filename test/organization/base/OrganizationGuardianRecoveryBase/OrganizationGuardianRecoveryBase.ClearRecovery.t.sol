@@ -10,6 +10,9 @@ import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRe
 import {TimelockUtils} from "libraries/TimelockUtils.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 import {
+    MockAccountForOrganizationTransaction
+} from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseMocks.sol";
+import {
     OrganizationClearRecoveryHarness
 } from "test/organization/base/OrganizationGuardianRecoveryBase/OrganizationClearRecoveryHarness.sol";
 import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
@@ -38,6 +41,7 @@ contract OrganizationGuardianRecoveryBaseClearRecoveryTest is OrganizationAdminT
     address internal constant GUARDIAN_RECOVERY_ADDRESS = address(0xAA11);
     address internal constant GUARDIAN_RECOVERY_ADDRESS_B = address(0xAA12);
     address internal constant NEW_GUARDIAN_A = address(0xAB11);
+    address internal constant NEW_GUARDIAN_B = address(0xAB12);
 
     /// @dev Deterministic tx-recovery fixtures.
     address internal constant TX_RECOVERY_ADDRESS = address(0xBB11);
@@ -328,49 +332,424 @@ contract OrganizationGuardianRecoveryBaseClearRecoveryTest is OrganizationAdminT
         assertEq(grState.pendingInit.pendingTimestamp, 0, "guardian pending init timestamp should clear");
     }
 
-    /// @dev Verifies that after a clear, both deferred-init flows can re-stage a pending initialization for a fresh
-    /// recovery address. Exercises the clear -> re-initialize loop end to end for guardian recovery.
-    function test_clearRecovery_thenReInitializeGuardianRecovery() public {
-        // Setup: stage admin auth for the clear and a follow-up initiate-init payload bound to a fresh recovery
-        // address with a different timelock duration.
+    /// @dev End-to-end verification of a full guardian-recovery rotation. Walks clear -> initiate-init ->
+    /// finalize-init for the guardian-recovery track, then exercises the disaster recovery flow itself by having
+    /// the freshly-installed recovery address drive `initiateRecoveryGuardianUpdate` ->
+    /// `finalizeRecoveryGuardianUpdate` -> `acceptGuardianRecovery`, ending with a brand-new guardian on the
+    /// Organization.
+    ///
+    /// The test first exercises the originally-configured recovery address end to end (pre-clear disaster
+    /// recovery, rotating the guardian to `NEW_GUARDIAN_A`) so that a passing post-clear flow can be attributed
+    /// to the clear + re-init path actually working, rather than to the initial recovery setup never having been
+    /// functional in the first place. The post-clear disaster recovery uses a different target guardian
+    /// (`NEW_GUARDIAN_B`) so the two rotations are observably distinct.
+    ///
+    /// After finalize-init:
+    ///   - `guardianRecovery.recoveryAddress` is the new address with the new timelock.
+    ///   - The pending-init tuple is wiped.
+    ///   - The previously-configured recovery address is no longer accepted on the track.
+    ///
+    /// After the post-clear recovery-guardian-update flow:
+    ///   - `LibOrganizationGuardianStorage.guardian` is `NEW_GUARDIAN_B`.
+    ///   - All guardian-recovery pending fields are wiped.
+    function test_endToEnd_clearReInitializeAndPerformGuardianRecovery() public {
+        // Setup: single-admin threshold. Pick a fresh recovery address and a different timelock so the post-finalize
+        // state is observably distinct from the pre-clear configuration. Use NEW_GUARDIAN_A as the pre-clear
+        // disaster-recovery target and NEW_GUARDIAN_B as the post-clear target so the two rotations cannot be
+        // confused.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+        address newRecoveryAddress = GUARDIAN_RECOVERY_ADDRESS_B;
+        uint256 newTimelock = GUARDIAN_RECOVERY_TIMELOCK + 1 days;
+        address preClearTargetGuardian = NEW_GUARDIAN_A;
+        address postClearTargetGuardian = NEW_GUARDIAN_B;
+
+        // PRE-CLEAR DISASTER RECOVERY: prove the originally-configured recovery address (`GUARDIAN_RECOVERY_ADDRESS`)
+        // actually works end to end, so any later success after the clear can be attributed to the clear/re-init
+        // path rather than to the initial setup never having been functional. Drives the full
+        // initiate -> finalize -> accept recovery-guardian-update flow and ends with the active guardian rotated
+        // from `GUARDIAN` to `preClearTargetGuardian`. From here on, the active guardian is `preClearTargetGuardian`.
+        assertEq(harness.getGuardianStorage(), GUARDIAN, "pre-clear-DR: guardian should start as the original guardian");
+        vm.prank(GUARDIAN_RECOVERY_ADDRESS);
+        harness.initiateRecoveryGuardianUpdate(preClearTargetGuardian);
+        vm.warp(block.timestamp + GUARDIAN_RECOVERY_TIMELOCK);
+        vm.prank(GUARDIAN_RECOVERY_ADDRESS);
+        harness.finalizeRecoveryGuardianUpdate();
+        vm.prank(preClearTargetGuardian);
+        harness.acceptGuardianRecovery();
+        assertEq(
+            harness.getGuardianStorage(),
+            preClearTargetGuardian,
+            "pre-clear-DR: configured guardian-recovery flow should have rotated the active guardian"
+        );
+        // From here on, all `onlyGuardian`-gated calls must be made by `activeGuardian`, not the original `GUARDIAN`.
+        address activeGuardian = preClearTargetGuardian;
+
+        // Step 1: clear both tracks via the admin-gated entrypoint, called by the now-active guardian.
         (AdminAuthParams memory clearAuth,) = _buildClearRecoveryAuth({
-            salt: 12_007,
-            expiration: block.timestamp + 1 days,
+            salt: 13_300,
+            expiration: block.timestamp + 30 days,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        bytes memory reInitGuardianOpData = abi.encode(GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK + 1 days);
-        AdminAuthParams memory reInitGuardianAuth = _buildAdminAuthParamsForEoa({
+        vm.prank(activeGuardian);
+        harness.clearRecovery(clearAuth);
+
+        // Step 2: initiate a fresh deferred init for the guardian-recovery track.
+        bytes memory initOpData = abi.encode(newRecoveryAddress, newTimelock);
+        AdminAuthParams memory initAuth = _buildAdminAuthParamsForEoa({
             operationType: OperationType.InitiateInitializeGuardianRecovery,
-            operationData: reInitGuardianOpData,
+            operationData: initOpData,
             isApproval: true,
-            salt: 12_008,
-            expirationTimestamp: block.timestamp + 1 days,
+            salt: 13_301,
+            expirationTimestamp: block.timestamp + 30 days,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(activeGuardian);
+        harness.initiateInitializeGuardianRecovery(newRecoveryAddress, newTimelock, initAuth);
+
+        // Snapshot the staged pending tuple. The finalize auth must bind to the same
+        // (address, timelock, initAttemptId) for replay protection across cancel-and-re-init cycles.
+        uint256 stagedInitAttemptId = harness.getGuardianRecoveryState().initAttemptId;
+        uint256 stagedPendingTimestamp = harness.getGuardianRecoveryState().pendingInit.pendingTimestamp;
+        assertEq(
+            harness.getGuardianRecoveryState().pendingInit.pendingRecoveryAddress,
+            newRecoveryAddress,
+            "pre-finalize: pending init address should match the deferred-init payload"
+        );
+        assertEq(
+            harness.getGuardianRecoveryState().pendingInit.pendingTimelockDurationSeconds,
+            newTimelock,
+            "pre-finalize: pending init timelock should match the deferred-init payload"
+        );
+        assertEq(
+            harness.getGuardianRecoveryState().recoveryAddress,
+            address(0),
+            "pre-finalize: recovery address should still be unconfigured"
+        );
+
+        // Step 3: warp to the admin-operation timelock horizon so finalize is allowed.
+        vm.warp(stagedPendingTimestamp);
+
+        // Step 4: build the finalize-init auth bound to the staged tuple + initAttemptId.
+        bytes memory finalizeOpData = abi.encode(newRecoveryAddress, newTimelock, stagedInitAttemptId);
+        AdminAuthParams memory finalizeAuth = _buildAdminAuthParamsForEoa({
+            operationType: OperationType.FinalizeInitializeGuardianRecovery,
+            operationData: finalizeOpData,
+            isApproval: true,
+            salt: 13_302,
+            expirationTimestamp: block.timestamp + 30 days,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: clear both tracks, then re-initiate a fresh guardian-recovery deferred init.
+        // Step 5: finalize and expect the `GuardianRecoveryInitializationFinalized` event with the new params.
+        vm.expectEmit(true, true, true, true);
+        emit IOrganizationGuardianRecovery.GuardianRecoveryInitializationFinalized(newRecoveryAddress, newTimelock);
+        vm.prank(activeGuardian);
+        harness.finalizeInitializeGuardianRecovery(finalizeAuth);
+
+        // Verify: post-finalize state reflects the new recovery configuration with the pending tuple wiped.
+        GuardianRecoveryState memory finalState = harness.getGuardianRecoveryState();
+        assertEq(
+            finalState.recoveryAddress, newRecoveryAddress, "post-finalize: recovery address should be the new address"
+        );
+        assertEq(finalState.timelockDurationSeconds, newTimelock, "post-finalize: timelock should be the new timelock");
+        assertEq(
+            finalState.pendingInit.pendingRecoveryAddress,
+            address(0),
+            "post-finalize: pending init address should clear"
+        );
+        assertEq(
+            finalState.pendingInit.pendingTimelockDurationSeconds,
+            0,
+            "post-finalize: pending init timelock should clear"
+        );
+        assertEq(finalState.pendingInit.pendingTimestamp, 0, "post-finalize: pending init timestamp should clear");
+        assertFalse(finalState.isUpdateReadyForAcceptance, "post-finalize: ready-for-acceptance flag should be false");
+        assertEq(finalState.pendingGuardian, address(0), "post-finalize: pending guardian should be unset");
+
+        // Functional sanity: the previously-configured recovery address no longer has authority on this track.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationGuardianRecovery.UnauthorizedGuardianRecoveryAddress.selector,
+                GUARDIAN_RECOVERY_ADDRESS,
+                newRecoveryAddress
+            )
+        );
+        vm.prank(GUARDIAN_RECOVERY_ADDRESS);
+        harness.cancelRecoveryGuardianUpdate();
+
+        // POST-CLEAR DISASTER RECOVERY: exercise the actual disaster recovery flow with the freshly-installed
+        // recovery address. This is the whole point of the rotation: the new key must be able to perform guardian
+        // recovery end to end. Targets `postClearTargetGuardian` (NEW_GUARDIAN_B) so it is observably different
+        // from the pre-clear rotation, which already moved the guardian to `preClearTargetGuardian`.
+        assertEq(
+            harness.getGuardianStorage(),
+            preClearTargetGuardian,
+            "post-clear-DR start: active guardian should still be the pre-clear-DR target"
+        );
+
+        // Step 6a: new recovery address initiates the recovery-guardian update, staging
+        // `postClearTargetGuardian` behind the new guardian-recovery timelock.
+        vm.prank(newRecoveryAddress);
+        harness.initiateRecoveryGuardianUpdate(postClearTargetGuardian);
+        uint256 disasterPendingTimestamp = harness.getGuardianRecoveryState().pendingGuardianTimestamp;
+        assertEq(
+            harness.getGuardianRecoveryState().pendingGuardian,
+            postClearTargetGuardian,
+            "post-clear-DR: pending guardian should be staged"
+        );
+        assertEq(
+            disasterPendingTimestamp,
+            block.timestamp + newTimelock,
+            "post-clear-DR: pending guardian timestamp should reflect the new track timelock"
+        );
+
+        // Step 6b: warp past the guardian-recovery timelock and finalize the update.
+        vm.warp(disasterPendingTimestamp);
+        vm.prank(newRecoveryAddress);
+        harness.finalizeRecoveryGuardianUpdate();
+        assertTrue(
+            harness.getGuardianRecoveryState().isUpdateReadyForAcceptance,
+            "post-clear-DR: ready-for-acceptance flag should be set"
+        );
+
+        // Step 6c: the new target guardian accepts, completing the post-clear disaster recovery.
+        vm.prank(postClearTargetGuardian);
+        harness.acceptGuardianRecovery();
+
+        // Verify: the post-clear disaster recovery actually rotated the guardian to the post-clear target and
+        // wiped all pending guardian-recovery state. Crucially, the active guardian is now `postClearTargetGuardian`
+        // (NEW_GUARDIAN_B), distinct from the pre-clear-DR target, confirming the post-clear flow performed a real,
+        // observably different rotation.
+        assertEq(
+            harness.getGuardianStorage(),
+            postClearTargetGuardian,
+            "post-clear-DR: guardian storage should hold the newly accepted post-clear guardian"
+        );
+        GuardianRecoveryState memory postRecoveryState = harness.getGuardianRecoveryState();
+        assertEq(postRecoveryState.pendingGuardian, address(0), "post-clear-DR: pending guardian should be wiped");
+        assertEq(
+            postRecoveryState.pendingGuardianTimestamp, 0, "post-clear-DR: pending guardian timestamp should be wiped"
+        );
+        assertFalse(
+            postRecoveryState.isUpdateReadyForAcceptance, "post-clear-DR: ready-for-acceptance flag should be cleared"
+        );
+    }
+
+    /// @dev End-to-end verification of a full tx-recovery rotation. Walks clear -> initiate-init -> finalize-init
+    /// for the tx-recovery track, then exercises the disaster recovery flow itself by having the freshly-installed
+    /// recovery address drive `initiateEnableTransactionAndERC1271Recovery` ->
+    /// `finalizeEnableTransactionAndERC1271Recovery` and finally `executeRecoveryAccountTransaction` against a
+    /// mock organization account.
+    ///
+    /// The test first exercises the originally-configured recovery address end to end (pre-clear disaster
+    /// recovery: enable + execute one recovery-path transaction) so that a passing post-clear flow can be
+    /// attributed to the clear + re-init path actually working, rather than to the initial recovery setup never
+    /// having been functional in the first place. The post-clear disaster recovery uses a different destination
+    /// and payload, and the mock account's `executionCount` is asserted to increment from 1 to 2 so the two flows
+    /// are observably distinct.
+    ///
+    /// After finalize-init:
+    ///   - `txRecovery.recoveryAddress` is the new address with the new timelock.
+    ///   - `isEnabled` is false (default-after-init), wiped by the clear.
+    ///   - The pending-init tuple is wiped.
+    ///   - The previously-configured recovery address is no longer accepted on the track.
+    ///
+    /// After the post-clear enable + execute flow:
+    ///   - `isEnabled` is true.
+    ///   - The mock account observed a second `executeTransaction(...)` with the post-clear destination, value,
+    ///     and data, and the recovery-fixed `nonce = 0`, `policyId = 0`.
+    function test_endToEnd_clearReInitializeAndPerformTxRecovery() public {
+        // Setup: single-admin threshold. Pick a fresh recovery address and a different timelock so the post-finalize
+        // state is observably distinct from the pre-clear configuration.
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+        address newRecoveryAddress = TX_RECOVERY_ADDRESS_B;
+        uint256 newTimelock = TX_RECOVERY_TIMELOCK + 1 days;
+
+        // PRE-CLEAR DISASTER RECOVERY: prove the originally-configured recovery address (`TX_RECOVERY_ADDRESS`)
+        // actually works end to end, so any later success after the clear can be attributed to the clear/re-init
+        // path rather than to the initial setup never having been functional. Drives the full
+        // enable (initiate + finalize) + `executeRecoveryAccountTransaction` flow against a mock account.
+        assertFalse(harness.getTxRecoveryState().isEnabled, "pre-clear-DR: tx recovery should start disabled");
+        vm.prank(TX_RECOVERY_ADDRESS);
+        harness.initiateEnableTransactionAndERC1271Recovery();
+        vm.warp(block.timestamp + TX_RECOVERY_TIMELOCK);
+        vm.prank(TX_RECOVERY_ADDRESS);
+        harness.finalizeEnableTransactionAndERC1271Recovery();
+        assertTrue(
+            harness.getTxRecoveryState().isEnabled,
+            "pre-clear-DR: configured tx recovery should enable end to end with the original address"
+        );
+
+        MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
+        harness.setDeployedAccount(address(account), true);
+        address preClearDestination = address(0xC0FFEE00);
+        bytes memory preClearPayload = abi.encodeWithSelector(bytes4(0xDEAD0001), uint256(1));
+        vm.prank(TX_RECOVERY_ADDRESS);
+        harness.executeRecoveryAccountTransaction(address(account), preClearDestination, 0, preClearPayload);
+        assertEq(
+            account.executionCount(),
+            1,
+            "pre-clear-DR: original recovery address should successfully execute one recovery transaction"
+        );
+        assertEq(account.lastTo(), preClearDestination, "pre-clear-DR: mock should record the pre-clear destination");
+        assertEq(account.lastData(), preClearPayload, "pre-clear-DR: mock should record the pre-clear payload");
+
+        // Step 1: clear both tracks via the admin-gated entrypoint.
+        (AdminAuthParams memory clearAuth,) = _buildClearRecoveryAuth({
+            salt: 13_400,
+            expiration: block.timestamp + 30 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
         vm.prank(GUARDIAN);
         harness.clearRecovery(clearAuth);
-        vm.prank(GUARDIAN);
-        harness.initiateInitializeGuardianRecovery(
-            GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK + 1 days, reInitGuardianAuth
+
+        // Sanity: clear wiped `isEnabled` and the recovery address. The mock account's deployed flag lives in
+        // separate account-factory storage and is untouched by the clear, so the same mock can be reused for the
+        // post-clear execution check.
+        assertFalse(
+            harness.getTxRecoveryState().isEnabled, "post-clear: isEnabled should be wiped even after pre-clear enable"
+        );
+        assertEq(
+            harness.getTxRecoveryState().recoveryAddress, address(0), "post-clear: recovery address should be wiped"
         );
 
-        // Verify: guardian recovery now has a fresh pending init tuple staged for the new recovery address.
-        GuardianRecoveryState memory grState = harness.getGuardianRecoveryState();
+        // Step 2: initiate a fresh deferred init for the tx-recovery track.
+        bytes memory initOpData = abi.encode(newRecoveryAddress, newTimelock);
+        AdminAuthParams memory initAuth = _buildAdminAuthParamsForEoa({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            operationData: initOpData,
+            isApproval: true,
+            salt: 13_401,
+            expirationTimestamp: block.timestamp + 30 days,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(newRecoveryAddress, newTimelock, initAuth);
+
+        // Snapshot the staged pending tuple. The finalize auth must bind to the same
+        // (address, timelock, initAttemptId) for replay protection across cancel-and-re-init cycles.
+        uint256 stagedInitAttemptId = harness.getTxRecoveryState().initAttemptId;
+        uint256 stagedPendingTimestamp = harness.getTxRecoveryState().pendingInit.pendingTimestamp;
         assertEq(
-            grState.pendingInit.pendingRecoveryAddress,
-            GUARDIAN_RECOVERY_ADDRESS_B,
-            "guardian recovery pending init address should match the fresh deferred init"
+            harness.getTxRecoveryState().pendingInit.pendingRecoveryAddress,
+            newRecoveryAddress,
+            "pre-finalize: pending init address should match the deferred-init payload"
         );
         assertEq(
-            grState.pendingInit.pendingTimelockDurationSeconds,
-            GUARDIAN_RECOVERY_TIMELOCK + 1 days,
-            "guardian recovery pending init timelock should match the fresh deferred init"
+            harness.getTxRecoveryState().pendingInit.pendingTimelockDurationSeconds,
+            newTimelock,
+            "pre-finalize: pending init timelock should match the deferred-init payload"
         );
-        assertEq(grState.recoveryAddress, address(0), "guardian recovery should still be unconfigured during pending");
+        assertEq(
+            harness.getTxRecoveryState().recoveryAddress,
+            address(0),
+            "pre-finalize: recovery address should still be unconfigured"
+        );
+
+        // Step 3: warp to the admin-operation timelock horizon so finalize is allowed.
+        vm.warp(stagedPendingTimestamp);
+
+        // Step 4: build the finalize-init auth bound to the staged tuple + initAttemptId.
+        bytes memory finalizeOpData = abi.encode(newRecoveryAddress, newTimelock, stagedInitAttemptId);
+        AdminAuthParams memory finalizeAuth = _buildAdminAuthParamsForEoa({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            operationData: finalizeOpData,
+            isApproval: true,
+            salt: 13_402,
+            expirationTimestamp: block.timestamp + 30 days,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Step 5: finalize and expect the `TxRecoveryInitializationFinalized` event with the new params.
+        vm.expectEmit(true, true, true, true);
+        emit IOrganizationTxRecovery.TxRecoveryInitializationFinalized(newRecoveryAddress, newTimelock);
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(finalizeAuth);
+
+        // Verify: post-finalize state reflects the new recovery configuration with the pending tuple wiped.
+        TxRecoveryState memory finalState = harness.getTxRecoveryState();
+        assertEq(
+            finalState.recoveryAddress, newRecoveryAddress, "post-finalize: recovery address should be the new address"
+        );
+        assertEq(finalState.timelockDurationSeconds, newTimelock, "post-finalize: timelock should be the new timelock");
+        assertFalse(finalState.isEnabled, "post-finalize: isEnabled should be false (default-after-init)");
+        assertEq(finalState.pendingEnableTimestamp, 0, "post-finalize: pending enable timestamp should be unset");
+        assertEq(
+            finalState.pendingInit.pendingRecoveryAddress,
+            address(0),
+            "post-finalize: pending init address should clear"
+        );
+        assertEq(
+            finalState.pendingInit.pendingTimelockDurationSeconds,
+            0,
+            "post-finalize: pending init timelock should clear"
+        );
+        assertEq(finalState.pendingInit.pendingTimestamp, 0, "post-finalize: pending init timestamp should clear");
+
+        // Functional sanity: the previously-configured recovery address no longer has authority on this track.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationTxRecovery.UnauthorizedTxRecoveryAddress.selector, TX_RECOVERY_ADDRESS, newRecoveryAddress
+            )
+        );
+        vm.prank(TX_RECOVERY_ADDRESS);
+        harness.cancelEnableTransactionAndERC1271Recovery();
+
+        // POST-CLEAR DISASTER RECOVERY: exercise the actual disaster recovery flow with the freshly-installed
+        // recovery address. This is the whole point of the rotation: the new key must be able to perform tx
+        // recovery end to end, including executing a recovery-path account transaction. Reuses the same mock
+        // account but with a different destination and payload than the pre-clear flow, so a `executionCount`
+        // of 2 + the new captured params prove the two flows are observably distinct.
+
+        // Step 6a: new recovery address initiates the enable flow, staging the pending-enable timestamp behind
+        // the new track timelock.
+        vm.prank(newRecoveryAddress);
+        harness.initiateEnableTransactionAndERC1271Recovery();
+        uint256 disasterPendingEnable = harness.getTxRecoveryState().pendingEnableTimestamp;
+        assertEq(
+            disasterPendingEnable,
+            block.timestamp + newTimelock,
+            "post-clear-DR: pending enable timestamp should reflect the new track timelock"
+        );
+
+        // Step 6b: warp past the tx-recovery timelock and finalize the enable, flipping `isEnabled` to true.
+        vm.warp(disasterPendingEnable);
+        vm.prank(newRecoveryAddress);
+        harness.finalizeEnableTransactionAndERC1271Recovery();
+        assertTrue(
+            harness.getTxRecoveryState().isEnabled, "post-clear-DR: tx recovery should be enabled by the new address"
+        );
+        assertEq(
+            harness.getTxRecoveryState().pendingEnableTimestamp,
+            0,
+            "post-clear-DR: pending enable timestamp should clear"
+        );
+
+        // Step 6c: the new recovery address executes a recovery-path transaction against the same mock account
+        // with a different destination + payload. The organization-level event must fire with the post-clear
+        // tuple, and the account's captured params must reflect the recovery-fixed `nonce = 0`, `policyId = 0`.
+        address postClearDestination = address(0xC0FFEE01);
+        bytes memory postClearPayload = abi.encodeWithSelector(bytes4(0xDEAD0002), uint256(2));
+        vm.expectEmit(true, true, true, true);
+        emit IOrganizationTxRecovery.RecoveryAccountTransactionExecuted(
+            address(account), postClearDestination, 0, postClearPayload
+        );
+        vm.prank(newRecoveryAddress);
+        harness.executeRecoveryAccountTransaction(address(account), postClearDestination, 0, postClearPayload);
+
+        // Verify: the mock account observed exactly two execution calls in total (one pre-clear, one post-clear).
+        // The captured params reflect the post-clear flow, confirming the new recovery address really executed
+        // disaster recovery and the rotation is observably distinct from the pre-clear flow.
+        assertEq(
+            account.executionCount(), 2, "post-clear-DR: mock should now have observed two execution calls in total"
+        );
+        assertEq(account.lastTo(), postClearDestination, "post-clear-DR: mock should record the post-clear destination");
+        assertEq(account.lastValue(), 0, "post-clear-DR: mock should record post-clear value=0");
+        assertEq(account.lastData(), postClearPayload, "post-clear-DR: mock should record the post-clear payload");
+        assertEq(account.lastNonce(), 0, "recovery-path execution must use nonce=0");
+        assertEq(account.lastPolicyId(), 0, "recovery-path execution must use policyId=0");
     }
 
     /// @dev Verifies the race-the-attacker scenario: a compromised tx recovery key initiates the enable flow,
