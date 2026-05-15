@@ -394,6 +394,28 @@ contract OrganizationGuardianRecoveryBaseClearRecoveryTest is OrganizationAdminT
         vm.prank(activeGuardian);
         harness.clearRecovery(clearAuth);
 
+        // POST-CLEAR LOCKOUT: the original recovery address that just successfully rotated the guardian in the
+        // pre-clear DR step can no longer kick off another rotation. The `onlyGuardianRecoveryAddress` modifier
+        // rejects the call because `storage.recoveryAddress` is now `address(0)`. This pairs with the pre-clear
+        // "successfully performs disaster recovery" step above to demonstrate that clearing the recovery state
+        // genuinely revokes the old address's disaster-recovery capability, not just blocks calls that depend on
+        // later re-initialization.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationGuardianRecovery.UnauthorizedGuardianRecoveryAddress.selector,
+                GUARDIAN_RECOVERY_ADDRESS,
+                address(0)
+            )
+        );
+        vm.prank(GUARDIAN_RECOVERY_ADDRESS);
+        harness.initiateRecoveryGuardianUpdate(postClearTargetGuardian);
+        // Confirm the failed attempt did not stage anything.
+        assertEq(
+            harness.getGuardianRecoveryState().pendingGuardian,
+            address(0),
+            "post-clear lockout: failed initiate must not have staged a pending guardian"
+        );
+
         // Step 2: initiate a fresh deferred init for the guardian-recovery track.
         bytes memory initOpData = abi.encode(newRecoveryAddress, newTimelock);
         AdminAuthParams memory initAuth = _buildAdminAuthParamsForEoa({
@@ -613,6 +635,25 @@ contract OrganizationGuardianRecoveryBaseClearRecoveryTest is OrganizationAdminT
         );
         assertEq(
             harness.getTxRecoveryState().recoveryAddress, address(0), "post-clear: recovery address should be wiped"
+        );
+
+        // POST-CLEAR LOCKOUT: the original recovery address that just successfully executed a recovery-path
+        // transaction in the pre-clear DR step can no longer execute another one. The `onlyTxRecoveryAddress`
+        // modifier rejects the call because `storage.recoveryAddress` is now `address(0)`. This pairs with the
+        // pre-clear "successfully executes" step above to demonstrate that clearing the recovery state genuinely
+        // revokes the old address's disaster-recovery capability, not just blocks calls that depend on later
+        // re-initialization. Replays the exact same (account, destination, payload) tuple from the successful
+        // pre-clear call so the only difference is the cleared state.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationTxRecovery.UnauthorizedTxRecoveryAddress.selector, TX_RECOVERY_ADDRESS, address(0)
+            )
+        );
+        vm.prank(TX_RECOVERY_ADDRESS);
+        harness.executeRecoveryAccountTransaction(address(account), preClearDestination, 0, preClearPayload);
+        // Confirm the mock account only recorded the pre-clear execution, not the failed post-clear attempt.
+        assertEq(
+            account.executionCount(), 1, "post-clear lockout: failed execute attempt must not have reached the account"
         );
 
         // Step 2: initiate a fresh deferred init for the tx-recovery track.
