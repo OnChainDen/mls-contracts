@@ -47,6 +47,12 @@ contract OrganizationGuardianRecoveryBaseClearRecoveryTest is OrganizationAdminT
     address internal constant TX_RECOVERY_ADDRESS = address(0xBB11);
     address internal constant TX_RECOVERY_ADDRESS_B = address(0xBB12);
 
+    /// @dev Default seeded `initAttemptId` for tests representing a "fully configured" recovery track. Non-zero
+    ///      because the deferred-init flow (`initiateInitialize...`) increments the counter on every initiation
+    ///      attempt, so any track that was configured via deferred init has `initAttemptId >= 1` in practice.
+    ///      Using `1` represents "configured once via the deferred init path, no prior cancel-and-retry cycles".
+    uint256 internal constant SEEDED_INIT_ATTEMPT_ID = 1;
+
     /// @dev Combined-base harness exposing both clear and tx-recovery entrypoints under one address.
     OrganizationClearRecoveryHarness internal harness;
 
@@ -69,7 +75,22 @@ contract OrganizationGuardianRecoveryBaseClearRecoveryTest is OrganizationAdminT
         super.setUp();
         recoveryStateHarness = OrganizationGuardianRecoveryStateHarness(address(harness));
         recoveryStateHarness.setAdminOperationTimelockDurationSeconds(ADMIN_OPERATION_TIMELOCK);
-        recoveryStateHarness.setGuardianRecoveryConfig(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
+        // Seed guardian recovery via the full-state setter so we can also pin `initAttemptId` to a realistic value.
+        // A fully-configured recovery track that went through the deferred-init path always has `initAttemptId >= 1`,
+        // since `initiateInitialize...` increments the counter on every initiation attempt.
+        recoveryStateHarness.setGuardianRecoveryState(
+            GuardianRecoveryState({
+                recoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
+                isUpdateReadyForAcceptance: false,
+                pendingGuardian: address(0),
+                timelockDurationSeconds: GUARDIAN_RECOVERY_TIMELOCK,
+                pendingGuardianTimestamp: 0,
+                pendingInit: PendingRecoveryInitTimelock({
+                    pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
+                }),
+                initAttemptId: SEEDED_INIT_ATTEMPT_ID
+            })
+        );
         _seedFullyConfiguredTxRecovery();
     }
 
@@ -94,7 +115,9 @@ contract OrganizationGuardianRecoveryBaseClearRecoveryTest is OrganizationAdminT
     }
 
     /**
-     * @dev Seeds a fully configured tx recovery state with no pending state.
+     * @dev Seeds a fully configured tx recovery state with no pending state. `initAttemptId` is non-zero
+     *      (`SEEDED_INIT_ATTEMPT_ID`) because a fully-configured track that went through the deferred-init path
+     *      always has `initAttemptId >= 1` in practice.
      */
     function _seedFullyConfiguredTxRecovery() internal {
         recoveryStateHarness.setTxRecoveryState(
@@ -106,7 +129,7 @@ contract OrganizationGuardianRecoveryBaseClearRecoveryTest is OrganizationAdminT
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
                 }),
-                initAttemptId: 0
+                initAttemptId: SEEDED_INIT_ATTEMPT_ID
             })
         );
     }
@@ -1292,6 +1315,8 @@ contract OrganizationGuardianRecoveryBaseClearRecoveryTest is OrganizationAdminT
         // EOA admins with a threshold of 2 so both signatures are required.
         vm.warp(1_000_000);
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
+        // `initAttemptId` is `SEEDED_INIT_ATTEMPT_ID` (non-zero) on both tracks because any fully-configured
+        // recovery state reached via the deferred-init path has `initAttemptId >= 1` in practice.
         recoveryStateHarness.setTxRecoveryState(
             TxRecoveryState({
                 recoveryAddress: TX_RECOVERY_ADDRESS,
@@ -1301,7 +1326,7 @@ contract OrganizationGuardianRecoveryBaseClearRecoveryTest is OrganizationAdminT
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
                 }),
-                initAttemptId: 0
+                initAttemptId: SEEDED_INIT_ATTEMPT_ID
             })
         );
         recoveryStateHarness.setGuardianRecoveryState(
@@ -1314,7 +1339,7 @@ contract OrganizationGuardianRecoveryBaseClearRecoveryTest is OrganizationAdminT
                 pendingInit: PendingRecoveryInitTimelock({
                     pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
                 }),
-                initAttemptId: 0
+                initAttemptId: SEEDED_INIT_ATTEMPT_ID
             })
         );
 
