@@ -74,6 +74,15 @@ interface IOrganizationGuardianRecovery {
     event GuardianRecoveryInitializationCancelled();
 
     /**
+     * @notice Emitted when guardian recovery state is cleared by admins
+     * @dev Fires after a successful admin-authorized clear that fully resets every guardian recovery field
+     *      (recovery address, timelock duration, any pending recovery guardian update fields, and any
+     *      pending deferred initialization fields).
+     * @param previousRecoveryAddress The recovery address that was cleared (0 if none was configured)
+     */
+    event GuardianRecoveryCleared(address indexed previousRecoveryAddress);
+
+    /**
      * @notice Thrown when the guardian recovery address is invalid (zero)
      */
     error InvalidGuardianRecoveryAddress();
@@ -179,6 +188,23 @@ interface IOrganizationGuardianRecovery {
      * @param authParams The admin authorization parameters (signatures, proofs, etc.)
      */
     function cancelInitializeGuardianRecovery(AdminAuthParams calldata authParams) external;
+
+    /**
+     * @notice Clears all recovery state (transaction/ERC1271 recovery and guardian recovery) in a single call
+     * @dev Both recovery tracks are cleared together so admins can revoke
+     *      compromised keys faster than the existing recovery timelocks can elapse, regardless of which
+     *      track is at risk.
+     *      After this call returns:
+     *      - The full tx recovery state has been reset (recovery address, timelock duration, isEnabled,
+     *        pending enable timestamp, pending deferred initialization fields)
+     *      - The full guardian recovery state has been reset (recovery address, timelock duration,
+     *        pending recovery guardian update fields, pending deferred initialization fields)
+     *      - `initiateInitializeTransactionAndERC1271Recovery` and `initiateInitializeGuardianRecovery`
+     *        can each configure a fresh recovery address
+     *      Emits one `TxRecoveryCleared` and one `GuardianRecoveryCleared` event per call.
+     * @param authParams The admin authorization parameters (signatures, proofs, etc.)
+     */
+    function clearRecovery(AdminAuthParams calldata authParams) external;
 
     /**
      * @notice Returns the full guardian recovery state

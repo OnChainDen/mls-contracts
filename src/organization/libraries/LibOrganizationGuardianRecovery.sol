@@ -250,6 +250,29 @@ library LibOrganizationGuardianRecovery {
     }
 
     /**
+     * @dev Fully resets guardian recovery state so a fresh initialization can configure a new
+     *      recovery address.
+     *
+     *      Resets every field that `_validateGuardianRecoveryNotConfiguredOrRevert`
+     *      inspects, plus any pending recovery guardian update fields and the full pending initialization
+     *      struct, so `initiateInitializeGuardianRecovery` can be re-run afterwards.
+     */
+    function clearGuardianRecovery() public {
+        GuardianRecoveryState storage guardianRecovery = LibOrganizationRecoveryStorage.layout().guardianRecovery;
+
+        address previousRecoveryAddress = guardianRecovery.recoveryAddress;
+
+        guardianRecovery.recoveryAddress = address(0);
+        guardianRecovery.timelockDurationSeconds = 0;
+        guardianRecovery.pendingGuardian = address(0);
+        guardianRecovery.pendingGuardianTimestamp = 0;
+        guardianRecovery.isUpdateReadyForAcceptance = false;
+        _clearPendingGuardianRecoveryInitTimelock(guardianRecovery);
+
+        emit IOrganizationGuardianRecovery.GuardianRecoveryCleared(previousRecoveryAddress);
+    }
+
+    /**
      * @dev Enforces that the caller is the guardian recovery address.
      *      Reverts if msg.sender is not the guardian recovery address.
      */

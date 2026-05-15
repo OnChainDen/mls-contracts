@@ -38,6 +38,7 @@ enum OperationType {
     InitiateInitializeTransactionRecovery,
     FinalizeInitializeTransactionRecovery,
     CancelInitializeTransactionRecovery,
+    ClearRecovery,
     // Account transaction operations
     AccountTransaction
 }

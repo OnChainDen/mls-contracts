@@ -43,6 +43,34 @@ Recovery mechanisms can be set up in two ways:
 
 ---
 
+### Clearing Recovery State (Admin-Authorized, No Timelock)
+
+A single admin-authorized clear function fully resets both recovery tracks (transaction/ERC-1271 recovery and guardian recovery) so fresh initializations can install new recovery addresses. The clear exists so admins can revoke a compromised or lost recovery key faster than the existing recovery timelock can elapse.
+
+| Function | Authorization | OperationType | Result |
+|----------|---------------|---------------|--------|
+| `clearRecovery(authParams)` | Guardian + Admin threshold (isApproval: true) | `ClearRecovery` | Resets every field of `TxRecoveryState` (recovery address, timelock duration, `isEnabled`, pending enable timestamp, pending initialization fields) AND every field of `GuardianRecoveryState` (recovery address, timelock duration, pending recovery guardian update fields, pending initialization fields) |
+
+After the clear returns, each `initiateInitialize...()` flow can be called to configure a new recovery address for its track. Rotation is performed as `clear + re-initialize` rather than as a single rotate-in-place call. Tracks are cleared together rather than independently to keep the clear surface area on `OrganizationImplementation` small enough to stay within the EIP-170 24,576 byte runtime limit. Re-initializing only one track after a clear is fully supported via the existing deferred initialization flows.
+
+**Key properties:**
+
+- **Single transaction, no timelock.** The clear executes atomically once admin signatures and the Guardian co-sign are collected. There is no waiting period between requesting and applying the clear.
+- **Not callable by the recovery addresses.** The clear is gated by `onlyGuardian` + admin-threshold signatures. A compromised recovery key cannot block its own revocation.
+- **Distinct events.** Each successful clear emits one `TxRecoveryCleared(previousRecoveryAddress)` and one `GuardianRecoveryCleared(previousRecoveryAddress)` event so off-chain monitors can detect and alert on the revocation in real time.
+- **Pending state is wiped on both tracks.** Any pending enable, pending recovery guardian update, or pending deferred initialization is cleared as part of the same call. A pending enable that an attacker initiated cannot survive the clear and cannot be finalized afterwards because the recovery address is gone.
+
+**Why no timelock on the clear itself.**
+
+The recovery timelock (`txRecoveryTimelockDurationSeconds` / `guardianRecoveryTimelockDurationSeconds`) is the window the clear is designed to race. If the clear were itself timelocked, an attacker who compromises a recovery key could call `initiateEnable...` immediately and only need to outwait whichever timelock is shorter to finish draining assets or installing an attacker-controlled guardian. Making the clear instant (authorization-gated, not time-gated) lets admins revoke the compromised key before the attacker's recovery timelock elapses.
+
+The protection against a compromised admin set abusing the clear comes from the Guardian co-signing requirement, not from a timelock. 
+
+
+Files: `OrganizationGuardianRecoveryBase.sol`, `LibOrganizationTxRecovery.sol`, `LibOrganizationGuardianRecovery.sol`
+
+---
+
 ### Timelock Durations
 
 There are three distinct timelock durations in the system, each validated to be within the range enforced by `TimelockUtils` (min 2 days, max 30 days):
@@ -212,6 +240,15 @@ File: `LibOrganizationAccountSignature.sol`
 4. Wait for `adminOperationTimelockDurationSeconds` to elapse
 5. Guardian calls `finalizeInitializeGuardianRecovery()` or `finalizeInitializeTransactionAndERC1271Recovery()` with admin authorization
 6. Recovery mechanisms are now available
+
+**Scenario E: Recovery Key Compromised or Lost (Clear + Re-Initialize)**
+1. Admins detect that `transactionAndERC1271RecoveryAddress` and/or `guardianRecoveryAddress` is compromised, lost, or otherwise needs to be rotated
+2. Guardian + admin threshold sign a `ClearRecovery` operation
+3. Guardian calls `clearRecovery(authParams)`
+4. The clear executes atomically in a single transaction (no timelock). Both recovery tracks are fully reset, including any pending enable or pending update an attacker may have initiated
+5. Admins follow the deferred initialization flow (Scenario D) to install a fresh recovery address for whichever track(s) they want to re-enable
+
+The clear must complete in less time than the configured recovery timelock so admins win the race against a compromised recovery key that has already called `initiateEnable...` or `initiateRecoveryGuardianUpdate(...)`. This is why the clear itself is intentionally not timelocked.
 
 ---
 
