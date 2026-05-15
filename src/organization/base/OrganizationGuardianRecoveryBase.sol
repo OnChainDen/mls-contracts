@@ -6,6 +6,7 @@ import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizati
 import {OrganizationModifiers} from "organization/common/OrganizationModifiers.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationGuardianRecovery} from "organization/libraries/LibOrganizationGuardianRecovery.sol";
+import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
@@ -108,6 +109,19 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
 
         // Cancel the pending initialization
         LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery();
+    }
+
+    /// @inheritdoc IOrganizationGuardianRecovery
+    function clearRecovery(AdminAuthParams calldata authParams) external override onlyGuardian {
+        // Validate that the current admin has authorized clearing disaster recovery state
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.ClearRecovery, operationData: "", isApproval: true, authParams: authParams
+        });
+
+        // Reset both recovery tracks in one transaction so a fresh initialization can configure new addresses.
+        // Each library function emits its own distinct cleared event for off-chain monitoring.
+        LibOrganizationTxRecovery.clearTxRecovery();
+        LibOrganizationGuardianRecovery.clearGuardianRecovery();
     }
 
     /// @inheritdoc IOrganizationGuardianRecovery

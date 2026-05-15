@@ -75,6 +75,13 @@ contract LibOrganizationGuardianRecoveryHarness is OrganizationGuardianRecoveryS
     }
 
     /**
+     * @dev Wrapper around `LibOrganizationGuardianRecovery.clearGuardianRecovery`.
+     */
+    function clearGuardianRecoveryViaLibrary() external {
+        LibOrganizationGuardianRecovery.clearGuardianRecovery();
+    }
+
+    /**
      * @dev Wrapper around `LibOrganizationGuardianRecovery.enforceOnlyGuardianRecoveryAddress`.
      */
     function enforceOnlyGuardianRecoveryAddressViaLibrary() external view {

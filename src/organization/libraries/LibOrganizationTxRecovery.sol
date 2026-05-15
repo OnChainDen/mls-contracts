@@ -219,6 +219,28 @@ library LibOrganizationTxRecovery {
     }
 
     /**
+     * @dev Fully resets transaction recovery state so a fresh initialization can configure a new
+     *      recovery address.
+     *
+     *      Resets every field that `_validateTxRecoveryNotConfiguredOrRevert`
+     *      inspects, plus the pending enable timestamp and the full pending initialization struct,
+     *      so `initiateInitializeTxRecovery` can be re-run afterwards.
+     */
+    function clearTxRecovery() public {
+        TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
+
+        address previousRecoveryAddress = txRecovery.recoveryAddress;
+
+        txRecovery.recoveryAddress = address(0);
+        txRecovery.isEnabled = false;
+        txRecovery.timelockDurationSeconds = 0;
+        txRecovery.pendingEnableTimestamp = 0;
+        _clearPendingTxRecoveryInitTimelock(txRecovery);
+
+        emit IOrganizationTxRecovery.TxRecoveryCleared(previousRecoveryAddress);
+    }
+
+    /**
      * @dev Validates that a recovery account transaction is allowed.
      *      Reverts if recovery is not configured or not enabled.
      */

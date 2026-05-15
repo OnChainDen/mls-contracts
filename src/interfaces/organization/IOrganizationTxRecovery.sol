@@ -71,6 +71,15 @@ interface IOrganizationTxRecovery {
     event TxRecoveryInitializationCancelled();
 
     /**
+     * @notice Emitted when transaction and ERC1271 recovery state is cleared by admins
+     * @dev Fires after a successful admin-authorized clear that fully resets every tx recovery field
+     *      (recovery address, timelock duration, isEnabled, pending enable timestamp, and any pending
+     *      deferred initialization fields).
+     * @param previousRecoveryAddress The recovery address that was cleared (0 if none was configured)
+     */
+    event TxRecoveryCleared(address indexed previousRecoveryAddress);
+
+    /**
      * @notice Thrown when transaction recovery is not configured (no recovery address set)
      */
     error TxRecoveryNotConfigured();

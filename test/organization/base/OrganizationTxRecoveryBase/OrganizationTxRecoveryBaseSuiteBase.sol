@@ -159,7 +159,7 @@ abstract contract OrganizationTxRecoveryBaseSuiteBase is OrganizationAdminTestBa
         view
         returns (bytes[] memory payloads)
     {
-        payloads = new bytes[](30);
+        payloads = new bytes[](31);
 
         // IOrganizationTxRecovery (8 selectors)
         payloads[0] = abi.encodeWithSelector(harness.initiateEnableTransactionAndERC1271Recovery.selector);
@@ -204,7 +204,7 @@ abstract contract OrganizationTxRecoveryBaseSuiteBase is OrganizationAdminTestBa
         payloads[15] = abi.encodeWithSelector(IOrganizationGuardian.cancelGuardianUpdate.selector, auth);
         payloads[16] = abi.encodeWithSelector(IOrganizationGuardian.acceptGuardian.selector);
 
-        // IOrganizationGuardianRecovery (7 selectors)
+        // IOrganizationGuardianRecovery (8 selectors)
         payloads[17] =
             abi.encodeWithSelector(IOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate.selector, address(0x1));
         payloads[18] = abi.encodeWithSelector(IOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate.selector);
@@ -217,22 +217,23 @@ abstract contract OrganizationTxRecoveryBaseSuiteBase is OrganizationAdminTestBa
             abi.encodeWithSelector(IOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery.selector, auth);
         payloads[23] =
             abi.encodeWithSelector(IOrganizationGuardianRecovery.cancelInitializeGuardianRecovery.selector, auth);
+        payloads[24] = abi.encodeWithSelector(IOrganizationGuardianRecovery.clearRecovery.selector, auth);
 
         // IOrganizationAccountFactory (2 selectors)
-        payloads[24] = abi.encodeWithSelector(IOrganizationAccountFactory.deployAccount.selector, bytes32(0), auth);
-        payloads[25] =
+        payloads[25] = abi.encodeWithSelector(IOrganizationAccountFactory.deployAccount.selector, bytes32(0), auth);
+        payloads[26] =
             abi.encodeWithSelector(IOrganizationAccountFactory.setAccountImplementation.selector, address(0x1), auth);
 
         // IOrganizationAccountTransaction (2 selectors) – selector-only; ValidationProofs omitted.
-        payloads[26] = abi.encodeWithSelector(IOrganizationAccountTransaction.executeAccountTransaction.selector);
-        payloads[27] = abi.encodeWithSelector(IOrganizationAccountTransaction.rejectAccountTransaction.selector);
+        payloads[27] = abi.encodeWithSelector(IOrganizationAccountTransaction.executeAccountTransaction.selector);
+        payloads[28] = abi.encodeWithSelector(IOrganizationAccountTransaction.rejectAccountTransaction.selector);
 
         // IOrganization (1 selector)
-        payloads[28] = abi.encodeWithSelector(
+        payloads[29] = abi.encodeWithSelector(
             IOrganization.upgradeToAndCallWithAuthorization.selector, address(0x1), bytes(""), auth
         );
 
         // IOrganizationInitialization (1 selector) – selector-only; InitializationParams omitted.
-        payloads[29] = abi.encodeWithSelector(IOrganizationInitialization.initialize.selector);
+        payloads[30] = abi.encodeWithSelector(IOrganizationInitialization.initialize.selector);
     }
 }
