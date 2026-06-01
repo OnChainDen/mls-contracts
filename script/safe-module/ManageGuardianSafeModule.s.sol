@@ -4,50 +4,10 @@ pragma solidity 0.8.33;
 
 import {BaseDeployScript} from "script/base/BaseDeployScript.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
+import {ISafe} from "script/libraries/ISafe.sol";
 import {Logger} from "script/libraries/Logger.sol";
+import {SafeTransactionUtils} from "script/libraries/SafeTransactionUtils.sol";
 import {StringUtils} from "script/libraries/StringUtils.sol";
-
-/// @notice Minimal interface for Safe v1.4.1 functions needed by this script
-/// @dev We define this locally rather than importing from the Safe library to avoid
-///      compiler version mismatch (Safe uses Solidity 0.7.6, this script uses 0.8.33).
-interface ISafe {
-    function isModuleEnabled(address module) external view returns (bool);
-    function enableModule(address module) external;
-    function disableModule(address prevModule, address module) external;
-    function getThreshold() external view returns (uint256);
-    function getOwners() external view returns (address[] memory);
-    function approvedHashes(address owner, bytes32 hash) external view returns (uint256);
-    function approveHash(bytes32 hashToApprove) external;
-    function nonce() external view returns (uint256);
-    function getModulesPaginated(address start, uint256 pageSize)
-        external
-        view
-        returns (address[] memory array, address next);
-    function execTransaction(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        uint8 operation,
-        uint256 safeTxGas,
-        uint256 baseGas,
-        uint256 gasPrice,
-        address gasToken,
-        address payable refundReceiver,
-        bytes memory signatures
-    ) external payable returns (bool success);
-    function getTransactionHash(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        uint8 operation,
-        uint256 safeTxGas,
-        uint256 baseGas,
-        uint256 gasPrice,
-        address gasToken,
-        address refundReceiver,
-        uint256 _nonce
-    ) external view returns (bytes32);
-}
 
 /**
  * @title ManageGuardianSafeModule
@@ -154,12 +114,12 @@ contract ManageGuardianSafeModule is BaseDeployScript {
         }
 
         // Get the transaction hash
-        bytes32 txHash = _getTransactionHash(safeAddress, txData);
+        bytes32 txHash = SafeTransactionUtils.getTransactionHash(ISafe(safeAddress), safeAddress, txData, 0);
 
         // Get approval info
         uint256 threshold = ISafe(safeAddress).getThreshold();
         address[] memory owners = ISafe(safeAddress).getOwners();
-        uint256 approvalCount = _countApprovals(safeAddress, txHash, owners);
+        uint256 approvalCount = SafeTransactionUtils.countApprovals(ISafe(safeAddress), txHash, owners);
 
         // Log status
         Logger.logBoxHeader("Guardian Safe Module Transaction Status");
@@ -204,86 +164,20 @@ contract ManageGuardianSafeModule is BaseDeployScript {
         // Prompt for confirmation when running with --broadcast
         confirmBroadcastOrDryRun("ManageGuardianSafeModule");
 
-        // Get the transaction hash
-        bytes32 txHash = _getTransactionHash(safeAddress, txData);
-
-        // Get threshold and current approvals
-        uint256 threshold = ISafe(safeAddress).getThreshold();
-        address[] memory owners = ISafe(safeAddress).getOwners();
-
         // Log header
         Logger.logBoxHeader(string(abi.encodePacked("Guardian Safe Module Transaction - ", action)));
         Logger.logKeyValue("Guardian Safe", safeAddress);
         Logger.logKeyValue("Module", moduleAddress);
-        Logger.logKeyValue("Threshold", threshold);
+        Logger.logKeyValue("Threshold", ISafe(safeAddress).getThreshold());
         Logger.logEmptyLine();
 
-        // Check if sender is an owner
-        bool isOwner = false;
-        for (uint256 i = 0; i < owners.length; i++) {
-            if (owners[i] == msg.sender) {
-                isOwner = true;
-                break;
-            }
-        }
-        require(isOwner, "Sender is not a Guardian Safe owner");
-
-        // Check if sender has already approved
-        bool alreadyApproved = ISafe(safeAddress).approvedHashes(msg.sender, txHash) == 1;
-
+        // Approve (and optionally execute) the Safe transaction (module management targets the Safe itself, Call)
         vm.startBroadcast();
-
-        // Approve if not already done
-        if (!alreadyApproved) {
-            Logger.logIndented("Submitting approval...");
-            ISafe(safeAddress).approveHash(txHash);
-            Logger.logIndented("Approval submitted successfully");
-        } else {
-            Logger.logIndented("Already approved by this owner");
-        }
-
-        // Count approvals after our approval (includes the one we just submitted)
-        uint256 approvalCount = _countApprovals(safeAddress, txHash, owners);
-
-        Logger.logKeyValue("Approvals after this", approvalCount);
-
-        // Execute if ready and requested
-        if (executeIfReady && approvalCount >= threshold) {
-            Logger.logEmptyLine();
-            Logger.logIndented("Threshold met - executing transaction...");
-
-            // Build signatures from approved hashes
-            bytes memory signatures = _buildApprovedSignatures(safeAddress, txHash, owners, threshold);
-
-            // Execute the transaction
-            bool success = ISafe(safeAddress)
-                .execTransaction(
-                    safeAddress, // to (call the Safe itself)
-                    0, // value
-                    txData, // data
-                    0, // operation (0 = Call)
-                    0, // safeTxGas
-                    0, // baseGas
-                    0, // gasPrice
-                    address(0), // gasToken
-                    payable(address(0)), // refundReceiver
-                    signatures // signatures
-                );
-
-            require(success, "Transaction execution failed");
-            Logger.logIndented("Transaction executed successfully!");
-        } else if (approvalCount < threshold) {
-            Logger.logEmptyLine();
-            Logger.logIndented(
-                string(
-                    abi.encodePacked(
-                        "Need ", StringUtils.toString(threshold - approvalCount), " more approval(s) to execute"
-                    )
-                )
-            );
-        }
-
+        SafeTransactionUtils.approveAndExecuteIfReady({
+            safe: ISafe(safeAddress), to: safeAddress, data: txData, operation: 0, executeIfReady: executeIfReady
+        });
         vm.stopBroadcast();
+
         Logger.logBoxFooter();
     }
 
@@ -309,89 +203,5 @@ contract ManageGuardianSafeModule is BaseDeployScript {
             prevModule = modules[i];
         }
         revert("Module not found in Guardian Safe");
-    }
-
-    /// @dev Get the Safe transaction hash
-    function _getTransactionHash(address safeAddress, bytes memory txData) internal view returns (bytes32) {
-        uint256 safeNonce = ISafe(safeAddress).nonce();
-        return ISafe(safeAddress)
-            .getTransactionHash(
-                safeAddress, // to (call the Safe itself for module management)
-                0, // value
-                txData, // data
-                0, // operation (0 = Call)
-                0, // safeTxGas
-                0, // baseGas
-                0, // gasPrice
-                address(0), // gasToken
-                address(0), // refundReceiver
-                safeNonce // _nonce
-            );
-    }
-
-    /// @dev Count the number of owners who have approved the hash
-    function _countApprovals(address safeAddress, bytes32 txHash, address[] memory owners)
-        internal
-        view
-        returns (uint256 count)
-    {
-        for (uint256 i = 0; i < owners.length; i++) {
-            // slither-disable-next-line calls-loop
-            if (ISafe(safeAddress).approvedHashes(owners[i], txHash) == 1) {
-                count++;
-            }
-        }
-    }
-
-    /// @dev Build signatures from approved hashes (sorted by owner address)
-    function _buildApprovedSignatures(address safeAddress, bytes32 txHash, address[] memory owners, uint256 threshold)
-        internal
-        view
-        returns (bytes memory signatures)
-    {
-        // Collect approving owners
-        address[] memory approvers = new address[](threshold);
-        uint256 approverCount = 0;
-
-        for (uint256 i = 0; i < owners.length && approverCount < threshold; i++) {
-            // slither-disable-next-line calls-loop
-            if (ISafe(safeAddress).approvedHashes(owners[i], txHash) == 1) {
-                approvers[approverCount] = owners[i];
-                approverCount++;
-            }
-        }
-
-        require(approverCount >= threshold, "Not enough approvals");
-
-        // Sort approvers by address (ascending) - Safe requires sorted signatures
-        for (uint256 i = 0; i < threshold - 1; i++) {
-            for (uint256 j = i + 1; j < threshold; j++) {
-                if (approvers[i] > approvers[j]) {
-                    address temp = approvers[i];
-                    approvers[i] = approvers[j];
-                    approvers[j] = temp;
-                }
-            }
-        }
-
-        // Build signatures using approved hash signature type
-        // For pre-approved hashes: r = owner address, s = 0, v = 1
-        signatures = new bytes(threshold * 65);
-        for (uint256 i = 0; i < threshold; i++) {
-            // r = padded owner address (32 bytes)
-            // s = 0 (32 bytes)
-            // v = 1 (1 byte) - indicates approved hash
-            bytes32 r = bytes32(uint256(uint160(approvers[i])));
-            bytes32 s = bytes32(0);
-            uint8 v = 1;
-
-            // slither-disable-next-line assembly
-            assembly {
-                let sigPos := add(signatures, add(32, mul(i, 65)))
-                mstore(sigPos, r)
-                mstore(add(sigPos, 32), s)
-                mstore8(add(sigPos, 64), v)
-            }
-        }
     }
 }

@@ -123,6 +123,20 @@ get_factory_deployer() {
     get_config ".factory[\"$factory\"].factory_deployer"
 }
 
+# Get OrganizationImplementation address for a given factory (environment-independent)
+# Usage: get_org_impl "arachnid"
+get_org_impl() {
+    local factory="$1"
+    get_config ".factory[\"$factory\"].org_impl"
+}
+
+# Get AccountImplementation address for a given factory (environment-independent)
+# Usage: get_account_impl "arachnid"
+get_account_impl() {
+    local factory="$1"
+    get_config ".factory[\"$factory\"].account_impl"
+}
+
 # Get LibOrganizationPolicy address for a given factory
 # Usage: get_lib_org_policy "arachnid"
 get_lib_org_policy() {

@@ -62,6 +62,7 @@ ANVIL_STATE_FILE="${STATE_FILE_ARG:-${ANVIL_STATE_FILE:-../.anvil/state.json}}"
 DEPLOYER_ACCOUNT="test-deployer"
 DEN_FACTORY_DEPLOYER_ACCOUNT="test-den-factory-deployer"
 GUARDIAN_SAFE_OWNER_ACCOUNT="test-guardian-safe-owner"
+ADMIN_SAFE_OWNER_ACCOUNT="test-admin-safe-owner"
 
 # EOA addresses - some hardcoded (foundry test accounts), some from deployment.toml
 DEPLOYER_ADDRESS="0x901cab5fdb93571f0f6cd6d643f8b2532f00d2a3"
@@ -72,6 +73,11 @@ DEN_FACTORY_DEPLOYER_ADDRESS=$(get_factory_deployer "den-nonprod")
 GUARDIAN_SAFE_OWNER_ADDRESS=$(get_guardian_safe_owner "nonprod")
 ADMIN_SAFE_OWNER_ADDRESS=$(get_admin_safe_owner "nonprod")
 GUARDIAN_EXECUTOR_ADDRESS=$(get_guardian_executor "nonprod")
+
+# Read platform implementation addresses from deployment.toml (environment-independent).
+# These are whitelisted via Admin Safe transactions after the whitelist is deployed.
+ORG_IMPL_ADDRESS=$(get_org_impl "$FACTORY")
+ACCOUNT_IMPL_ADDRESS=$(get_account_impl "$FACTORY")
 
 echo "============================================================================="
 echo "Local Deployment Test: $FACTORY"
@@ -161,6 +167,30 @@ make deploy-dependent-libs ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 echo ""
 echo "[Step 6] Deploying platform contracts..."
 make deploy-contracts ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
+
+# =============================================================================
+# Step 6.4: Whitelist Organization and Account Implementations (single Admin Safe transaction)
+# =============================================================================
+# The Admin Safe owns the whitelist, so whitelisting the implementations requires an Admin Safe
+# transaction. Both the Organization and Account implementations are whitelisted together in one
+# atomic transaction (batched via MultiSendCallOnly).
+echo ""
+echo "[Step 6.4] Whitelisting implementations via a single Admin Safe transaction..."
+echo "  Note: This requires Admin Safe owner signatures. Using the Admin Safe owner account."
+echo "  Whitelisting Organization ($ORG_IMPL_ADDRESS) and Account ($ACCOUNT_IMPL_ADDRESS) implementations..."
+make whitelist-implementations \
+    ORG_IMPLEMENTATIONS="[$ORG_IMPL_ADDRESS]" ACCOUNT_IMPLEMENTATIONS="[$ACCOUNT_IMPL_ADDRESS]" EXECUTE=true \
+    ACCOUNT=$ADMIN_SAFE_OWNER_ACCOUNT FACTORY=$FACTORY || {
+    echo "  Warning: Failed to whitelist implementations (may need multi-sig approval)"
+}
+
+# Verify the implementations were actually whitelisted onchain (fails the script via `set -e` if not).
+# This guards against the whitelist transaction silently not taking effect.
+echo ""
+echo "  Verifying implementations are whitelisted onchain..."
+make is-implementation-whitelisted CONTRACT_TYPE=organization IMPLEMENTATION=$ORG_IMPL_ADDRESS FACTORY=$FACTORY
+make is-implementation-whitelisted CONTRACT_TYPE=account IMPLEMENTATION=$ACCOUNT_IMPL_ADDRESS FACTORY=$FACTORY
+echo "  ✅ Both Organization and Account implementations are whitelisted."
 
 # =============================================================================
 # Step 6.5: Deploy BatchedTransaction

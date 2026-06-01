@@ -18,9 +18,10 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
    - [Step 4: Deploy Independent Libraries](#step-4-deploy-independent-libraries)
    - [Step 5: Deploy Dependent Libraries](#step-5-deploy-dependent-libraries)
    - [Step 6: Deploy Platform Contracts](#step-6-deploy-platform-contracts)
-   - [Step 7: Deploy BatchedTransaction](#step-7-deploy-batchedtransaction)
-   - [Step 8: Deploy Guardian Safe Executor Module](#step-8-deploy-guardian-safe-executor-module)
-   - [Step 9: Add Module to Guardian Safe](#step-9-add-module-to-guardian-safe)
+   - [Step 7: Whitelist Implementations](#step-7-whitelist-implementations)
+   - [Step 8: Deploy BatchedTransaction](#step-8-deploy-batchedtransaction)
+   - [Step 9: Deploy Guardian Safe Executor Module](#step-9-deploy-guardian-safe-executor-module)
+   - [Step 10: Add Module to Guardian Safe](#step-10-add-module-to-guardian-safe)
    - [Full Deployment Quick Reference](#full-deployment-quick-reference)
 3. [Deployment Example (Arachnid Factory)](#deployment-example-arachnid-factory)
 4. [Deploying with Ledger Hardware Wallets (production)](#deploying-with-ledger-hardware-wallets-production)
@@ -45,6 +46,7 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
    - [Safe 1.4.1 Deployment](#safe-141-deployment)
    - [Guardian Safe Executor Module](#guardian-safe-executor-module)
    - [Platform Deployment](#platform-deployment)
+   - [Implementation Whitelist](#implementation-whitelist)
    - [Utilities](#utilities)
 
 ---
@@ -145,9 +147,10 @@ This script will:
 4. Deploy Safe infrastructure and multisigs
 5. Deploy platform libraries (in two stages)
 6. Deploy platform contracts
-7. Deploy BatchedTransaction
-8. Deploy the Guardian Safe Executor Module
-9. Add the module to the Guardian Safe
+7. Whitelist the Organization and Account implementations
+8. Deploy BatchedTransaction
+9. Deploy the Guardian Safe Executor Module
+10. Add the module to the Guardian Safe
 
 > [!IMPORTANT]
 > For production deployment, refer to the script to see the deployment order, and run the same Makefile targets with different networks, accounts (Ledgers), and other configuration as needed.
@@ -258,7 +261,25 @@ make deploy-contracts ACCOUNT=my-deployer FACTORY=arachnid
 
 ---
 
-### Step 7: Deploy BatchedTransaction
+### Step 7: Whitelist Implementations
+
+A Safe owns the whitelist, so whitelisting implementations requires an Safe transaction. Whitelist the Organization and Account implementations deployed in Step 6. This is a multisig operation requiring threshold approvals.
+
+```bash
+# Each Safe owner runs this command (executes when threshold met).
+# Both the org and account implementations are whitelisted together in one atomic transaction.
+make whitelist-implementations \
+  ORG_IMPLEMENTATIONS='[0xYourOrgImpl]' ACCOUNT_IMPLEMENTATIONS='[0xYourAccountImpl]' \
+  EXECUTE=true ACCOUNT=admin-safe-owner FACTORY=arachnid
+```
+
+`ORG_IMPLEMENTATIONS` and `ACCOUNT_IMPLEMENTATIONS` are [forge `address[]` literals](https://book.getfoundry.sh/) — the `org_impl` and `account_impl` values from `deployment.toml`. Each accepts multiple addresses (e.g. `'[0xa,0xb]'`), and either may be empty (`'[]'`) as long as at least one is non-empty. When both types are provided they are batched into a single atomic Admin Safe transaction (via `MultiSendCallOnly`); a single type is sent as a plain call. When `EXECUTE=true` and the approval threshold is met, the transaction is automatically executed.
+
+> **Why this is required:** The `OrganizationFactory` validates the Organization implementation against the whitelist before deploying an Organization, and Organization/Account upgrades validate against the whitelist too. Until the implementations are whitelisted, deployments and upgrades will revert.
+
+---
+
+### Step 8: Deploy BatchedTransaction
 
 Deploys the `BatchedTransaction` contract, a security-focused batched transaction executor.
 
@@ -266,11 +287,11 @@ Deploys the `BatchedTransaction` contract, a security-focused batched transactio
 make deploy-batched-transaction ACCOUNT=my-deployer FACTORY=arachnid
 ```
 
-> **Must be deployed before Step 8.** The SafeExecutorModule references BatchedTransaction as the only allowed DELEGATECALL target.
+> **Must be deployed before Step 9.** The SafeExecutorModule references BatchedTransaction as the only allowed DELEGATECALL target.
 
 ---
 
-### Step 8: Deploy Guardian Safe Executor Module
+### Step 9: Deploy Guardian Safe Executor Module
 
 Deploys the `SafeExecutorModule` for the Guardian Safe, allowing a designated Authorized Executor to execute transactions on behalf of the Safe. In Den's Guardian deployment the Authorized Executor is an EOA (the "Guardian Executor EOA") and this script enforces that the supplied `EXECUTOR` matches the `guardian_executor_eoa` from `deployment.toml`. The underlying `SafeExecutorModule` contract itself accepts either an EOA or a contract as the Authorized Executor, but this script is the Den-specific EOA path. See [Guardian Protection](./GUARDIAN_PROTECTION.md#the-safeexecutormodule) for the broader signer model.
 
@@ -282,7 +303,7 @@ The `EXECUTOR` address must match the expected Guardian Executor EOA in `deploym
 
 ---
 
-### Step 9: Add Module to Guardian Safe
+### Step 10: Add Module to Guardian Safe
 
 Guardian Safe owners must approve adding the module. This is a multisig operation requiring threshold approvals.
 
@@ -305,9 +326,10 @@ When `EXECUTE=true` and the approval threshold is met, the transaction is automa
 | 4 | `make deploy-independent-libs` | Policy, Admin, Members, Groups, TxRecovery, GuardianRecovery libraries |
 | 5 | `make deploy-dependent-libs` | Init, AccountSig libraries (with linking) |
 | 6 | `make deploy-contracts` | Platform contracts (with linking) |
-| 7 | `make deploy-batched-transaction` | Before SafeExecutorModule |
-| 8 | `make deploy-guardian-safe-module` | Requires `EXECUTOR=` |
-| 9 | `make guardian-safe-add-module` | Owner multisig operation |
+| 7 | `make whitelist-implementations` | Whitelist org + account impls in one tx |
+| 8 | `make deploy-batched-transaction` | Before SafeExecutorModule |
+| 9 | `make deploy-guardian-safe-module` | Requires `EXECUTOR=` |
+| 10 | `make guardian-safe-add-module` | Owner multisig operation |
 
 **Convenience targets:**
 
@@ -316,7 +338,7 @@ When `EXECUTE=true` and the approval threshold is met, the transaction is automa
 | `make deploy-libraries` | 4, 5 | All eight external libraries (Policy, Admin, Members, Groups, TxRecovery, GuardianRecovery, Init, AccountSig) |
 | `make deploy-platform` | 2, 3, 4, 5, 6 | Safe infrastructure, Safe multisigs, all libraries, and platform contracts |
 
-> **Note:** Convenience targets do not include Steps 1, 7, 8, or 9. The CREATE2 factory (Step 1) only needs to be deployed once per chain. BatchedTransaction (Step 7), Guardian module (Step 8), and module approval (Step 9) are typically done separately after the core platform is deployed.
+> **Note:** Convenience targets do not include Steps 1, 7, 8, 9, or 10. The CREATE2 factory (Step 1) only needs to be deployed once per chain. Whitelisting implementations (Step 7) is an Safe owner operation. BatchedTransaction (Step 8), Guardian module (Step 9), and module approval (Step 10) are typically done separately after the core platform is deployed. In particular, `make deploy-platform` deploys the whitelist but does **not** whitelist any implementations — run Step 7 afterward.
 
 ---
 
@@ -347,13 +369,20 @@ make deploy-arachnid-factory ACCOUNT=$ACCOUNT
 # 4. Deploy platform (Safe infra + multisigs + libraries + contracts)
 make deploy-platform ACCOUNT=$ACCOUNT
 
-# 5. Deploy BatchedTransaction (required before SafeExecutorModule)
+# 5. Whitelist the Organization and Account implementations (Safe owner operation)
+#    Use the org_impl / account_impl addresses from deployment.toml for your factory.
+#    Both are whitelisted together in a single atomic Safe transaction.
+ORG_IMPL=$(yq -r '.factory.arachnid.org_impl' deployment.toml)
+ACCOUNT_IMPL=$(yq -r '.factory.arachnid.account_impl' deployment.toml)
+make whitelist-implementations ORG_IMPLEMENTATIONS="[$ORG_IMPL]" ACCOUNT_IMPLEMENTATIONS="[$ACCOUNT_IMPL]" EXECUTE=true ACCOUNT=admin-safe-owner
+
+# 6. Deploy BatchedTransaction (required before SafeExecutorModule)
 make deploy-batched-transaction ACCOUNT=$ACCOUNT
 
-# 6. Deploy Guardian Safe Executor Module
+# 7. Deploy Guardian Safe Executor Module
 make deploy-guardian-safe-module EXECUTOR=$EXECUTOR ACCOUNT=$ACCOUNT
 
-# 7. Add module to Guardian Safe (each owner runs this; executes when threshold met)
+# 8. Add module to Guardian Safe (each owner runs this; executes when threshold met)
 make guardian-safe-add-module EXECUTE=true ACCOUNT=guardian-safe-owner
 
 echo "Deployment complete."
@@ -494,9 +523,11 @@ Understanding which addresses depend on what is critical:
 | Libraries (Init, AccountSig) | Factory + independent library addresses |
 | Safe infrastructure | Factory only |
 | Safe multisigs | Factory + Safe proxy factory + Safe owner addresses |
-| Platform implementations | Factory + all library addresses |
+| Organization implementation | Factory + all library addresses |
+| Account implementation | Factory only |
 | OrganizationFactory | Factory + libraries + Guardian Safe address |
-| WhitelistProxy | Factory + libraries + Admin Safe address |
+| ImplementationWhitelist implementation | Factory only |
+| ImplementationWhitelist proxy | Factory + whitelist implementation + Admin Safe address (NOT which implementations are whitelisted) |
 | Guardian Executor Module | Factory + Guardian Safe + BatchedTransaction + Executor EOA |
 
 > **Key insight:** If the Den factory deployer EOA changes, **all** contract addresses for that factory change. This is why we maintain separate deployer EOAs for production and non-production environments.
@@ -668,6 +699,9 @@ All deployment commands support the following configuration variables:
 | `EXECUTOR` | Guardian Executor EOA address (for `deploy-guardian-safe-module`) | - | `EXECUTOR=0x5678...` |
 | `EXECUTE` | Execute transaction if threshold met: `true` or `false` | - | `EXECUTE=true` |
 | `ACTION` | Action to check status for: `add` or `remove` (for `check-guardian-module-status`) | - | `ACTION=add` |
+| `ORG_IMPLEMENTATIONS` | Organization impls as a forge `address[]` literal (for `*-implementations` targets) | `[]` | `ORG_IMPLEMENTATIONS='[0xabc,0xdef]'` |
+| `ACCOUNT_IMPLEMENTATIONS` | Account impls as a forge `address[]` literal (for `*-implementations` targets) | `[]` | `ACCOUNT_IMPLEMENTATIONS='[0xabc]'` |
+| `IS_WHITELIST` | For `check-whitelist-status`: `true` (whitelist/add) or `false` (unwhitelist/remove) | `true` | `IS_WHITELIST=false` |
 
 **Factory Addresses:**
 
@@ -746,6 +780,16 @@ make deploy-libraries NETWORK=https://my-custom-rpc.example.com ACCOUNT=my-deplo
 | `make deploy-libraries-dry-run` | Simulate all library deployment (no broadcast) |
 | `make deploy-contracts-dry-run` | Simulate contract deployment (no broadcast) |
 | `make deploy-platform-dry-run` | Simulate full platform deployment (no broadcast) |
+
+### Implementation Whitelist
+
+The ImplementationWhitelist (impl + proxy) is deployed by `make deploy-contracts`. These commands manage which implementations are whitelisted, via Safe transactions.
+
+| Command | Description |
+|---------|-------------|
+| `make whitelist-implementations` | Approve whitelisting one or more implementations, batching org + account into one atomic tx (requires `EXECUTE`; uses `ORG_IMPLEMENTATIONS`/`ACCOUNT_IMPLEMENTATIONS`) |
+| `make unwhitelist-implementations` | Approve removing one or more implementations from the whitelist (requires `EXECUTE`; uses `ORG_IMPLEMENTATIONS`/`ACCOUNT_IMPLEMENTATIONS`) |
+| `make check-whitelist-status` | Check approval status for an implementation whitelist transaction (uses `ORG_IMPLEMENTATIONS`/`ACCOUNT_IMPLEMENTATIONS`; optional `IS_WHITELIST`) |
 
 ### Utilities
 
