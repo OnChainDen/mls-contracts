@@ -29,6 +29,9 @@
 .PHONY: deploy-independent-libs deploy-dependent-libs deploy-libraries deploy-contracts deploy-platform validate-signer-vars
 .PHONY: deploy-independent-libs-dry-run deploy-dependent-libs-dry-run deploy-libraries-dry-run deploy-contracts-dry-run deploy-platform-dry-run
 
+# Implementation Whitelist
+.PHONY: whitelist-implementations unwhitelist-implementations check-whitelist-status is-implementation-whitelisted
+
 # Utilities
 .PHONY: check-factory check-all-factories compute-addresses compute-all-addresses verify
 
@@ -80,6 +83,12 @@ help:
 	@echo "  deploy-contracts-dry-run  Simulate contract deployment (no broadcast)"
 	@echo "  deploy-platform-dry-run   Simulate full deployment (no broadcast)"
 	@echo ""
+	@echo "Implementation Whitelist (deployed by deploy-contracts; seeded via Admin Safe txs):"
+	@echo "  whitelist-implementations    Approve whitelisting one or more implementations (Admin Safe owner operation)"
+	@echo "  unwhitelist-implementations  Approve removing one or more implementations from the whitelist (owner operation)"
+	@echo "  check-whitelist-status       Check approval status for an implementation whitelist transaction"
+	@echo "  is-implementation-whitelisted  Read whether an implementation is currently whitelisted (exits non-zero if not)"
+	@echo ""
 	@echo "CREATE2 Factory Deployment:"
 	@echo "  fund-arachnid-deployer    Fund the Arachnid factory deployer"
 	@echo "  deploy-arachnid-factory   Deploy the Arachnid CREATE2 factory"
@@ -102,8 +111,14 @@ help:
 	@echo "  HD_PATH   Ledger HD derivation path (default: m/44'/60'/0'/0/0)"
 	@echo "  VERBOSITY Forge verbosity level (default: $(VERBOSITY))"
 	@echo "  EXECUTOR  Guardian Executor EOA address (for deploy-guardian-safe-module)"
-	@echo "  EXECUTE   Execute transaction if threshold met: true or false (for guardian-safe-add/remove-module)"
+	@echo "  EXECUTE   Execute transaction if threshold met: true or false (for *-module and *-implementations targets)"
 	@echo "  ACTION    Action to check status for: add or remove (for check-guardian-module-status)"
+	@echo "  ORG_IMPLEMENTATIONS      Organization impls as a forge address[] literal, e.g. '[0xabc,0xdef]' (default [])"
+	@echo "  ACCOUNT_IMPLEMENTATIONS  Account impls as a forge address[] literal, e.g. '[0xabc]' (default [])"
+	@echo "  IS_WHITELIST   For check-whitelist-status: true (whitelist/add) or false (unwhitelist/remove)"
+	@echo "  CONTRACT_TYPE  organization or account (for is-implementation-whitelisted)"
+	@echo "  IMPLEMENTATION Implementation address (for is-implementation-whitelisted)"
+	@echo "  WHITELIST_ENV  Safe config env to resolve the whitelist proxy: nonprod or prod (default nonprod)"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer"
@@ -111,6 +126,7 @@ help:
 	@echo "  make check-all-factories NETWORK=mainnet"
 	@echo "  make deploy-guardian-safe-module EXECUTOR=0x... NETWORK=sepolia ACCOUNT=my-deployer"
 	@echo "  make guardian-safe-add-module EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner"
+	@echo "  make whitelist-implementations ORG_IMPLEMENTATIONS='[0x..]' ACCOUNT_IMPLEMENTATIONS='[0x..]' EXECUTE=true ACCOUNT=admin-safe-owner"
 
 # ==============================================================================
 # Core Commands
@@ -222,6 +238,19 @@ SIGNER ?= account
 FACTORY ?= arachnid
 HD_PATH ?= m/44'/60'/0'/0/0
 VERBOSITY ?= -vvvv
+
+# Implementation whitelist arrays (forge address[] literals, e.g. ORG_IMPLEMENTATIONS='[0xabc,0xdef]').
+# Default to empty arrays so callers only need to pass the type(s) they want to change.
+ORG_IMPLEMENTATIONS ?= []
+ACCOUNT_IMPLEMENTATIONS ?= []
+
+# For check-whitelist-status: whether to check a whitelist (add) or unwhitelist (remove) transaction
+IS_WHITELIST ?= true
+
+# Environment (Safe config: prod vs nonprod) used to resolve env-dependent addresses in pure-cast
+# read targets such as is-implementation-whitelisted. Defaults to nonprod (local/testnet).
+# NOTE: deployment scripts derive this from the chain ID; this is only for the cast-based read targets.
+WHITELIST_ENV ?= nonprod
 
 # ------------------------------------------------------------------------------
 # Validate FACTORY value (must be done before generating variables)
@@ -668,6 +697,10 @@ deploy-contracts: validate-signer-vars
 # This is a convenience target that runs deploy-safe-infra, deploy-safe-multisigs, deploy-libraries, then deploy-contracts.
 # Safe deployment is idempotent (skips already deployed contracts).
 #
+# NOTE: deploy-contracts deploys the ImplementationWhitelist (impl + proxy) but does NOT whitelist any
+# implementations. After deployment, Admin Safe owners must whitelist the Organization and Account
+# implementations via `make whitelist-implementations` (an owner multisig operation).
+#
 # Example:
 #   make deploy-platform NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
 #   make deploy-platform FACTORY=arachnid NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
@@ -746,6 +779,129 @@ deploy-platform-dry-run: deploy-libraries-dry-run deploy-contracts-dry-run
 	@echo "Platform deployment simulation complete!"
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY)"
+
+# ==============================================================================
+# Implementation Whitelist Commands
+# ==============================================================================
+#
+# The ImplementationWhitelist (implementation + proxy) is deployed by deploy-contracts. The proxy is
+# deployed with NO whitelisted implementations and is owned by the Admin Safe. Whitelisting the
+# Organization and Account implementations (and any future upgrade targets) is done afterward via
+# Admin Safe transactions.
+#
+# IMPORTANT: The whitelist proxy's address depends on the Admin Safe (its owner) but NOT on which
+# implementations are whitelisted, so whitelisting never changes the proxy address.
+
+# Whitelist Implementations: Approve whitelisting one or more implementations (Admin Safe owner operation)
+# Pass Organization and/or Account implementations as forge address[] literals. At least one must be
+# non-empty. When both are provided, they are batched into a single atomic Admin Safe transaction.
+# Each Admin Safe owner runs this command to approve. When threshold is met and EXECUTE=true,
+# the transaction is automatically executed.
+#
+# Example:
+#   make whitelist-implementations ORG_IMPLEMENTATIONS='[0xabc]' ACCOUNT_IMPLEMENTATIONS='[0xdef]' EXECUTE=true NETWORK=sepolia ACCOUNT=admin-safe-owner
+#   make whitelist-implementations ORG_IMPLEMENTATIONS='[0xabc,0x123]' EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+whitelist-implementations: validate-signer-vars
+ifndef EXECUTE
+	$(error EXECUTE is required. Set EXECUTE=true or EXECUTE=false)
+endif
+	@echo "Whitelisting implementations (approve transaction)..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Organization implementations: $(ORG_IMPLEMENTATIONS)"
+	@echo "  Account implementations: $(ACCOUNT_IMPLEMENTATIONS)"
+	@echo "  Execute if ready: $(EXECUTE)"
+	forge script script/ManageImplementationWhitelist.s.sol:ManageImplementationWhitelist \
+		--sig "whitelistImplementations(address,address[],address[],bool)" $(FACTORY_ADDRESS) "$(ORG_IMPLEMENTATIONS)" "$(ACCOUNT_IMPLEMENTATIONS)" $(EXECUTE) \
+		--rpc-url $(RPC_URL) \
+		$(SIGNER_FLAGS) \
+		--broadcast \
+		$(VERBOSITY)
+
+# Unwhitelist Implementations: Approve removing one or more implementations from the whitelist (owner operation)
+# Same array shape as whitelist-implementations. When both types are provided, they are batched atomically.
+# Each Admin Safe owner runs this command to approve. When threshold is met and EXECUTE=true,
+# the transaction is automatically executed.
+#
+# Example:
+#   make unwhitelist-implementations ORG_IMPLEMENTATIONS='[0xabc]' ACCOUNT_IMPLEMENTATIONS='[0xdef]' EXECUTE=true NETWORK=sepolia ACCOUNT=admin-safe-owner
+unwhitelist-implementations: validate-signer-vars
+ifndef EXECUTE
+	$(error EXECUTE is required. Set EXECUTE=true or EXECUTE=false)
+endif
+	@echo "Unwhitelisting implementations (approve transaction)..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Organization implementations: $(ORG_IMPLEMENTATIONS)"
+	@echo "  Account implementations: $(ACCOUNT_IMPLEMENTATIONS)"
+	@echo "  Execute if ready: $(EXECUTE)"
+	forge script script/ManageImplementationWhitelist.s.sol:ManageImplementationWhitelist \
+		--sig "unwhitelistImplementations(address,address[],address[],bool)" $(FACTORY_ADDRESS) "$(ORG_IMPLEMENTATIONS)" "$(ACCOUNT_IMPLEMENTATIONS)" $(EXECUTE) \
+		--rpc-url $(RPC_URL) \
+		$(SIGNER_FLAGS) \
+		--broadcast \
+		$(VERBOSITY)
+
+# Check Whitelist Status: Check approval status for an implementation whitelist transaction
+# Shows how many approvals exist and who has approved. Use the SAME arrays you passed (or will pass)
+# to whitelist-implementations / unwhitelist-implementations, and set IS_WHITELIST to match.
+#
+# Example:
+#   make check-whitelist-status ORG_IMPLEMENTATIONS='[0xabc]' ACCOUNT_IMPLEMENTATIONS='[0xdef]' IS_WHITELIST=true NETWORK=sepolia
+#   make check-whitelist-status ORG_IMPLEMENTATIONS='[0xabc]' IS_WHITELIST=false FACTORY=den-nonprod NETWORK=mainnet
+check-whitelist-status:
+	@echo "Checking implementation whitelist transaction status..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Organization implementations: $(ORG_IMPLEMENTATIONS)"
+	@echo "  Account implementations: $(ACCOUNT_IMPLEMENTATIONS)"
+	@echo "  Is whitelist (add): $(IS_WHITELIST)"
+	forge script script/ManageImplementationWhitelist.s.sol:ManageImplementationWhitelist \
+		--sig "checkStatus(address,address[],address[],bool)" $(FACTORY_ADDRESS) "$(ORG_IMPLEMENTATIONS)" "$(ACCOUNT_IMPLEMENTATIONS)" $(IS_WHITELIST) \
+		--rpc-url $(RPC_URL)
+
+# Is Implementation Whitelisted: Read-only check of whether a single implementation is currently
+# whitelisted (queries the deployed ImplementationWhitelist proxy via cast). Prints WHITELISTED or
+# NOT WHITELISTED and exits non-zero when it is NOT whitelisted, so it can gate scripts/CI.
+#
+# Resolves the whitelist proxy from deployment.toml using FACTORY + WHITELIST_ENV (default nonprod).
+# Set WHITELIST_ENV=prod when querying a production-chain deployment.
+#
+# Example:
+#   make is-implementation-whitelisted CONTRACT_TYPE=organization IMPLEMENTATION=0xabc NETWORK=sepolia
+#   make is-implementation-whitelisted CONTRACT_TYPE=account IMPLEMENTATION=0xdef FACTORY=den-nonprod WHITELIST_ENV=prod NETWORK=mainnet
+is-implementation-whitelisted:
+ifndef CONTRACT_TYPE
+	$(error CONTRACT_TYPE is required. Set CONTRACT_TYPE=organization or CONTRACT_TYPE=account)
+endif
+ifndef IMPLEMENTATION
+	$(error IMPLEMENTATION is required. Set IMPLEMENTATION=<implementation-address>)
+endif
+	@whitelist_proxy=$$(yq -r '.factory["$(FACTORY)"].env.$(WHITELIST_ENV).whitelist_proxy' deployment.toml); \
+	if [ -z "$$whitelist_proxy" ] || [ "$$whitelist_proxy" = "null" ]; then \
+		echo "Error: whitelist_proxy not found in deployment.toml for factory '$(FACTORY)' env '$(WHITELIST_ENV)'"; exit 1; \
+	fi; \
+	case "$(CONTRACT_TYPE)" in \
+		organization) type_id=1 ;; \
+		account) type_id=0 ;; \
+		*) echo "Error: CONTRACT_TYPE must be 'organization' or 'account' (got '$(CONTRACT_TYPE)')"; exit 1 ;; \
+	esac; \
+	echo "Checking whitelist status..."; \
+	echo "  Network: $(NETWORK)"; \
+	echo "  Factory: $(FACTORY) (env: $(WHITELIST_ENV))"; \
+	echo "  ImplementationWhitelist: $$whitelist_proxy"; \
+	echo "  Contract type: $(CONTRACT_TYPE) (enum $$type_id)"; \
+	echo "  Implementation: $(IMPLEMENTATION)"; \
+	result=$$(env -u ETH_PASSWORD -u ETH_KEYSTORE -u ETH_KEYSTORE_ACCOUNT \
+		cast call $$whitelist_proxy "isImplementationWhitelisted(uint8,address)(bool)" $$type_id $(IMPLEMENTATION) --rpc-url $(RPC_URL)) || { \
+		echo "  ERROR: cast call failed (is the whitelist proxy deployed at $$whitelist_proxy on $(NETWORK)?)"; exit 1; \
+	}; \
+	if [ "$$result" = "true" ]; then \
+		echo "  WHITELISTED"; \
+	else \
+		echo "  NOT WHITELISTED (cast returned: $$result)"; \
+		exit 1; \
+	fi
 
 # ==============================================================================
 # Deployment Utility Commands

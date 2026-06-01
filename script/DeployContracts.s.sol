@@ -101,8 +101,9 @@ contract DeployContracts is BaseDeployScript {
         // Deploy Factory Contracts (OrganizationFactory)
         address organizationFactoryAddress = _deployOrganizationFactory(guardianSafeAddress);
 
-        // Deploy ImplementationWhitelistProxy (depends on implementationContracts, admin safe)
-        address whitelistProxyAddress = _deployWhitelistProxy(implementationContracts, adminSafeAddress);
+        // Deploy ImplementationWhitelistProxy (depends on whitelist impl and Admin Safe owner)
+        address whitelistProxyAddress =
+            _deployWhitelistProxy(implementationContracts.whitelistAddress, adminSafeAddress);
 
         // Stop broadcasting transactions
         vm.stopBroadcast();
@@ -173,21 +174,7 @@ contract DeployContracts is BaseDeployScript {
         // (depends on whitelistImplAddress, orgImplAddress, accountImplAddress, adminSafeAddress)
         Logger.logSection("Proxy Contracts");
 
-        // Build the same init data that _deployWhitelistProxy uses
-        address[] memory organizationImplementationAddresses = new address[](1);
-        organizationImplementationAddresses[0] = orgImplAddress;
-        address[] memory accountImplementationAddresses = new address[](1);
-        accountImplementationAddresses[0] = accountImplAddress;
-
-        bytes memory initData = abi.encodeCall(
-            ImplementationWhitelistImplementation.initialize,
-            (adminSafeAddress, organizationImplementationAddresses, accountImplementationAddresses)
-        );
-
-        bytes memory proxyBytecode = abi.encodePacked(
-            type(ImplementationWhitelistProxy).creationCode, abi.encode(whitelistImplAddress, initData)
-        );
-
+        bytes memory proxyBytecode = _getWhitelistProxyBytecode(whitelistImplAddress, adminSafeAddress);
         address whitelistProxyAddress = Create2Utils.computeAddress(factoryAddress, WHITELIST_PROXY_SALT, proxyBytecode);
         Logger.logKeyValue("ImplementationWhitelistProxy", whitelistProxyAddress);
         Logger.logBoxFooter();
@@ -239,37 +226,42 @@ contract DeployContracts is BaseDeployScript {
         );
     }
 
-    /// @dev Deploys the ImplementationWhitelistProxy via CREATE2 with atomic initialization
-    /// @param implementationContracts Implementation contract addresses
+    /// @dev Deploys the ImplementationWhitelistProxy via CREATE2, initializing only the owner
+    /// @param whitelistImplAddress The ImplementationWhitelist implementation address
     /// @param adminSafeAddress Address of the Admin Safe (owner of the whitelist)
     /// @return whitelistProxyAddress Address of the deployed whitelist proxy
-    function _deployWhitelistProxy(PlatformImplementations memory implementationContracts, address adminSafeAddress)
+    function _deployWhitelistProxy(address whitelistImplAddress, address adminSafeAddress)
         internal
         returns (address whitelistProxyAddress)
     {
         Logger.logSection("ImplementationWhitelistProxy");
 
-        // Construct arrays of implementation addresses to whitelist
-        address[] memory organizationImplementationAddresses = new address[](1);
-        organizationImplementationAddresses[0] = implementationContracts.organizationAddress;
-        address[] memory accountImplementationAddresses = new address[](1);
-        accountImplementationAddresses[0] = implementationContracts.accountAddress;
-
-        // Encode the initialization data for the whitelist proxy
-        bytes memory initData = abi.encodeCall(
-            ImplementationWhitelistImplementation.initialize,
-            (adminSafeAddress, organizationImplementationAddresses, accountImplementationAddresses)
-        );
-
         // Construct the proxy bytecode for the whitelist proxy
-        bytes memory proxyBytecode = abi.encodePacked(
-            type(ImplementationWhitelistProxy).creationCode,
-            abi.encode(implementationContracts.whitelistAddress, initData)
-        );
+        bytes memory proxyBytecode = _getWhitelistProxyBytecode(whitelistImplAddress, adminSafeAddress);
 
         // Deploy the whitelist proxy using CREATE2
         (whitelistProxyAddress,) = Create2Utils.deployIfNotExists(
             _factoryAddress, WHITELIST_PROXY_SALT, proxyBytecode, "ImplementationWhitelistProxy"
+        );
+    }
+
+    /// @dev Builds the whitelist proxy creation bytecode with initialization data that sets only the owner
+    /// @param whitelistImplAddress The ImplementationWhitelist implementation address
+    /// @param adminSafeAddress The Admin Safe address (owner of the whitelist)
+    /// @return proxyBytecode The proxy creation code with constructor args
+    function _getWhitelistProxyBytecode(address whitelistImplAddress, address adminSafeAddress)
+        internal
+        pure
+        returns (bytes memory proxyBytecode)
+    {
+        // Initialize the owner only; whitelisted implementations are added later via Admin Safe txs.
+        // Empty seed arrays keep the proxy address independent of which implementations are whitelisted.
+        bytes memory initData = abi.encodeCall(
+            ImplementationWhitelistImplementation.initialize, (adminSafeAddress, new address[](0), new address[](0))
+        );
+
+        proxyBytecode = abi.encodePacked(
+            type(ImplementationWhitelistProxy).creationCode, abi.encode(whitelistImplAddress, initData)
         );
     }
 
@@ -371,6 +363,7 @@ contract DeployContracts is BaseDeployScript {
         Logger.logEmptyLine();
         Logger.logIndented("Platform Proxies:");
         Logger.logKeyValue("  WhitelistProxy", contracts.whitelistProxyAddress);
+        Logger.logIndented("  (deployed with no whitelisted implementations; seed via Admin Safe txs)");
         Logger.logBoxFooter();
     }
 }
