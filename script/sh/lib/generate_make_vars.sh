@@ -58,8 +58,8 @@ LIB_ORG_ACCOUNT_SIG_ADDRESS := $(get_lib_org_account_sig "$FACTORY")
 LIB_ORG_TX_RECOVERY_ADDRESS := $(get_lib_org_tx_recovery "$FACTORY")
 LIB_ORG_GUARDIAN_RECOVERY_ADDRESS := $(get_lib_org_guardian_recovery "$FACTORY")
 
-# Arachnid deployer address (special case for funding - always from arachnid factory)
-ARACHNID_DEPLOYER_ADDRESS := $(get_factory_deployer "arachnid")
+# Arachnid factory deployer address (special case for funding - always from arachnid factory)
+ARACHNID_FACTORY_DEPLOYER_ADDRESS := $(get_factory_deployer "arachnid")
 
 # ------------------------------------------------------------------------------
 # Library Paths (for --libraries flag)
