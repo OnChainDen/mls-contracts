@@ -111,11 +111,20 @@ echo "  Anvil started (PID: $ANVIL_PID)"
 echo ""
 echo "[Step 2] Funding EOAs..."
 
-# Fund all test accounts with max balance
-for addr in $DEPLOYER_ADDRESS $DEN_FACTORY_DEPLOYER_ADDRESS $GUARDIAN_SAFE_OWNER_ADDRESS $ADMIN_SAFE_OWNER_ADDRESS $GUARDIAN_EXECUTOR_ADDRESS; do
+# Bootstrap-fund the deployer EOA (the funder) and the guardian executor EOA directly via the
+# anvil cheat. The deployer must hold a balance before it can pay for the *real* funding
+# transactions below, and the executor isn't covered by a funding make target.
+for addr in $DEPLOYER_ADDRESS $GUARDIAN_EXECUTOR_ADDRESS; do
     cast rpc anvil_setBalance $addr 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff --rpc-url $RPC_URL
-    echo "  Funded $addr"
+    echo "  Bootstrap-funded $addr"
 done
+
+# Fund the Safe owners with real funding transactions via the make target (exercises
+# `make fund-safe-owners`). Local testing always uses the nonprod Safe config (chain id
+# $LOCAL_CHAIN_ID is non-production), and the deployer EOA pays.
+# (The den-nonprod factory deployer is funded in Step 3, only when that factory is used.)
+echo "  Funding nonprod Safe owners via 'make fund-safe-owners'..."
+make fund-safe-owners FUND_ENV=nonprod ACCOUNT=$DEPLOYER_ACCOUNT
 
 # =============================================================================
 # Step 3: Deploy CREATE2 Factory
@@ -129,7 +138,11 @@ if [[ "$FACTORY" == "arachnid" ]]; then
     make fund-arachnid-deployer ACCOUNT=$DEPLOYER_ACCOUNT
     make deploy-arachnid-factory ACCOUNT=$DEPLOYER_ACCOUNT
 else
-    # Den non-prod factory is deployed by the Den factory deployer account
+    # Den non-prod factory is deployed by the Den factory deployer account at nonce 0.
+    # Fund that deployer first via the make target (exercises `make fund-den-deployer`).
+    # The funder is the deployer EOA, never the Den factory deployer itself (sending a tx from
+    # it would burn nonce 0 and change the deterministic factory address).
+    make fund-den-deployer DEN_DEPLOYER_ADDRESS=$DEN_FACTORY_DEPLOYER_ADDRESS ACCOUNT=$DEPLOYER_ACCOUNT
     make deploy-den-factory ACCOUNT=$DEN_FACTORY_DEPLOYER_ACCOUNT
 fi
 

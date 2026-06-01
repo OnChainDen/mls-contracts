@@ -19,7 +19,7 @@
 .PHONY: fund-arachnid-deployer deploy-arachnid-factory fund-den-deployer deploy-den-factory
 
 # Safe 1.4.1 deployment
-.PHONY: deploy-safe-infra deploy-safe-infra-dry-run deploy-safe-multisigs deploy-safe-multisigs-dry-run
+.PHONY: deploy-safe-infra deploy-safe-infra-dry-run deploy-safe-multisigs deploy-safe-multisigs-dry-run fund-safe-owners
 
 # Guardian Safe Executor Module
 .PHONY: deploy-batched-transaction
@@ -65,6 +65,7 @@ help:
 	@echo "  deploy-safe-infra-dry-run      Simulate Safe infrastructure deployment (no broadcast)"
 	@echo "  deploy-safe-multisigs          Deploy Guardian and Admin Safe multisigs"
 	@echo "  deploy-safe-multisigs-dry-run  Simulate Safe multisig deployment (no broadcast)"
+	@echo "  fund-safe-owners               Fund the prod/nonprod Safe owners (uses FUND_ENV, FUND_AMOUNT)"
 	@echo ""
 	@echo "Guardian Safe Executor Module:"
 	@echo "  deploy-batched-transaction        Deploy BatchedTransaction contract"
@@ -122,6 +123,8 @@ help:
 	@echo "  IMPLEMENTATION Implementation address (for is-implementation-whitelisted)"
 	@echo "  WHITELIST_ENV  Safe config env to resolve the whitelist proxy: nonprod or prod (default nonprod)"
 	@echo "  ENV            For check-deployment/check-all-deployments: which env gates the summary: auto, nonprod, prod, both (default auto, derived from chain id)"
+	@echo "  FUND_ENV       For fund-safe-owners: prod or nonprod (default nonprod)"
+	@echo "  FUND_AMOUNT    For fund-safe-owners: ETH amount to send each owner, e.g. 0.1ether (default $(FUND_AMOUNT))"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer"
@@ -129,6 +132,7 @@ help:
 	@echo "  make check-all-factories NETWORK=mainnet"
 	@echo "  make check-deployment FACTORY=arachnid NETWORK=mainnet"
 	@echo "  make check-all-deployments NETWORK=sepolia"
+	@echo "  make fund-safe-owners FUND_ENV=nonprod FUND_AMOUNT=0.1ether NETWORK=sepolia ACCOUNT=my-deployer"
 	@echo "  make deploy-guardian-safe-module EXECUTOR=0x... NETWORK=sepolia ACCOUNT=my-deployer"
 	@echo "  make guardian-safe-add-module EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner"
 	@echo "  make whitelist-implementations ORG_IMPLEMENTATIONS='[0x..]' ACCOUNT_IMPLEMENTATIONS='[0x..]' EXECUTE=true ACCOUNT=admin-safe-owner"
@@ -266,6 +270,14 @@ WHITELIST_ENV ?= nonprod
 #   both    - count both environments
 ENV ?= auto
 
+# Environment selector for fund-safe-owners. Must be prod or nonprod. Selects which
+# Safe owner set ([safe.prod] vs [safe.nonprod]) to fund.
+FUND_ENV ?= nonprod
+
+# Amount of ETH to send each Safe owner in fund-safe-owners (any cast-parseable value,
+# e.g. 0.1ether, 1ether, 50000000000000000).
+FUND_AMOUNT ?= 0.1ether
+
 # ------------------------------------------------------------------------------
 # Validate FACTORY value (must be done before generating variables)
 # ------------------------------------------------------------------------------
@@ -335,8 +347,12 @@ endif
 # ------------------------------------------------------------------------------
 ifeq ($(SIGNER),ledger)
     SIGNER_FLAGS = --ledger --hd-paths "$(HD_PATH)" --sender $(SENDER)
+    # cast uses different flag names than forge (--from instead of --sender,
+    # --mnemonic-derivation-path instead of --hd-paths).
+    CAST_SIGNER_FLAGS = --ledger --mnemonic-derivation-path "$(HD_PATH)" --from $(SENDER)
 else ifeq ($(SIGNER),account)
     SIGNER_FLAGS = --account $(ACCOUNT) --sender $(SENDER)
+    CAST_SIGNER_FLAGS = --account $(ACCOUNT) --from $(SENDER)
 else
     SIGNER_FLAGS = $(error Invalid SIGNER value '$(SIGNER)'. Use: account or ledger)
 endif
@@ -510,6 +526,42 @@ deploy-safe-multisigs-dry-run:
 		--sig "run(address)" $(FACTORY_ADDRESS) \
 		--rpc-url $(RPC_URL) \
 		$(VERBOSITY)
+
+# Fund Safe Owners: Sends ETH to every Safe owner (Guardian + Admin) for the selected
+# environment ([safe.prod] or [safe.nonprod] in deployment.toml), so the owners can pay gas
+# for their Safe transactions (e.g. whitelisting implementations, adding the Guardian module).
+# Funds whichever owner_1/2/3 keys are present (1 each for nonprod, 3 each for prod).
+#
+# FUND_ENV selects the owner set (prod or nonprod); FUND_AMOUNT is the ETH sent to each owner.
+# Uses `cast send` value transfers from SENDER.
+#
+# Example:
+#   make fund-safe-owners FUND_ENV=nonprod NETWORK=sepolia ACCOUNT=my-deployer
+#   make fund-safe-owners FUND_ENV=prod FUND_AMOUNT=0.25ether NETWORK=mainnet SIGNER=ledger SENDER=0x...
+fund-safe-owners: validate-signer-vars
+	@case "$(FUND_ENV)" in \
+		prod|nonprod) ;; \
+		*) echo "Error: FUND_ENV must be 'prod' or 'nonprod' (got '$(FUND_ENV)')"; exit 1 ;; \
+	esac; \
+	echo "Funding $(FUND_ENV) Safe owners ($(FUND_AMOUNT) each) from $(SENDER) on $(NETWORK)..."; \
+	funded=0; \
+	for key in guardian_safe_owner_1 guardian_safe_owner_2 guardian_safe_owner_3 \
+	           admin_safe_owner_1 admin_safe_owner_2 admin_safe_owner_3; do \
+		owner=$$(yq -r ".safe.$(FUND_ENV).$$key" deployment.toml 2>/dev/null); \
+		if [ -z "$$owner" ] || [ "$$owner" = "null" ]; then continue; fi; \
+		printf '  %-22s %s ... ' "$$key" "$$owner"; \
+		if cast send "$$owner" --value $(FUND_AMOUNT) --rpc-url $(RPC_URL) $(CAST_SIGNER_FLAGS) >/dev/null 2>&1; then \
+			echo "funded"; \
+		else \
+			echo "FAILED"; \
+			echo "  ERROR: cast send failed funding $$key ($$owner)"; exit 1; \
+		fi; \
+		funded=$$((funded + 1)); \
+	done; \
+	if [ "$$funded" -eq 0 ]; then \
+		echo "Error: no Safe owners found for env '$(FUND_ENV)' in deployment.toml"; exit 1; \
+	fi; \
+	echo "Funded $$funded $(FUND_ENV) Safe owner(s)."
 
 # ==============================================================================
 # BatchedTransaction Deployment Commands
