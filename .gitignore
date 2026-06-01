@@ -14,8 +14,8 @@ out-safe/
 # Dotenv file
 .env
 
-# Generated Makefile variables (from deployment.toml)
-.make-deploy-vars.mk
+# Generated Makefile variables (from deployment.toml), including the atomic-write temp
+.make-deploy-vars.mk*
 
 # TODO list
 .TODO.md

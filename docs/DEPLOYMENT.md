@@ -29,6 +29,7 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
    - [deployment.toml Overview](#deploymenttoml-overview)
    - [How deployment.toml Is Used](#how-deploymenttoml-is-used)
    - [Computing Expected Addresses](#computing-expected-addresses)
+   - [Verifying Deployment Status](#verifying-deployment-status)
    - [How Address Computation Works](#how-address-computation-works)
    - [Address Dependencies](#address-dependencies)
    - [Updating Addresses](#updating-addresses)
@@ -495,6 +496,42 @@ make compute-addresses FACTORY=den-nonprod
 make compute-addresses FACTORY=den-prod
 ```
 
+### Verifying Deployment Status
+
+While `compute-addresses` tells you *where* contracts should live, `check-deployment` tells you *whether they are actually there* on a given network. It performs a simple bytecode-nonzero check (`cast code`) against every expected address in `deployment.toml` and pretty-prints the result, grouped by section and by environment.
+
+```bash
+# Check a single factory on a network
+make check-deployment FACTORY=arachnid NETWORK=mainnet
+
+# Check all three factories on a network
+make check-all-deployments NETWORK=sepolia
+```
+
+It is safe to run at any point and is designed to be used **before, during, and after** a deployment:
+
+- **Before** — confirm a clean slate (everything reports `MISSING`).
+- **During** — watch expected progress as each contract comes online.
+- **After** — confirm everything that should be deployed actually is (exit code `0`).
+
+Each address reports one of four statuses:
+
+| Status | Meaning |
+|--------|---------|
+| `DEPLOYED` | Bytecode is present at the expected address |
+| `MISSING` | No bytecode at the expected address (not yet deployed) |
+| `SKIPPED` | The address is not configured in `deployment.toml` (e.g. `NOT_COMPUTED`) |
+| `ERROR` | The `cast code` RPC call failed |
+
+**Environments.** The output always shows both the `nonprod` and `prod` env-dependent sections (Guardian/Admin Safes, OrganizationFactory, whitelist proxy, executor module). Because the active environment is derived from the chain id (mirroring `DeploymentConfig._isProductionChain()`), only the environment that should be deployed on the target network counts toward the summary and exit code; the other is shown for reference. Override the gated environment with `ENV=nonprod|prod|both` (default `auto`):
+
+```bash
+# Force nonprod to be the counted environment (e.g. on a mainnet fork used for staging)
+make check-deployment FACTORY=arachnid NETWORK=stage ENV=nonprod
+```
+
+The command exits non-zero if any active-scope contract is `MISSING` or `ERROR`, so it can gate CI or deployment scripts.
+
 ### How Address Computation Works
 
 The `compute_all_addresses.sh` script orchestrates address computation by:
@@ -797,6 +834,8 @@ The ImplementationWhitelist (impl + proxy) is deployed by `make deploy-contracts
 |---------|-------------|
 | `make check-factory` | Check if a factory is deployed |
 | `make check-all-factories` | Check all factories on a network |
+| `make check-deployment` | Check that all contracts (and the factory) for a factory are deployed, pretty-printed (uses `FACTORY`, `NETWORK`, optional `ENV`) |
+| `make check-all-deployments` | Run `check-deployment` for all three factories on a network (uses `NETWORK`, optional `ENV`) |
 | `make compute-addresses` | Compute all CREATE2 addresses for a factory |
 | `make compute-all-addresses` | Compute all CREATE2 addresses for all factories |
 | `make verify` | Verify a contract on Etherscan (requires `CONTRACT_ADDRESS`, `CONTRACT_NAME`) |
@@ -812,6 +851,9 @@ make deploy-platform FACTORY=arachnid NETWORK=mainnet SIGNER=ledger SENDER=0x...
 
 # Check all factories on mainnet
 make check-all-factories NETWORK=mainnet
+
+# Check that every contract for the Arachnid factory is deployed on mainnet
+make check-deployment FACTORY=arachnid NETWORK=mainnet
 
 # Deploy Guardian Safe module
 make deploy-guardian-safe-module EXECUTOR=0x... NETWORK=sepolia ACCOUNT=my-deployer
