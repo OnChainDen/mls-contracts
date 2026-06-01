@@ -180,8 +180,8 @@ All contracts are deployed via CREATE2 to ensure deterministic addresses across 
 **For most chains (Arachnid factory):**
 
 ```bash
-# Fund the Arachnid deployer, then deploy the factory
-make fund-arachnid-deployer ACCOUNT=my-deployer
+# Fund the Arachnid factory deployer, then deploy the factory
+make fund-arachnid-factory-deployer ACCOUNT=my-deployer
 make deploy-arachnid-factory ACCOUNT=my-deployer
 ```
 To learn more about the Arachnid factory, see [Arachnid Deterministic Deployer (Preferred)](#arachnid-deterministic-deployer-preferred).
@@ -189,8 +189,8 @@ To learn more about the Arachnid factory, see [Arachnid Deterministic Deployer (
 **For chains that reject Arachnid's pre-signed transaction (Den factory):**
 
 ```bash
-# Fund the Den deployer, then deploy the factory
-make fund-den-deployer DEN_DEPLOYER_ADDRESS=0x22002e8661A780d61EF4c86F4a9fFa843A6fea20 ACCOUNT=my-deployer
+# Fund the Den factory deployer, then deploy the factory
+make fund-den-factory-deployer DEN_FACTORY_DEPLOYER_ADDRESS=0x22002e8661A780d61EF4c86F4a9fFa843A6fea20 ACCOUNT=my-deployer
 make deploy-den-factory ACCOUNT=den-nonprod-deployer
 ```
 
@@ -364,7 +364,7 @@ SENDER=$(cast wallet address --account $ACCOUNT)
 cast rpc anvil_setBalance $SENDER 0xffffffffffffffffffffffffffffffff --rpc-url $RPC_URL
 
 # 3. Deploy Arachnid CREATE2 factory
-make fund-arachnid-deployer ACCOUNT=$ACCOUNT
+make fund-arachnid-factory-deployer ACCOUNT=$ACCOUNT
 make deploy-arachnid-factory ACCOUNT=$ACCOUNT
 
 # 4. Deploy platform (Safe infra + multisigs + libraries + contracts)
@@ -779,9 +779,10 @@ make deploy-libraries NETWORK=https://my-custom-rpc.example.com ACCOUNT=my-deplo
 
 | Command | Description |
 |---------|-------------|
-| `make fund-arachnid-deployer` | Fund the Arachnid factory deployer |
+| `make fund-arachnid-factory-deployer` | Fund the Arachnid CREATE2 factory deployer EOA |
 | `make deploy-arachnid-factory` | Deploy the Arachnid CREATE2 factory |
-| `make fund-den-deployer` | Fund a Den factory deployer (requires `DEN_DEPLOYER_ADDRESS`) |
+| `make fund-den-factory-deployer` | Fund the Den CREATE2 factory deployer EOA (requires `DEN_FACTORY_DEPLOYER_ADDRESS`) |
+| `make fund-mls-contracts-deployer` | Fund the EOA that deploys the MLS contracts via a factory (requires `MLS_CONTRACTS_DEPLOYER_ADDRESS`, uses `FUND_AMOUNT`) |
 | `make deploy-den-factory` | Deploy the Den Singleton Factory |
 
 ### Safe 1.4.1 Deployment

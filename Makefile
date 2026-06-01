@@ -16,7 +16,7 @@
 .PHONY: coverage snapshot gas-report help
 
 # CREATE2 factory deployment
-.PHONY: fund-arachnid-deployer deploy-arachnid-factory fund-den-deployer deploy-den-factory
+.PHONY: fund-arachnid-factory-deployer deploy-arachnid-factory fund-den-factory-deployer fund-mls-contracts-deployer deploy-den-factory
 
 # Safe 1.4.1 deployment
 .PHONY: deploy-safe-infra deploy-safe-infra-dry-run deploy-safe-multisigs deploy-safe-multisigs-dry-run fund-safe-owners
@@ -91,10 +91,11 @@ help:
 	@echo "  is-implementation-whitelisted  Read whether an implementation is currently whitelisted (exits non-zero if not)"
 	@echo ""
 	@echo "CREATE2 Factory Deployment:"
-	@echo "  fund-arachnid-deployer    Fund the Arachnid factory deployer"
-	@echo "  deploy-arachnid-factory   Deploy the Arachnid CREATE2 factory"
-	@echo "  fund-den-deployer         Fund the Den factory deployer"
-	@echo "  deploy-den-factory        Deploy the Den Singleton Factory"
+	@echo "  fund-arachnid-factory-deployer  Fund the Arachnid CREATE2 factory deployer EOA"
+	@echo "  deploy-arachnid-factory         Deploy the Arachnid CREATE2 factory"
+	@echo "  fund-den-factory-deployer       Fund the Den CREATE2 factory deployer EOA (requires DEN_FACTORY_DEPLOYER_ADDRESS)"
+	@echo "  fund-mls-contracts-deployer     Fund the EOA that deploys the MLS contracts via a factory (requires MLS_CONTRACTS_DEPLOYER_ADDRESS)"
+	@echo "  deploy-den-factory              Deploy the Den Singleton Factory"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  check-factory             Check if a factory is deployed"
@@ -124,7 +125,9 @@ help:
 	@echo "  WHITELIST_ENV  Safe config env to resolve the whitelist proxy: nonprod or prod (default nonprod)"
 	@echo "  ENV            For check-deployment/check-all-deployments: which env gates the summary: auto, nonprod, prod, both (default auto, derived from chain id)"
 	@echo "  FUND_ENV       For fund-safe-owners: prod or nonprod (default nonprod)"
-	@echo "  FUND_AMOUNT    For fund-safe-owners: ETH amount to send each owner, e.g. 0.1ether (default $(FUND_AMOUNT))"
+	@echo "  FUND_AMOUNT    For fund-safe-owners/fund-mls-contracts-deployer: ETH amount to send, e.g. 0.1ether (default $(FUND_AMOUNT))"
+	@echo "  DEN_FACTORY_DEPLOYER_ADDRESS    Den factory deployer EOA to fund (for fund-den-factory-deployer)"
+	@echo "  MLS_CONTRACTS_DEPLOYER_ADDRESS  EOA that deploys the MLS contracts, to fund (for fund-mls-contracts-deployer)"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer"
@@ -133,6 +136,7 @@ help:
 	@echo "  make check-deployment FACTORY=arachnid NETWORK=mainnet"
 	@echo "  make check-all-deployments NETWORK=sepolia"
 	@echo "  make fund-safe-owners FUND_ENV=nonprod FUND_AMOUNT=0.1ether NETWORK=sepolia ACCOUNT=my-deployer"
+	@echo "  make fund-mls-contracts-deployer MLS_CONTRACTS_DEPLOYER_ADDRESS=0x.. FUND_AMOUNT=1ether NETWORK=sepolia ACCOUNT=my-funder"
 	@echo "  make deploy-guardian-safe-module EXECUTOR=0x... NETWORK=sepolia ACCOUNT=my-deployer"
 	@echo "  make guardian-safe-add-module EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner"
 	@echo "  make whitelist-implementations ORG_IMPLEMENTATIONS='[0x..]' ACCOUNT_IMPLEMENTATIONS='[0x..]' EXECUTE=true ACCOUNT=admin-safe-owner"
@@ -376,15 +380,15 @@ endif
 # CREATE2 Factory Deployment Commands
 # ==============================================================================
 
-# Fund Arachnid Deployer: Sends ETH to the Arachnid factory deployer address
+# Fund Arachnid Factory Deployer: Sends ETH to the Arachnid CREATE2 factory deployer EOA
 # This is required before deploying the Arachnid factory on a new chain.
 #
 # Example:
-#   make fund-arachnid-deployer NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
-fund-arachnid-deployer: validate-signer-vars
+#   make fund-arachnid-factory-deployer NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
+fund-arachnid-factory-deployer: validate-signer-vars
 	@echo "Funding Arachnid factory deployer..."
 	@echo "  Network: $(NETWORK)"
-	@echo "  Target: $(ARACHNID_DEPLOYER_ADDRESS)"
+	@echo "  Target: $(ARACHNID_FACTORY_DEPLOYER_ADDRESS)"
 	forge script script/DeployArachnidFactory.s.sol:DeployArachnidFactory \
 		--sig "fundDeployer()" \
 		--rpc-url $(RPC_URL) \
@@ -393,7 +397,7 @@ fund-arachnid-deployer: validate-signer-vars
 		$(VERBOSITY)
 
 # Deploy Arachnid Factory: Deploys the Arachnid Deterministic Deployment Proxy
-# Requires: The deployer address must be funded first (use fund-arachnid-deployer)
+# Requires: The deployer address must be funded first (use fund-arachnid-factory-deployer)
 #
 # Example:
 #   make deploy-arachnid-factory NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
@@ -408,29 +412,50 @@ deploy-arachnid-factory: validate-signer-vars
 		--broadcast \
 		$(VERBOSITY)
 
-# Fund Den Deployer: Sends ETH to the Den Singleton Factory deployer address
-# The target address depends on whether you're using prod or non-prod deployer.
-# Pass DEN_DEPLOYER_ADDRESS to specify the target.
+# Fund Den Factory Deployer: Sends ETH to the Den Singleton Factory deployer EOA
+# The target address depends on whether you're using the prod or non-prod deployer.
+# Pass DEN_FACTORY_DEPLOYER_ADDRESS to specify the target.
 #
 # Example:
-#   make fund-den-deployer DEN_DEPLOYER_ADDRESS=0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37 NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
-fund-den-deployer: validate-signer-vars
-ifndef DEN_DEPLOYER_ADDRESS
-	$(error DEN_DEPLOYER_ADDRESS is required. Set DEN_DEPLOYER_ADDRESS=<deployer-address>)
+#   make fund-den-factory-deployer DEN_FACTORY_DEPLOYER_ADDRESS=0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37 NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
+fund-den-factory-deployer: validate-signer-vars
+ifndef DEN_FACTORY_DEPLOYER_ADDRESS
+	$(error DEN_FACTORY_DEPLOYER_ADDRESS is required. Set DEN_FACTORY_DEPLOYER_ADDRESS=<deployer-address>)
 endif
 	@echo "Funding Den Singleton Factory deployer..."
 	@echo "  Network: $(NETWORK)"
-	@echo "  Target: $(DEN_DEPLOYER_ADDRESS)"
+	@echo "  Target: $(DEN_FACTORY_DEPLOYER_ADDRESS)"
 	forge script script/DeployDenSingletonFactory.s.sol:DeployDenSingletonFactory \
-		--sig "fundDeployer(address)" $(DEN_DEPLOYER_ADDRESS) \
+		--sig "fundDeployer(address)" $(DEN_FACTORY_DEPLOYER_ADDRESS) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
 		$(VERBOSITY)
 
+# Fund MLS Contracts Deployer: Sends ETH to the EOA that will deploy the MLS platform contracts
+# (libraries, implementations, Safe infra, OrganizationFactory, whitelist, BatchedTransaction, module)
+# THROUGH an already-deployed CREATE2 factory.
+#
+# This is distinct from a *factory* deployer (which deploys the CREATE2 factory itself at nonce 0):
+# the contracts deployer deploys via the factory, so its nonce does not affect any deterministic
+# address. Sends FUND_AMOUNT from SENDER via a cast value transfer.
+#
+# Example:
+#   make fund-mls-contracts-deployer MLS_CONTRACTS_DEPLOYER_ADDRESS=0x1234... FUND_AMOUNT=1ether NETWORK=sepolia ACCOUNT=my-funder
+fund-mls-contracts-deployer: validate-signer-vars
+ifndef MLS_CONTRACTS_DEPLOYER_ADDRESS
+	$(error MLS_CONTRACTS_DEPLOYER_ADDRESS is required. Set MLS_CONTRACTS_DEPLOYER_ADDRESS=<deployer-address>)
+endif
+	@echo "Funding MLS contracts deployer..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Target:  $(MLS_CONTRACTS_DEPLOYER_ADDRESS)"
+	@echo "  Amount:  $(FUND_AMOUNT)"
+	@echo "  Funder:  $(SENDER)"
+	cast send $(MLS_CONTRACTS_DEPLOYER_ADDRESS) --value $(FUND_AMOUNT) --rpc-url $(RPC_URL) $(CAST_SIGNER_FLAGS)
+
 # Deploy Den Factory: Deploys the Den Singleton Factory
 # IMPORTANT: Must be run from the correct deployer EOA at nonce 0 for deterministic address.
-# The deployer must be funded first (use fund-den-deployer).
+# The deployer must be funded first (use fund-den-factory-deployer).
 #
 # Example:
 #   make deploy-den-factory NETWORK=sepolia ACCOUNT=den-deployer SENDER=0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37
