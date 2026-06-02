@@ -39,20 +39,26 @@ no_match_coverage = "^(script|test)/.*"
 # ------------------------------------------------------------------------------
 # RPC ENDPOINTS (Network Aliases)
 # Available to ALL profiles. Use via: --rpc-url mainnet
+#
+# Keyless public endpoints (from chainlist.org; mostly publicnode.com). The previous
+# ankr.com public endpoints now require an API key, so they were replaced. For higher
+# rate limits / reliability, point an alias at your own keyed provider, e.g.
+# mainnet = "https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}".
 # ------------------------------------------------------------------------------
 [rpc_endpoints]
 # Mainnets
-mainnet = "https://rpc.ankr.com/eth"
-polygon = "https://rpc.ankr.com/polygon"
-arbitrum = "https://rpc.ankr.com/arbitrum"
-optimism = "https://rpc.ankr.com/optimism"
-base = "https://rpc.ankr.com/base"
+mainnet = "https://ethereum-rpc.publicnode.com"
+polygon = "https://polygon-bor-rpc.publicnode.com"
+arbitrum = "https://arbitrum-one-rpc.publicnode.com"
+optimism = "https://optimism-rpc.publicnode.com"
+base = "https://base-rpc.publicnode.com"
+ronin = "https://api.roninchain.com/rpc"
 
 # Testnets
-sepolia = "https://rpc.ankr.com/eth_sepolia"
-arbitrum-sepolia = "https://rpc.ankr.com/arbitrum_sepolia"
-base-sepolia = "https://rpc.ankr.com/base_sepolia"
-optimism-sepolia = "https://rpc.ankr.com/optimism_sepolia"
+sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
+arbitrum-sepolia = "https://arbitrum-sepolia-rpc.publicnode.com"
+base-sepolia = "https://base-sepolia-rpc.publicnode.com"
+optimism-sepolia = "https://optimism-sepolia-rpc.publicnode.com"
 local = "localhost:8545"
 
 # Tenderly Virtual TestNets
@@ -64,6 +70,30 @@ ethereum-fork = "https://virtual.mainnet.us-east.rpc.tenderly.co/${TENDERLY_ETHE
 base-fork = "https://virtual.base.us-east.rpc.tenderly.co/${TENDERLY_BASE_FORK_VNET_ID}"
 arbitrum-fork = "https://virtual.arbitrum.us-east.rpc.tenderly.co/${TENDERLY_ARBITRUM_FORK_VNET_ID}"
 stage = "https://virtual.base.us-east.rpc.tenderly.co/${STAGE_TENDERLY_VIRTUAL_TESTNET_API_KEY}"
+
+# ==============================================================================
+# BLOCK EXPLORER VERIFICATION (Etherscan family)
+# ==============================================================================
+# Per-chain explorer config consumed by `forge verify-contract` / `forge script
+# --verify` (and by `make verify` / `make verify-all`). With Etherscan V2 a single
+# ETHERSCAN_API_KEY covers all of these chains; these entries just let forge resolve
+# the key/URL automatically when you pass `--chain <name>` or a numeric chain id.
+# Unset ${ETHERSCAN_API_KEY} interpolates to empty and is only an error if you
+# actually verify — it does not affect build/test/script runs.
+[etherscan]
+mainnet = { key = "${ETHERSCAN_API_KEY}", chain = 1 }
+optimism = { key = "${ETHERSCAN_API_KEY}", chain = 10 }
+base = { key = "${ETHERSCAN_API_KEY}", chain = 8453 }
+arbitrum = { key = "${ETHERSCAN_API_KEY}", chain = 42161 }
+sepolia = { key = "${ETHERSCAN_API_KEY}", chain = 11155111 }
+
+# Template for an Etherscan-style explorer on a chain NOT in forge's built-in
+# registry. The `chain` (numeric id) + `url` (verifier API endpoint) make it
+# resolvable: forge matches this entry by that numeric id (or by a matching
+# --rpc-url endpoint alias), since `--chain` itself only accepts built-in chain
+# names or a raw chain id. Trigger it with `--chain <id>` or `forge script
+# --rpc-url my_l2 --verify`.
+# my_l2 = { key = "${MY_L2_API_KEY}", chain = 9999, url = "https://explorer.my-l2.xyz/api" }
 
 # ==============================================================================
 # CI PROFILE (For Continuous Integration)

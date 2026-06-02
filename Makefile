@@ -33,7 +33,7 @@
 .PHONY: whitelist-implementations unwhitelist-implementations check-whitelist-status is-implementation-whitelisted
 
 # Utilities
-.PHONY: check-factory check-all-factories check-deployment check-all-deployments compute-addresses compute-all-addresses verify
+.PHONY: check-factory check-all-factories check-deployment check-all-deployments compute-addresses compute-all-addresses verify verify-all find-proxy verify-proxies
 
 # ==============================================================================
 # Help
@@ -104,7 +104,10 @@ help:
 	@echo "  check-all-deployments     Check all contracts for all factories on a network"
 	@echo "  compute-addresses         Compute all CREATE2 addresses for a factory"
 	@echo "  compute-all-addresses     Compute all CREATE2 addresses for all factories"
-	@echo "  verify                    Verify a contract on Etherscan"
+	@echo "  verify                    Verify a single contract (CONTRACT_ADDRESS, CONTRACT_NAME; honors VERIFIER, CONSTRUCTOR_ARGS, GUESS_CONSTRUCTOR_ARGS, LIBRARIES)"
+	@echo "  verify-all                Verify all platform contracts for a factory/env (uses FACTORY, NETWORK, ENV, VERIFIER)"
+	@echo "  find-proxy                Discover a representative proxy instance from creation events (TYPE=org|account, NETWORK)"
+	@echo "  verify-proxies            Discover + verify one OrganizationProxy and one AccountProxy instance on a chain (NETWORK, ENV, VERIFIER)"
 	@echo ""
 	@echo "Configuration Variables:"
 	@echo "  NETWORK   Target network: local, mainnet, sepolia, polygon, etc. (default: local)"
@@ -128,6 +131,10 @@ help:
 	@echo "  FUND_AMOUNT    For fund-safe-owners/fund-mls-contracts-deployer: ETH amount to send, e.g. 0.1ether (default $(FUND_AMOUNT))"
 	@echo "  DEN_FACTORY_DEPLOYER_ADDRESS    Den factory deployer EOA to fund (for fund-den-factory-deployer)"
 	@echo "  MLS_CONTRACTS_DEPLOYER_ADDRESS  EOA that deploys the MLS contracts, to fund (for fund-mls-contracts-deployer)"
+	@echo "  VERIFIER       For verify-all: block explorer verifier: etherscan (default), sourcify, blockscout, custom"
+	@echo "  VERIFIER_URL   For verify-all: optional --verifier-url (required for sourcify/blockscout/custom)"
+	@echo "  ETHERSCAN_API_KEY  For verify/verify-all (one Etherscan V2 key covers ETH/OP/Base/Arb/Sepolia); verify-all also reads it from .env"
+	@echo "  VERIFIER_API_KEY   For verify-all on key-gated non-etherscan explorers (oklink/custom); also read from .env (sourcify/blockscout need none)"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer"
@@ -140,6 +147,7 @@ help:
 	@echo "  make deploy-guardian-safe-module EXECUTOR=0x... NETWORK=sepolia ACCOUNT=my-deployer"
 	@echo "  make guardian-safe-add-module EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner"
 	@echo "  make whitelist-implementations ORG_IMPLEMENTATIONS='[0x..]' ACCOUNT_IMPLEMENTATIONS='[0x..]' EXECUTE=true ACCOUNT=admin-safe-owner"
+	@echo "  ETHERSCAN_API_KEY=xxx make verify-all FACTORY=arachnid NETWORK=mainnet ENV=prod"
 
 # ==============================================================================
 # Core Commands
@@ -281,6 +289,55 @@ FUND_ENV ?= nonprod
 # Amount of ETH to send each Safe owner in fund-safe-owners (any cast-parseable value,
 # e.g. 0.1ether, 1ether, 50000000000000000).
 FUND_AMOUNT ?= 0.1ether
+
+# Block explorer verifier for verify-all. etherscan (default) uses the Etherscan V2
+# API (one ETHERSCAN_API_KEY covers ETH/OP/Base/Arb/Sepolia). For non-Etherscan
+# chains, use VERIFIER=blockscout|sourcify|custom with VERIFIER_URL.
+VERIFIER ?= etherscan
+VERIFIER_URL ?=
+
+# Proxy instance type for find-proxy (org or account).
+TYPE ?= org
+
+# Export verification inputs so the verify/verify-all scripts pick them up when passed
+# as make variables. The scripts also read the API keys from the shell env or a .env
+# file. ETHERSCAN_API_KEY is used by the etherscan verifier; VERIFIER_API_KEY by
+# key-gated non-etherscan verifiers (oklink/custom). CONSTRUCTOR_ARGS / LIBRARIES are
+# optional inputs to the single-contract verify.
+#
+# IMPORTANT: export only when set. A bare `export VAR` for an undefined variable
+# exports it as an EMPTY string; forge binds ETHERSCAN_API_KEY/VERIFIER_API_KEY as env
+# defaults for its key args, and an empty value breaks verifier resolution
+# ("ETHERSCAN_API_KEY must be set ...") even when a real key is passed on the CLI.
+# `ifdef` is false for empty/undefined variables, so this never exports an empty value.
+ifdef ETHERSCAN_API_KEY
+export ETHERSCAN_API_KEY
+endif
+ifdef VERIFIER_API_KEY
+export VERIFIER_API_KEY
+endif
+ifdef CONSTRUCTOR_ARGS
+export CONSTRUCTOR_ARGS
+endif
+ifdef GUESS_CONSTRUCTOR_ARGS
+export GUESS_CONSTRUCTOR_ARGS
+endif
+ifdef LIBRARIES
+export LIBRARIES
+endif
+# find-proxy tuning knobs (so `make find-proxy CHUNK=... FROM_BLOCK=...` reaches the script).
+ifdef ORG
+export ORG
+endif
+ifdef FROM_BLOCK
+export FROM_BLOCK
+endif
+ifdef CHUNK
+export CHUNK
+endif
+ifdef MAX_CHUNKS
+export MAX_CHUNKS
+endif
 
 # ------------------------------------------------------------------------------
 # Validate FACTORY value (must be done before generating variables)
@@ -1085,12 +1142,25 @@ compute-all-addresses:
 	@echo ""
 	-@./script/sh/compute_all_addresses.sh den-prod
 
-# Verify: Verifies a deployed contract on Etherscan
+# Verify: Verifies a single deployed contract on a block explorer.
 # Requires CONTRACT_ADDRESS and CONTRACT_NAME variables.
 #
-# Example:
-#   make verify CONTRACT_ADDRESS=0x1234... CONTRACT_NAME=OrganizationImplementation NETWORK=mainnet
-#   make verify CONTRACT_ADDRESS=0x1234... CONTRACT_NAME=src/organization/OrganizationImplementation.sol:OrganizationImplementation NETWORK=sepolia
+# Uses the same verifier/API-key handling as verify-all (shared lib/verifier.sh):
+# VERIFIER (default etherscan), VERIFIER_URL, and ETHERSCAN_API_KEY / VERIFIER_API_KEY
+# from the shell environment, a make variable, or a .env file. NETWORK is the --chain
+# value. For contracts with constructor args or linked libraries, pass CONSTRUCTOR_ARGS
+# (ABI-encoded hex) and/or LIBRARIES (raw forge --libraries flags). DRY_RUN=1 prints only.
+#
+# GUESS_CONSTRUCTOR_ARGS=1 extracts args from the on-chain creation tx (uses an RPC) —
+# only works for contracts created by a top-level tx (EOA-deployed), NOT for factory-created
+# contracts. To verify the factory-deployed proxies (OrganizationProxy / AccountProxy), use
+# `make verify-proxies` (it computes the constructor args), or pass CONSTRUCTOR_ARGS yourself.
+#
+# Examples:
+#   ETHERSCAN_API_KEY=xxx make verify CONTRACT_ADDRESS=0x1234... CONTRACT_NAME=src/account/AccountImplementation.sol:AccountImplementation NETWORK=mainnet
+#   make verify CONTRACT_ADDRESS=0xabc... CONTRACT_NAME=src/safe-module/BatchedTransaction.sol:BatchedTransaction NETWORK=<network> VERIFIER=blockscout
+#   # OrganizationProxy by hand (arg = the whitelist proxy address):
+#   make verify CONTRACT_ADDRESS=<org-instance> CONTRACT_NAME=src/organization/OrganizationProxy.sol:OrganizationProxy NETWORK=mainnet CONSTRUCTOR_ARGS=$$(cast abi-encode "c(address)" <whitelist_proxy>)
 verify:
 ifndef CONTRACT_ADDRESS
 	$(error CONTRACT_ADDRESS is required. Set CONTRACT_ADDRESS=<deployed-contract-address>)
@@ -1098,9 +1168,60 @@ endif
 ifndef CONTRACT_NAME
 	$(error CONTRACT_NAME is required. Set CONTRACT_NAME=<contract-name-or-path>)
 endif
-	@echo "Verifying contract on $(NETWORK)..."
-	@echo "  Address: $(CONTRACT_ADDRESS)"
-	@echo "  Contract: $(CONTRACT_NAME)"
-	forge verify-contract $(CONTRACT_ADDRESS) $(CONTRACT_NAME) \
-		--chain $(NETWORK) \
-		--watch
+	@./script/sh/verify_contract.sh "$(CONTRACT_ADDRESS)" "$(CONTRACT_NAME)" "$(NETWORK)" "$(VERIFIER)" "$(VERIFIER_URL)"
+
+# Verify All: Verifies every platform contract for a factory/env on a block explorer.
+# Reads addresses, library link addresses, and constructor-arg inputs from
+# deployment.toml and runs `forge verify-contract` for each (libraries linked and
+# constructor args ABI-encoded automatically). Unlike `verify`, this does NOT require
+# CONTRACT_ADDRESS/CONTRACT_NAME and handles the library-linked and constructor-arg
+# contracts that `verify` cannot.
+#
+# It recompiles from source. You MUST run it
+# from the exact commit that was deployed so the recompiled bytecode matches on-chain.
+# Tip: run `make check-deployment` first to confirm parity.
+#
+# Set ETHERSCAN_API_KEY (one Etherscan V2 key covers ETH/OP/Base/Arb/Sepolia). It can
+# be exported in your shell or placed in a .env file at the repo root (the shell value
+# wins). For a Blockscout explorer, just VERIFIER=blockscout (no key needed) — the
+# verifier URL is auto-derived from the explorer origin in explorers.toml as
+# "<origin>/api/" (pass VERIFIER_URL only to override). For other non-Etherscan chains,
+# pass VERIFIER=blockscout|sourcify|oklink|custom (with VERIFIER_URL for sourcify/custom),
+# and VERIFIER_API_KEY for the ones that require a key (oklink/custom/key-gated explorers).
+#
+# Variables: FACTORY (default arachnid), NETWORK (the --chain value), ENV (auto|prod|nonprod),
+#            VERIFIER (default etherscan), VERIFIER_URL (optional). DRY_RUN=1 prints commands only.
+# Keys: ETHERSCAN_API_KEY / VERIFIER_API_KEY (shell env, make var, or .env).
+#
+# Examples:
+#   ETHERSCAN_API_KEY=xxx make verify-all FACTORY=arachnid NETWORK=mainnet ENV=prod
+#   ETHERSCAN_API_KEY=xxx make verify-all FACTORY=arachnid NETWORK=base
+#   make verify-all FACTORY=arachnid NETWORK=<network> ENV=prod VERIFIER=blockscout
+#   VERIFIER_API_KEY=xxx make verify-all FACTORY=arachnid NETWORK=<id> ENV=prod VERIFIER=oklink VERIFIER_URL=<url>
+verify-all:
+	@./script/sh/verify_contracts.sh $(FACTORY) "$(NETWORK)" "$(ENV)" "$(VERIFIER)" "$(VERIFIER_URL)"
+
+# Find Proxy: Discovers a representative factory-deployed proxy instance
+# (OrganizationProxy or AccountProxy) from its on-chain creation event, so you can verify
+# it without hunting for an address. Needs a working RPC for NETWORK (resolved via
+# foundry.toml [rpc_endpoints]). Prints the address and a ready `make verify` command.
+#
+# Variables: TYPE (org|account, default org), NETWORK, ENV (auto|prod|nonprod), FACTORY.
+# Tuning env: FROM_BLOCK, CHUNK, MAX_CHUNKS, ORG (restrict account lookup to one org).
+#
+# Examples:
+#   make find-proxy TYPE=org NETWORK=mainnet ENV=prod
+#   make find-proxy TYPE=account NETWORK=ronin
+find-proxy:
+	@./script/sh/find_proxy_instance.sh "$(TYPE)" "$(NETWORK)" "$(ENV)"
+
+# Verify Proxies: Discovers one OrganizationProxy and one AccountProxy instance on a chain
+# and verifies each (using GUESS_CONSTRUCTOR_ARGS so per-instance constructor args are
+# pulled from the on-chain creation tx). Verifying one instance per type is enough —
+# explorers auto-match the rest by bytecode. Honors VERIFIER/VERIFIER_URL like verify-all.
+#
+# Examples:
+#   make verify-proxies NETWORK=mainnet ENV=prod
+#   make verify-proxies NETWORK=ronin ENV=prod VERIFIER=blockscout
+verify-proxies:
+	@./script/sh/verify_proxies.sh "$(NETWORK)" "$(ENV)" "$(VERIFIER)" "$(VERIFIER_URL)"

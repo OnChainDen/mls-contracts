@@ -52,11 +52,10 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         uint256 chainId = _getChainId();
         return chainId == 1 // Ethereum Mainnet
             || chainId == 10 // Optimism
-            || chainId == 56 // BNB Smart Chain
-            || chainId == 137 // Polygon
             || chainId == 8453 // Base
             || chainId == 42_161 // Arbitrum One
-            || chainId == 43_114; // Avalanche C-Chain
+            || chainId == 2020 // Ronin
+            || chainId == 11_155_111; // Sepolia
     }
 
     /// @dev Returns the factory address for a given factory name
