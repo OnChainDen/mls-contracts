@@ -6,9 +6,6 @@ This README.md documents information specific to the smart contracts for MLS Wal
 
 In addition to this README.md and [supplemental docs](./docs/), we also recommend that you read Den's official product documentation for MLS Wallet at [https://docs.mls.onchainden.com](https://docs.mls.onchainden.com). 
 
-> [!IMPORTANT]
-> The contents of this document and this repository are confidential. Do not share without explicit written permission from the Den team.
-
 
 ---
 
@@ -34,6 +31,7 @@ In addition to this README.md and [supplemental docs](./docs/), we also recommen
 10. [Signatures](#signatures)
 11. [Disaster Recovery](#disaster-recovery)
 12. [Deployment](#deployment)
+13. [Security & Audits](#security--audits)
 
 ### Supplementary Documentation
 
@@ -46,6 +44,7 @@ For detailed deep-dives on specific topics, see the following documents in the `
 | [SIGNATURES.md](./docs/SIGNATURES.md) | Signature encoding formats, EIP-712, nonces, and signed message types |
 | [DISASTER_RECOVERY.md](./docs/DISASTER_RECOVERY.md) | Guardian recovery and transaction recovery mechanisms |
 | [DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Step-by-step deployment instructions and configuration |
+| [audits/](./docs/audits) | Third-party security audit reports |
 
 ---
 
@@ -1031,3 +1030,14 @@ For detailed deployment instructions, see **[DEPLOYMENT.md](./docs/DEPLOYMENT.md
 - Guardian/Admin Safe configuration
 - Library linking requirements
 - Troubleshooting guide
+
+---
+
+## Security & Audits
+
+The MLS Wallet smart contracts have been reviewed by independent third-party security firms. Full reports are available in the [`docs/audits/`](./docs/audits) directory.
+
+| Auditor | Report | Date |
+|---------|--------|------|
+| [Certora](https://www.certora.com/) | [MLS Wallet Security Assessment (PDF)](./docs/audits/Den_MLS_Audit_Report_Certora.pdf) | May 2026 |
+| [yAudit](https://yAudit.dev/) | Report will be added to this repository soon | May 2026 |
