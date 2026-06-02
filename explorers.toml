@@ -1,0 +1,26 @@
+# ==============================================================================
+# Block Explorer URLs
+# ==============================================================================
+# Block explorer base URLs (origins), used by the verification scripts
+# (make verify / verify-all) to print clickable links after a contract is verified.
+#
+# This lives in its own file on purpose:
+#   - foundry.toml warns on unknown config sections/keys (noise on every forge/cast
+#     command), so a custom namespace there is not viable.
+#   - deployment.toml is reserved for deterministic CREATE2 addresses only.
+#
+# Keyed by the exact NETWORK / --chain value you pass to the verify targets. Use the
+# same token everywhere: for chains in forge's registry that's the name (which also
+# matches the [rpc_endpoints] alias in foundry.toml). For a chain forge does NOT name,
+# you'd pass the numeric chain id to --chain, so key it here by that id instead.
+#
+# Provide only the explorer origin (e.g. https://etherscan.io); the scripts append the
+# "/address/<addr>#code" route themselves. A trailing slash is fine. Chains without an
+# entry simply skip the link.
+# ==============================================================================
+mainnet = "https://etherscan.io"
+optimism = "https://optimistic.etherscan.io"
+base = "https://basescan.org"
+arbitrum = "https://arbiscan.io"
+sepolia = "https://sepolia.etherscan.io"
+ronin = "https://explorer.roninchain.com"
