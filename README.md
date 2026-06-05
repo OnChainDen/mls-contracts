@@ -1039,5 +1039,5 @@ The MLS Wallet smart contracts have been reviewed by independent third-party sec
 
 | Auditor | Report | Date |
 |---------|--------|------|
-| [Certora](https://www.certora.com/) | [MLS Wallet Security Assessment (PDF)](./docs/audits/Den_MLS_Audit_Report_Certora.pdf) | May 2026 |
-| [yAudit](https://yAudit.dev/) | Report will be added to this repository soon | May 2026 |
+| [Certora](https://www.certora.com/) | [MLS Wallet Security Assessment by Certora (PDF)](./docs/audits/Den_MLS_Audit_Report_Certora.pdf) | May 2026 |
+| [yAudit](https://yAudit.dev/) | [MLS Wallet Security Assessment by yAudit (PDF)](./docs/audits/Den_MLS_Audit_Report_yAudit.pdf) | April 2026 |
