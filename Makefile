@@ -5,7 +5,7 @@
 # Requirements:
 #   - Foundry (forge, cast) >= 0.2.0
 #   - Slither >= 0.10.0
-#   - Node.js >= 20 (for solhint)
+#   - Node.js 20 or >= 22 (for solhint)
 #   - solhint (npm install -g solhint)
 #   - yq >= 4.0 (for TOML parsing: brew install yq)
 #

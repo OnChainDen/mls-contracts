@@ -23,6 +23,9 @@
     "url": "https://github.com/OnChainDen/mls-contracts/issues"
   },
   "homepage": "https://github.com/OnChainDen/mls-contracts#readme",
+  "engines": {
+    "node": "20 || >=22"
+  },
   "devDependencies": {
     "solhint": "6.2.1"
   },
