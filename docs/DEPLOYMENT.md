@@ -59,7 +59,7 @@ This quickstart guide walks you through deploying the platform locally for devel
 ### Prerequisites
 
 Before starting, ensure you have the following installed:
-- Node.js >= 18 
+- Node.js 20 or >= 22
 - Python 3 (for Slither)
 
 ### 1. Install Dependencies

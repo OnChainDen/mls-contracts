@@ -23,10 +23,16 @@
     "url": "https://github.com/OnChainDen/mls-contracts/issues"
   },
   "homepage": "https://github.com/OnChainDen/mls-contracts#readme",
+  "engines": {
+    "node": "20 || >=22"
+  },
   "devDependencies": {
     "solhint": "6.2.1"
   },
   "overrides": {
+    "brace-expansion": "5.0.9",
+    "fast-uri": "3.1.5",
+    "js-yaml": "4.3.0",
     "lodash": "4.18.1"
   }
 }
