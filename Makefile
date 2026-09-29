@@ -180,9 +180,9 @@ update:
 build:
 	forge build
 
-# Test: Runs Foundry tests
+# Test: Force test compilation after source-only size and lint builds.
 test:
-	forge test
+	forge test --force
 
 # Format: Fixes code style
 format:
